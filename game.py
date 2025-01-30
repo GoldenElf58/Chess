@@ -11,7 +11,8 @@ start_board: list[list[int]] = [[-4, -2, -3, -5, -6, -3, -2, -4],
 
 
 class GameState:
-    def __init__(self, board=None, white_queen=True, white_king=True, black_queen=True, back_king=True, last_move=None, color=1):
+    def __init__(self, board=None, white_queen=True, white_king=True, black_queen=True, back_king=True, last_move=None,
+                 color=1):
         if board is None:
             board = start_board
         self.board = board
@@ -172,30 +173,54 @@ class GameState:
                 if piece_type == 1:  # Pawn
                     forward = (i - color) % 8 == i - color
                     if forward and self.board[i - color][j] == 0:
-                        moves.append(((i, j), (i - color, j)))
-                    if forward and (j + 1) % 8 == j + 1 and self.board[i - color][j + 1] * color < 0:
-                        if j + 1 != 7:
-                            moves.append(((i, j), (i - color, j + 1)))
-                        else: # Promotion
+                        if i - color != 0 and i - color != 7:
+                            moves.append(((i, j), (i - color, j)))
+                        elif i - color == 0:  # Promotion
                             moves.append(((-3, 2), (i, j)))
                             moves.append(((-3, 3), (i, j)))
                             moves.append(((-3, 4), (i, j)))
                             moves.append(((-3, 5), (i, j)))
-                    if forward and (j - 1) % 8 == j - 1 and self.board[i - color][j - 1] * color < 0:
-                        if j - 1 != 0:
-                            moves.append(((i, j), (i - color, j - 1)))
-                        else: # Promotion
+                        elif i - color == 7:  # Promotion
                             moves.append(((-3, -2), (i, j)))
                             moves.append(((-3, -3), (i, j)))
                             moves.append(((-3, -4), (i, j)))
                             moves.append(((-3, -5), (i, j)))
+                    if forward and (j + 1) % 8 == j + 1 and self.board[i - color][j + 1] * color < 0:
+                        if i - color != 0 and i - color != 7:
+                            moves.append(((i, j), (i - color, j + 1)))
+                            print("HERE")
+                        # elif i - color == 0:  # Promotion
+                        #     moves.append(((-3, 2), (i, j)))
+                        #     moves.append(((-3, 3), (i, j)))
+                        #     moves.append(((-3, 4), (i, j)))
+                        #     moves.append(((-3, 5), (i, j)))
+                        # elif i - color == 7:  # Promotion
+                        #     moves.append(((-3, -2), (i, j)))
+                        #     moves.append(((-3, -3), (i, j)))
+                        #     moves.append(((-3, -4), (i, j)))
+                        #     moves.append(((-3, -5), (i, j)))
+                    if forward and (j - 1) % 8 == j - 1 and self.board[i - color][j - 1] * color < 0:
+                        if i - color != 0 and i - color != 7:
+                            moves.append(((i, j), (i - color, j - 1)))
+                            print("here")
+                        # elif i - color == 0:  # Promotion
+                        #     moves.append(((-3, 2), (i, j)))
+                        #     moves.append(((-3, 3), (i, j)))
+                        #     moves.append(((-3, 4), (i, j)))
+                        #     moves.append(((-3, 5), (i, j)))
+                        # elif i - color == 7:  # Promotion
+                        #     moves.append(((-3, -2), (i, j)))
+                        #     moves.append(((-3, -3), (i, j)))
+                        #     moves.append(((-3, -4), (i, j)))
+                        #     moves.append(((-3, -5), (i, j)))
                     if forward and color == 1 and i == 6 and self.board[4][j] == 0:
                         moves.append(((i, j), (4, j)))
                     if forward and color == -1 and i == 1 and self.board[3][j] == 0:
                         moves.append(((i, j), (3, j)))
                     # En Passant
-                    if self.board[self.last_move[1][0]][self.last_move[1][1]] == -color and abs(
-                            self.last_move[1][0] - self.last_move[0][0]) == 2 and i == self.last_move[1][0]:
+                    if (self.last_move is not None and self.board[self.last_move[1][0]][
+                        self.last_move[1][1]] == -color and abs(self.last_move[1][0] - self.last_move[0][0]) == 2
+                            and i == self.last_move[1][0]):
                         if j == self.last_move[1][1] + 1:
                             moves.append(((-2, 1), (i, j)))
                         if j == self.last_move[1][1] - 1:
@@ -210,7 +235,7 @@ class GameState:
         black_queen = self.black_queen
         black_king = self.black_king
 
-        if move[0][0] == -1: # Castle
+        if move[0][0] == -1:  # Castle
             if move[1][0] == 7:
                 white_queen = False
                 white_king = False
@@ -223,13 +248,13 @@ class GameState:
             new_board[move[1][0]][4 + move[0][1]] = self.board[move[1][0]][move[0][1] * 7]
             return GameState(new_board, white_queen, white_king, black_queen, black_king)
 
-        if move[0][0] == -2: # En Passant
+        if move[0][0] == -2:  # En Passant
             new_board[move[1][0]][move[1][1]] = 0
             new_board[move[1][0] - self.color][move[1][1] + move[0][1]] = self.board[move[1][0]][move[1][1]]
             new_board[move[1][0]][move[1][1] + move[0][1]] = 0
             return GameState(new_board, white_queen, white_king, black_queen, black_king, move, color=-self.color)
 
-        if move[0][0] == -3: # Promotion
+        if move[0][0] == -3:  # Promotion
             new_board[move[1][0]][move[1][1]] = 0
             new_board[move[1][0] - self.color][move[1][1]] = move[0][1]
             return GameState(new_board, white_queen, white_king, black_queen, black_king, move, color=-self.color)
@@ -261,3 +286,53 @@ class GameState:
         new_board[move[1][0]][move[1][1]] = new_board[move[0][0]][move[0][1]]
         new_board[move[0][0]][move[0][1]] = 0
         return GameState(new_board, white_queen, white_king, black_queen, black_king, last_move=move, color=-self.color)
+
+    """
+    Returns the board in a readable format for the user with a grid of pieces and each piece translated to the correct letter:
+    6 - King, changed to K or k
+    5 - Queen, changed to Q or q
+    4 - Rook, changed to R or r
+    3 - Bishop, changed to B or b
+    2 - Knight, changed to N or n
+    1 - Pawn, changed to P or p
+    0 - Empty square, changed to " "
+    (-) - Black piece
+    (+) - White piece
+    """
+
+    def __repr__(self):
+        result = "_________________________________\n"
+        for row in self.board:
+            result += "| "
+            for piece in row:
+                if piece == 6:
+                    result += "K"
+                elif piece == 5:
+                    result += "Q"
+                elif piece == 4:
+                    result += "R"
+                elif piece == 3:
+                    result += "B"
+                elif piece == 2:
+                    result += "N"
+                elif piece == 1:
+                    result += "P"
+                elif piece == 0:
+                    result += " "
+                elif piece == -6:
+                    result += "k"
+                elif piece == -5:
+                    result += "q"
+                elif piece == -4:
+                    result += "r"
+                elif piece == -3:
+                    result += "b"
+                elif piece == -2:
+                    result += "n"
+                elif piece == -1:
+                    result += "p"
+                result += " | "
+            # result += "\n"
+            result += "\n|___|___|___|___|___|___|___|___|\n"
+
+        return result

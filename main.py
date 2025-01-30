@@ -16,8 +16,8 @@ start_board: list[list[int]] = [[-4, -2, -3, -5, -6, -3, -2, -4],
                                 [0, 0, 0, 0, 0, 0, 0, 0],
                                 [1, 1, 1, 1, 1, 1, 1, 1],
                                 [4, 2, 3, 5, 6, 3, 2, 4]]
-game_board: list[list[int]] = [[0, 0, 0, 0, 0, 0, 0, 0],
-                               [0, 0, 0, 0, 0, 0, 0, 0],
+game_board: list[list[int]] = [[0, 0, -2, 0, 0, 0, 0, 0],
+                               [0, 0, 0, 1, 0, 0, 0, 0],
                                [0, 0, 0, 0, 0, 0, 0, 0],
                                [0, 0, 0, 0, 0, 0, 0, 0],
                                [0, 0, 0, 0, 0, 0, 0, 0],
@@ -37,10 +37,9 @@ def main() -> None:
     game_state = GameState(game_board)
     moves = game_state.get_moves()
     print(moves)
-    for move in moves:
-        game_board[move[1][0]][move[1][1]] = 7
-    for row in game_board:
-        print(row)
+    print(game_state)
+    new_game_state = game_state.move(moves[3])
+    print(new_game_state)
 
 
 if __name__ == '__main__':
