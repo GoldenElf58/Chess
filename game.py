@@ -174,9 +174,21 @@ class GameState:
                     if forward and self.board[i - color][j] == 0:
                         moves.append(((i, j), (i - color, j)))
                     if forward and (j + 1) % 8 == j + 1 and self.board[i - color][j + 1] * color < 0:
-                        moves.append(((i, j), (i - color, j + 1)))
+                        if j + 1 != 7:
+                            moves.append(((i, j), (i - color, j + 1)))
+                        else: # Promotion
+                            moves.append(((-3, 2), (i, j)))
+                            moves.append(((-3, 3), (i, j)))
+                            moves.append(((-3, 4), (i, j)))
+                            moves.append(((-3, 5), (i, j)))
                     if forward and (j - 1) % 8 == j - 1 and self.board[i - color][j - 1] * color < 0:
-                        moves.append(((i, j), (i - color, j - 1)))
+                        if j - 1 != 0:
+                            moves.append(((i, j), (i - color, j - 1)))
+                        else: # Promotion
+                            moves.append(((-3, -2), (i, j)))
+                            moves.append(((-3, -3), (i, j)))
+                            moves.append(((-3, -4), (i, j)))
+                            moves.append(((-3, -5), (i, j)))
                     if forward and color == 1 and i == 6 and self.board[4][j] == 0:
                         moves.append(((i, j), (4, j)))
                     if forward and color == -1 and i == 1 and self.board[3][j] == 0:
@@ -197,6 +209,7 @@ class GameState:
         white_king = self.white_king
         black_queen = self.black_queen
         black_king = self.black_king
+
         if move[0][0] == -1: # Castle
             if move[1][0] == 7:
                 white_queen = False
@@ -209,11 +222,18 @@ class GameState:
             new_board[move[1][0]][4 + move[0][1] * 2] = self.board[move[1][0]][move[1][1]]
             new_board[move[1][0]][4 + move[0][1]] = self.board[move[1][0]][move[0][1] * 7]
             return GameState(new_board, white_queen, white_king, black_queen, black_king)
+
         if move[0][0] == -2: # En Passant
             new_board[move[1][0]][move[1][1]] = 0
             new_board[move[1][0] - self.color][move[1][1] + move[0][1]] = self.board[move[1][0]][move[1][1]]
             new_board[move[1][0]][move[1][1] + move[0][1]] = 0
             return GameState(new_board, white_queen, white_king, black_queen, black_king, move, color=-self.color)
+
+        if move[0][0] == -3: # Promotion
+            new_board[move[1][0]][move[1][1]] = 0
+            new_board[move[1][0] - self.color][move[1][1]] = move[0][1]
+            return GameState(new_board, white_queen, white_king, black_queen, black_king, move, color=-self.color)
+
         if new_board[move[1][0]][move[1][1]] in {-4, 4}:  # Can never take kings
             if move[1][0] == 7 and move[1][1] == 0:
                 white_queen = False
