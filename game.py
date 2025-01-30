@@ -11,18 +11,22 @@ start_board: list[list[int]] = [[-4, -2, -3, -5, -6, -3, -2, -4],
 
 
 class GameState:
-    def __init__(self, board=None, white_queen=True, white_king=True, black_queen=True, back_king=True, last_move=None):
+    def __init__(self, board=None, white_queen=True, white_king=True, black_queen=True, back_king=True, last_move=None, color=1):
         if board is None:
             board = start_board
         self.board = board
+        self.color = color
         self.white_queen = white_queen
         self.white_king = white_king
         self.black_queen = black_queen
         self.black_king = back_king
         self.last_move = last_move
 
-    def get_moves(self, color: int, can_castle_king: bool, can_castle_queen: bool) -> list[
-        tuple[tuple[int, int], tuple[int, int]]]:
+    def get_moves(self, color: int = None) -> list[tuple[tuple[int, int], tuple[int, int]]]:
+        if color is None:
+            color = self.color
+        else:
+            self.color = color
         moves: list[tuple[tuple[int, int], tuple[int, int]]] = []
         for i, row in enumerate(self.board):
             for j, piece in enumerate(row):
@@ -30,11 +34,12 @@ class GameState:
                     continue
                 piece_type = abs(piece)
                 if piece_type == 6:  # King
-                    if can_castle_king and self.board[i][7] == 4 * color and {self.board[i][5], self.board[i][6]} == {
-                        0}:
+                    if (((color == 1 and self.white_king) or (color == -1 and self.black_king))
+                            and self.board[i][7] == 4 * color and {self.board[i][5], self.board[i][6]} == {0}):
                         moves.append(((-1, 1), (i, j)))
-                    if can_castle_queen and self.board[i][7] == 4 * color and {self.board[i][1], self.board[i][2],
-                                                                               self.board[i][3]} == {0}:
+                    if (((color == 1 and self.white_queen) or (color == -1 and self.black_queen))
+                            and self.board[i][7] == 4 * color and {self.board[i][1], self.board[i][2],
+                                                                   self.board[i][3]} == {0}):
                         moves.append(((-1, -1), (i, j)))
                     for k in range(-1, 2):
                         for l in range(-1, 2):
@@ -192,7 +197,7 @@ class GameState:
         white_king = self.white_king
         black_queen = self.black_queen
         black_king = self.black_king
-        if move[0][0] == -1:
+        if move[0][0] == -1: # Castle
             if move[1][0] == 7:
                 white_queen = False
                 white_king = False
@@ -204,9 +209,11 @@ class GameState:
             new_board[move[1][0]][4 + move[0][1] * 2] = self.board[move[1][0]][move[1][1]]
             new_board[move[1][0]][4 + move[0][1]] = self.board[move[1][0]][move[0][1] * 7]
             return GameState(new_board, white_queen, white_king, black_queen, black_king)
-        if move[0][0] == -2:
-            # TODO: Add final En Passant logic here
-            return self
+        if move[0][0] == -2: # En Passant
+            new_board[move[1][0]][move[1][1]] = 0
+            new_board[move[1][0] - self.color][move[1][1] + move[0][1]] = self.board[move[1][0]][move[1][1]]
+            new_board[move[1][0]][move[1][1] + move[0][1]] = 0
+            return GameState(new_board, white_queen, white_king, black_queen, black_king, move, color=-self.color)
         if new_board[move[1][0]][move[1][1]] in {-4, 4}:  # Can never take kings
             if move[1][0] == 7 and move[1][1] == 0:
                 white_queen = False
@@ -233,4 +240,4 @@ class GameState:
                 white_king = False
         new_board[move[1][0]][move[1][1]] = new_board[move[0][0]][move[0][1]]
         new_board[move[0][0]][move[0][1]] = 0
-        return GameState(new_board, white_queen, white_king, black_queen, black_king, last_move=move)
+        return GameState(new_board, white_queen, white_king, black_queen, black_king, last_move=move, color=-self.color)

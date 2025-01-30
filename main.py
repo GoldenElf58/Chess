@@ -6,6 +6,7 @@
 # 2 - Knight
 # 1 - Pawn
 # 0 - Empty square
+from game import GameState
 
 start_board: list[list[int]] = [[-4, -2, -3, -5, -6, -3, -2, -4],
                                 [-1, -1, -1, -1, -1, -1, -1, -1],
@@ -32,161 +33,9 @@ def evaluate(board: list[list[int]]) -> float:
             evaluation += piece
     return evaluation
 
-
-def get_moves(board: list[list[int]], color: int, can_castle_king: bool, can_castle_queen: bool) -> list[tuple[tuple[int, int], tuple[int, int]]]:
-    moves: list[tuple[tuple[int, int], tuple[int, int]]] = []
-    for i, row in enumerate(board):
-        for j, piece in enumerate(row):
-            if piece * color <= 0:  # If piece is 0, blank so skip; if color doesn't match player color skip
-                continue
-            piece_type = abs(piece)
-            if piece_type == 6: # King
-                if can_castle_king and board[i][7] == 4 * color and {board[i][5], board[i][6]} == {0}:
-                    moves.append(((-1, 1), (i, j)))
-                if can_castle_queen and board[i][7] == 4 * color and {board[i][1], board[i][2], board[i][3]} == {0}:
-                    moves.append(((-1, 0), (i, j)))
-                for k in range(-1, 2):
-                    for l in range(-1, 2):
-                        if (i + k) % 8 != i + k or (j + l) % 8 != j + l:
-                            continue
-                        if board[i + k][j + l] * color <= 0:
-                            moves.append(((i, j), (i + k, j + l)))
-            if piece_type == 5: # Queen
-                for k in range(j + 1, 8):
-                    if board[i][k] * color <= 0:
-                        moves.append(((i, j), (i, k)))
-                    if board[i][k] == 0:
-                        continue
-                    break
-                for k in range(j - 1, -1, -1):
-                    if board[i][k] * color <= 0:
-                        moves.append(((i, j), (i, k)))
-                    if board[i][k] == 0:
-                        continue
-                    break
-                for k in range(i - 1, -1, -1):
-                    if board[k][j] * color <= 0:
-                        moves.append(((i, j), (k, j)))
-                    if board[k][j] == 0:
-                        continue
-                    break
-                for k in range(i + 1, 8):
-                    if board[k][j] * color <= 0:
-                        moves.append(((i, j), (k, j)))
-                    if board[k][j] == 0:
-                        continue
-                    break
-                for k in range(1, 8):
-                    if i + k > 7 or j + k > 7:
-                        break
-                    if board[i + k][j + k] * color <= 0:
-                        moves.append(((i, j), (i + k, j + k)))
-                    if board[i + k][j + k] == 0:
-                        continue
-                    break
-                for k in range(1, 8):
-                    if i - k < 0 or j + k > 7:
-                        break
-                    if board[i - k][j + k] * color <= 0:
-                        moves.append(((i, j), (i - k, j + k)))
-                    if board[i - k][j + k] == 0:
-                        continue
-                    break
-                for k in range(1, 8):
-                    if i + k > 7 or j - k < 0:
-                        break
-                    if board[i + k][j - k] * color <= 0:
-                        moves.append(((i, j), (i + k, j - k)))
-                    if board[i + k][j - k] == 0:
-                        continue
-                    break
-                for k in range(1, 8):
-                    if i - k < 0 or j  - k < 0:
-                        break
-                    if board[i - k][j - k] * color <= 0:
-                        moves.append(((i, j), (i - k, j - k)))
-                    if board[i - k][j - k] == 0:
-                        continue
-                    break
-            if piece_type == 4:  # Rook
-                for k in range(j + 1, 8):
-                    if board[i][k] * color <= 0:
-                        moves.append(((i, j), (i, k)))
-                    if board[i][k] == 0:
-                        continue
-                    break
-                for k in range(j - 1, -1, -1):
-                    if board[i][k] * color <= 0:
-                        moves.append(((i, j), (i, k)))
-                    if board[i][k] == 0:
-                        continue
-                    break
-                for k in range(i - 1, -1, -1):
-                    if board[k][j] * color <= 0:
-                        moves.append(((i, j), (k, j)))
-                    if board[k][j] == 0:
-                        continue
-                    break
-                for k in range(i + 1, 8):
-                    if board[k][j] * color <= 0:
-                        moves.append(((i, j), (k, j)))
-                    if board[k][j] == 0:
-                        continue
-                    break
-            if piece_type == 3: # Bishop
-                for k in range(1, 8):
-                    if i + k > 7 or j + k > 7:
-                        break
-                    if board[i + k][j + k] * color <= 0:
-                        moves.append(((i, j), (i + k, j + k)))
-                    if board[i + k][j + k] == 0:
-                        continue
-                    break
-                for k in range(1, 8):
-                    if i - k < 0 or j + k > 7:
-                        break
-                    if board[i - k][j + k] * color <= 0:
-                        moves.append(((i, j), (i - k, j + k)))
-                    if board[i - k][j + k] == 0:
-                        continue
-                    break
-                for k in range(1, 8):
-                    if i + k > 7 or j - k < 0:
-                        break
-                    if board[i + k][j - k] * color <= 0:
-                        moves.append(((i, j), (i + k, j - k)))
-                    if board[i + k][j - k] == 0:
-                        continue
-                    break
-                for k in range(1, 8):
-                    if i - k < 0 or j  - k < 0:
-                        break
-                    if board[i - k][j - k] * color <= 0:
-                        moves.append(((i, j), (i - k, j - k)))
-                    if board[i - k][j - k] == 0:
-                        continue
-                    break
-            if piece_type == 2: # Knight
-                for k in range(-2, 3, 4):
-                    for l in range(-1, 2, 2):
-                        if (i + k) % 8 == i + k and (j + l) % 8 == j + l and board[i + k][j + l] * color <= 0:
-                            moves.append(((i, j), (i + k, j + l)))
-                        if (i + l) % 8 == i + l and (j + k) % 8 == j + k and board[i + l][j + k] * color <= 0:
-                            moves.append(((i, j), (i + l, j + k)))
-            if piece_type == 1: # Pawn
-                forward = (i - color) % 8 == i - color
-                if forward and board[i - color][j] == 0:
-                    moves.append(((i, j), (i - color, j)))
-                if forward and (j + 1) % 8 == j + 1 and board[i - color][j + 1] * color < 0:
-                    moves.append(((i, j), (i - color, j + 1)))
-                if forward and (j - 1) % 8 == j - 1 and board[i - color][j - 1] * color < 0:
-                    moves.append(((i, j), (i - color, j - 1)))
-
-    return moves
-
-
 def main() -> None:
-    moves = get_moves(game_board, 1, True, True)
+    game_state = GameState(game_board)
+    moves = game_state.get_moves()
     print(moves)
     for move in moves:
         game_board[move[1][0]][move[1][1]] = 7
