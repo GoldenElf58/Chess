@@ -33,7 +33,7 @@ def evaluate(board: list[list[int]]) -> float:
     return evaluation
 
 
-def get_moves(board: list[list[int]], color: int) -> list[tuple[tuple[int, int], tuple[int, int]]]:
+def get_moves(board: list[list[int]], color: int, can_castle_king: bool, can_castle_queen: bool) -> list[tuple[tuple[int, int], tuple[int, int]]]:
     moves: list[tuple[tuple[int, int], tuple[int, int]]] = []
     for i, row in enumerate(board):
         for j, piece in enumerate(row):
@@ -41,6 +41,10 @@ def get_moves(board: list[list[int]], color: int) -> list[tuple[tuple[int, int],
                 continue
             piece_type = abs(piece)
             if piece_type == 6: # King
+                if can_castle_king and board[i][7] == 4 * color and {board[i][5], board[i][6]} == {0}:
+                    moves.append(((-1, 1), (i, j)))
+                if can_castle_queen and board[i][7] == 4 * color and {board[i][1], board[i][2], board[i][3]} == {0}:
+                    moves.append(((-1, 0), (i, j)))
                 for k in range(-1, 2):
                     for l in range(-1, 2):
                         if (i + k) % 8 != i + k or (j + l) % 8 != j + l:
@@ -173,15 +177,16 @@ def get_moves(board: list[list[int]], color: int) -> list[tuple[tuple[int, int],
                 forward = (i - color) % 8 == i - color
                 if forward and board[i - color][j] == 0:
                     moves.append(((i, j), (i - color, j)))
-                # if forward and board[i - color][]
-
-
+                if forward and (j + 1) % 8 == j + 1 and board[i - color][j + 1] * color < 0:
+                    moves.append(((i, j), (i - color, j + 1)))
+                if forward and (j - 1) % 8 == j - 1 and board[i - color][j - 1] * color < 0:
+                    moves.append(((i, j), (i - color, j - 1)))
 
     return moves
 
 
 def main() -> None:
-    moves = get_moves(game_board, 1)
+    moves = get_moves(game_board, 1, True, True)
     print(moves)
     for move in moves:
         game_board[move[1][0]][move[1][1]] = 7
