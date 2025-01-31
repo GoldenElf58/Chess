@@ -1,21 +1,117 @@
-from game import GameState
+import sys
 
+import pygame
+from game import GameState, start_board
 
-def evaluate(board: list[list[int]]) -> float:
+images = [
+    pygame.image.load("piece_images/-6.png"),
+    pygame.image.load("piece_images/-5.png"),
+    pygame.image.load("piece_images/-4.png"),
+    pygame.image.load("piece_images/-3.png"),
+    pygame.image.load("piece_images/-2.png"),
+    pygame.image.load("piece_images/-1.png"),
+    0,
+    pygame.image.load("piece_images/1.png"),
+    pygame.image.load("piece_images/2.png"),
+    pygame.image.load("piece_images/3.png"),
+    pygame.image.load("piece_images/4.png"),
+    pygame.image.load("piece_images/5.png"),
+    pygame.image.load("piece_images/6.png"),
+]
+
+def evaluate(game_state: GameState) -> float:
     evaluation = 0
-    for row in board:
+    for row in game_state.board:
         for piece in row:
             evaluation += piece
     return evaluation
 
-def main() -> None:
+
+def minimax(game_state: GameState, depth: int, maximizing_player: bool) -> float:
+    moves = game_state.get_moves()
+    outcomes = []
+    for _move in moves:
+        outcomes.append(game_state.move(_move))
+    evaluations = []
+    if depth == 0:
+        for outcome in outcomes:
+            evaluations.append(evaluate(outcome))
+    else:
+        for outcome in outcomes:
+            evaluations.append(minimax(outcome, depth - 1, not maximizing_player))
+    best_eval = 999999999 * (-1 if maximizing_player else 1)
+    for evaluation in evaluations:
+        if maximizing_player and evaluation > best_eval:
+            best_eval = evaluation
+        elif not maximizing_player and evaluation < best_eval:
+            best_eval = evaluation
+    return best_eval
+
+
+def display_board(screen, board, selected_square):
+    for i in range(8):
+        for j in range(8):
+            if selected_square == (j, i):
+                pygame.draw.rect(screen, (245, 157, 131) if (i + j) % 2 == 0 else (211, 116, 79), (j * 60, i * 60, 60, 60))
+            else:
+                pygame.draw.rect(screen, (240, 217, 181) if (i + j) % 2 == 0 else (181, 136, 99), (j * 60, i * 60, 60, 60))
+            if board[i][j] != 0:
+                screen.blit(images[board[i][j] + 6], (j * 60, i * 60))
+
+
+def game_loop():
     game_state = GameState()
-    while True:
+    while game_state.get_winner() is None:
         print(game_state)
         moves = game_state.get_moves()
         print(moves)
         choice = int(input("Enter move index:  "))
         game_state = game_state.move(moves[choice])
+
+
+def main() -> None:
+    pygame.init()
+    clock: pygame.time.Clock = pygame.time.Clock()
+    screen = pygame.display.set_mode((480, 480))
+    selected_square = None
+
+    game_state = GameState()
+    moves = game_state.get_moves()
+    print(moves)
+
+    player_move = []
+
+    while True:
+        clock.tick(60)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    square = (event.pos[0] // 60, event.pos[1] // 60)
+                    if selected_square == square:
+                        selected_square = None
+                        player_move = []
+                    else:
+                        selected_square = square
+                        player_move.append((selected_square[1], selected_square[0]))
+                    print(selected_square, tuple(player_move))
+                    if len(player_move) == 2 and tuple(player_move) in moves:
+                        game_state = game_state.move(tuple(player_move))
+                        player_move = []
+                        moves = game_state.get_moves()
+                        print("here")
+                    elif len(player_move) == 2:
+                        player_move = []
+                        print("reset")
+                if event.button == 3:
+                    selected_square = None
+
+        screen.fill(0)
+        display_board(screen, game_state.board, selected_square)
+        pygame.display.flip()
+
 
 if __name__ == '__main__':
     main()

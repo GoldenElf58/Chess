@@ -343,6 +343,23 @@ class GameState:
         new_board[move[0][0]][move[0][1]] = 0
         return GameState(new_board, white_queen, white_king, black_queen, black_king, last_move=move, color=-self.color)
 
+    def get_winner(self):
+        white = False
+        black = False
+        for row in self.board:
+            for piece in row:
+                if piece == 6:
+                    white = True
+                elif piece == -6:
+                    black = True
+        if white and not black:
+            return 1
+        elif black and not white:
+            return -1
+        elif black and white:
+            return 0
+        return None
+
     def __repr__(self):
         """
         Return a string representation of the board.
