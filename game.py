@@ -189,30 +189,30 @@ class GameState:
                         if i - color != 0 and i - color != 7:
                             moves.append(((i, j), (i - color, j + 1)))
                             print("HERE")
-                        # elif i - color == 0:  # Promotion
-                        #     moves.append(((-3, 2), (i, j)))
-                        #     moves.append(((-3, 3), (i, j)))
-                        #     moves.append(((-3, 4), (i, j)))
-                        #     moves.append(((-3, 5), (i, j)))
-                        # elif i - color == 7:  # Promotion
-                        #     moves.append(((-3, -2), (i, j)))
-                        #     moves.append(((-3, -3), (i, j)))
-                        #     moves.append(((-3, -4), (i, j)))
-                        #     moves.append(((-3, -5), (i, j)))
+                        elif i - color == 0:  # Promotion
+                            moves.append(((-4, 1), (i, j)))
+                            moves.append(((-5, 1), (i, j)))
+                            moves.append(((-6, 1), (i, j)))
+                            moves.append(((-7, 1), (i, j)))
+                        elif i - color == 7:  # Promotion
+                            moves.append(((-4, 1), (i, j)))
+                            moves.append(((-5, 1), (i, j)))
+                            moves.append(((-6, 1), (i, j)))
+                            moves.append(((-7, 1), (i, j)))
                     if forward and (j - 1) % 8 == j - 1 and self.board[i - color][j - 1] * color < 0:
                         if i - color != 0 and i - color != 7:
                             moves.append(((i, j), (i - color, j - 1)))
                             print("here")
-                        # elif i - color == 0:  # Promotion
-                        #     moves.append(((-3, 2), (i, j)))
-                        #     moves.append(((-3, 3), (i, j)))
-                        #     moves.append(((-3, 4), (i, j)))
-                        #     moves.append(((-3, 5), (i, j)))
-                        # elif i - color == 7:  # Promotion
-                        #     moves.append(((-3, -2), (i, j)))
-                        #     moves.append(((-3, -3), (i, j)))
-                        #     moves.append(((-3, -4), (i, j)))
-                        #     moves.append(((-3, -5), (i, j)))
+                        elif i - color == 0:  # Promotion
+                            moves.append(((-4, -1), (i, j)))
+                            moves.append(((-5, -1), (i, j)))
+                            moves.append(((-6, -1), (i, j)))
+                            moves.append(((-7, -1), (i, j)))
+                        elif i - color == 7:  # Promotion
+                            moves.append(((-4, -1), (i, j)))
+                            moves.append(((-5, -1), (i, j)))
+                            moves.append(((-6, -1), (i, j)))
+                            moves.append(((-7, -1), (i, j)))
                     if forward and color == 1 and i == 6 and self.board[4][j] == 0:
                         moves.append(((i, j), (4, j)))
                     if forward and color == -1 and i == 1 and self.board[3][j] == 0:
@@ -257,6 +257,11 @@ class GameState:
         if move[0][0] == -3:  # Promotion
             new_board[move[1][0]][move[1][1]] = 0
             new_board[move[1][0] - self.color][move[1][1]] = move[0][1]
+            return GameState(new_board, white_queen, white_king, black_queen, black_king, move, color=-self.color)
+
+        if move[0][0] <= -4: # Promotion while taking
+            new_board[move[1][0]][move[1][1]] = 0
+            new_board[move[1][0] - self.color][move[1][1] + move[0][1]] = (move[0][0] + 2) * -self.color
             return GameState(new_board, white_queen, white_king, black_queen, black_king, move, color=-self.color)
 
         if new_board[move[1][0]][move[1][1]] in {-4, 4}:  # Can never take kings

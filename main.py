@@ -38,7 +38,9 @@ def main() -> None:
     moves = game_state.get_moves()
     print(moves)
     print(game_state)
-    new_game_state = game_state.move(moves[3])
+    move = moves[7]
+    new_game_state = game_state.move(move)
+    print(move)
     print(new_game_state)
 
 
