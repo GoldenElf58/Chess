@@ -13,6 +13,26 @@ start_board: list[list[int]] = [[-4, -2, -3, -5, -6, -3, -2, -4],
 class GameState:
     def __init__(self, board=None, white_queen=True, white_king=True, black_queen=True, back_king=True, last_move=None,
                  color=1):
+        """
+        Initialize a GameState object.
+
+        Parameters
+        ----------
+        board : list[list[int]], optional
+            The starting board. Defaults to `start_board`.
+        white_queen : bool, optional
+            Whether the white queen is still on the board. Defaults to True.
+        white_king : bool, optional
+            Whether the white king is still on the board. Defaults to True.
+        black_queen : bool, optional
+            Whether the black queen is still on the board. Defaults to True.
+        back_king : bool, optional
+            Whether the black king is still on the board. Defaults to True.
+        last_move : tuple[tuple[int, int], tuple[int, int]], optional
+            The last move made, as a tuple of two tuples. Defaults to None.
+        color : int, optional
+            The color of the current player (1 for white, -1 for black). Defaults to 1.
+        """
         if board is None:
             board = start_board
         self.board = board
@@ -24,6 +44,19 @@ class GameState:
         self.last_move = last_move
 
     def get_moves(self, color: int = None) -> list[tuple[tuple[int, int], tuple[int, int]]]:
+        """
+        Get all the possible moves for the current player.
+
+        Parameters
+        ----------
+        color : int, optional
+            The color of the player to get the moves for. Defaults to `self.color`.
+
+        Returns
+        -------
+        list[tuple[tuple[int, int], tuple[int, int]]]
+            A list of tuples of two tuples, representing the starting and ending squares of each move.
+        """
         if color is None:
             color = self.color
         else:
@@ -229,6 +262,23 @@ class GameState:
         return moves
 
     def move(self, move) -> 'GameState':
+        """
+        Make a move on the board.
+
+        Parameters
+        ----------
+        move : tuple[tuple[int, int], tuple[int, int]]
+            The move to make, as a tuple of two tuples. The first tuple is the
+            piece to move, with the first element being the row and the second
+            element being the column. The second tuple is the destination, with
+            the first element being the row and the second element being the
+            column.
+
+        Returns
+        -------
+        GameState
+            A new GameState object, with the move applied.
+        """
         new_board = copy.deepcopy(self.board)
         white_queen = self.white_queen
         white_king = self.white_king
@@ -262,6 +312,7 @@ class GameState:
         if move[0][0] <= -4: # Promotion while taking
             new_board[move[1][0]][move[1][1]] = 0
             new_board[move[1][0] - self.color][move[1][1] + move[0][1]] = (move[0][0] + 2) * -self.color
+
             return GameState(new_board, white_queen, white_king, black_queen, black_king, move, color=-self.color)
 
         if new_board[move[1][0]][move[1][1]] in {-4, 4}:  # Can never take kings
@@ -292,20 +343,32 @@ class GameState:
         new_board[move[0][0]][move[0][1]] = 0
         return GameState(new_board, white_queen, white_king, black_queen, black_king, last_move=move, color=-self.color)
 
-    """
-    Returns the board in a readable format for the user with a grid of pieces and each piece translated to the correct letter:
-    6 - King, changed to K or k
-    5 - Queen, changed to Q or q
-    4 - Rook, changed to R or r
-    3 - Bishop, changed to B or b
-    2 - Knight, changed to N or n
-    1 - Pawn, changed to P or p
-    0 - Empty square, changed to " "
-    (-) - Black piece
-    (+) - White piece
-    """
-
     def __repr__(self):
+        """
+        Return a string representation of the board.
+
+        This string is an 8x8 grid of characters, with each character
+        representing a piece on the board. The characters are as follows:
+
+        - K: King
+        - Q: Queen
+        - R: Rook
+        - B: Bishop
+        - N: Knight
+        - P: Pawn
+        -  : Empty space
+        - k: Black King
+        - q: Black Queen
+        - r: Black Rook
+        - b: Black Bishop
+        - n: Black Knight
+        - p: Black Pawn
+
+        The string is formatted with lines separating each row of the board,
+        and pipes (|) separating each column.
+
+        :return: A string representation of the board.
+        """
         result = "_________________________________\n"
         for row in self.board:
             result += "| "
@@ -337,7 +400,6 @@ class GameState:
                 elif piece == -1:
                     result += "p"
                 result += " | "
-            # result += "\n"
             result += "\n|___|___|___|___|___|___|___|___|\n"
 
         return result
