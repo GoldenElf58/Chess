@@ -221,7 +221,6 @@ class GameState:
                     if forward and (j + 1) % 8 == j + 1 and self.board[i - color][j + 1] * color < 0:
                         if i - color != 0 and i - color != 7:
                             moves.append(((i, j), (i - color, j + 1)))
-                            print("HERE")
                         elif i - color == 0:  # Promotion
                             moves.append(((-4, 1), (i, j)))
                             moves.append(((-5, 1), (i, j)))
@@ -235,7 +234,6 @@ class GameState:
                     if forward and (j - 1) % 8 == j - 1 and self.board[i - color][j - 1] * color < 0:
                         if i - color != 0 and i - color != 7:
                             moves.append(((i, j), (i - color, j - 1)))
-                            print("here")
                         elif i - color == 0:  # Promotion
                             moves.append(((-4, -1), (i, j)))
                             moves.append(((-5, -1), (i, j)))
