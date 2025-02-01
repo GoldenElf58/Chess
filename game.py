@@ -252,9 +252,9 @@ class GameState:
                     if (self.last_move is not None and self.board[self.last_move[1][0]][
                         self.last_move[1][1]] == -color and abs(self.last_move[1][0] - self.last_move[0][0]) == 2
                             and i == self.last_move[1][0]):
-                        if j == self.last_move[1][1] + 1:
+                        if j == self.last_move[1][1] + 1 and j < 7:
                             moves.append(((-2, 1), (i, j)))
-                        if j == self.last_move[1][1] - 1:
+                        if j == self.last_move[1][1] - 1 and j > 0:
                             moves.append(((-2, -1), (i, j)))
 
         return moves

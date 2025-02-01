@@ -19,44 +19,60 @@ images = [
     pygame.image.load("piece_images/6.png"),
 ]
 
+piece_values = {-6: -999999,
+                -5: -9,
+                -4: -5,
+                -3: -3.2,
+                -2: -3,
+                -1: -1,
+                0: 0,
+                1: 1,
+                2: 3,
+                3: 3.2,
+                4: 5,
+                5: 9,
+                6: 999999
+                }
+
+
 def evaluate(game_state: GameState) -> float:
     evaluation = 0
     for row in game_state.board:
         for piece in row:
-            evaluation += piece
+            evaluation += piece_values[piece]
     return evaluation
 
 
-def minimax(game_state: GameState, depth: int, maximizing_player: bool) -> tuple[float, tuple[tuple[int,int], tuple[int,int]]]:
+def minimax(game_state: GameState, depth: int, alpha: float, beta: float, maximizing_player: bool) -> tuple[
+    float, tuple[tuple[int, int], tuple[int, int]]]:
     moves = game_state.get_moves()
-    outcomes = []
-    for _move in moves:
-        outcomes.append((game_state.move(_move), _move))
-    evaluations = []
-    if depth == 0:
-        for outcome, _move in outcomes:
-            evaluations.append((evaluate(outcome), _move))
-    else:
-        for outcome, _move in outcomes:
-            evaluations.append((minimax(outcome, depth - 1, not maximizing_player)[0], _move))
-    best_eval = 999999999 * (-1 if maximizing_player else 1)
+    best_eval = float("inf") * (-1 if maximizing_player else 1)
     best_move = ()
-    for evaluation, _move in evaluations:
+    for _move in moves:
+        new_game_state = game_state.move(_move)
+        evaluation = evaluate(new_game_state) if depth == 0 else minimax(game_state.move(_move), depth - 1, alpha, beta, not maximizing_player)[0]
         if maximizing_player and evaluation > best_eval:
             best_eval = evaluation
             best_move = _move
+            alpha = max(alpha, evaluation)
         elif not maximizing_player and evaluation < best_eval:
             best_eval = evaluation
-    return best_eval, best_move
+            best_move = _move
+            beta = min(beta, evaluation)
+        if beta <= alpha:
+            break
+    return round(best_eval, 5), best_move
 
 
 def display_board(screen, board, selected_square):
     for i in range(8):
         for j in range(8):
             if selected_square == (j, i):
-                pygame.draw.rect(screen, (245, 157, 131) if (i + j) % 2 == 0 else (211, 116, 79), (j * 60, i * 60, 60, 60))
+                pygame.draw.rect(screen, (245, 157, 131) if (i + j) % 2 == 0 else (211, 116, 79),
+                                 (j * 60, i * 60, 60, 60))
             else:
-                pygame.draw.rect(screen, (240, 217, 181) if (i + j) % 2 == 0 else (181, 136, 99), (j * 60, i * 60, 60, 60))
+                pygame.draw.rect(screen, (240, 217, 181) if (i + j) % 2 == 0 else (181, 136, 99),
+                                 (j * 60, i * 60, 60, 60))
             if board[i][j] != 0:
                 screen.blit(images[board[i][j] + 6], (j * 60, i * 60))
 
@@ -85,32 +101,35 @@ def main() -> None:
 
     while True:
         clock.tick(60)
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    square = (event.pos[0] // 60, event.pos[1] // 60)
-                    if selected_square == square:
-                        selected_square = None
-                        player_move = []
-                    else:
-                        selected_square = square
-                        player_move.append((selected_square[1], selected_square[0]))
-                    print(selected_square, tuple(player_move))
-                    if len(player_move) == 2 and tuple(player_move) in moves:
-                        game_state = game_state.move(tuple(player_move))
-                        player_move = []
-                        moves = game_state.get_moves()
-                    elif len(player_move) == 2:
-                        player_move = [player_move[1]]
-                if event.button == 3:
-                    selected_square = None
+            # if event.type == pygame.MOUSEBUTTONDOWN:
+                # if event.button == 1:
+                #     game_state = game_state.move(minimax(game_state, 4, float("-inf"), float("inf"), game_state.color == 1)[1])
+                #     square = (event.pos[0] // 60, event.pos[1] // 60)
+                #     if selected_square == square:
+                #         selected_square = None
+                #         player_move = []
+                #     else:
+                #         selected_square = square
+                #         player_move.append((selected_square[1], selected_square[0]))
+                #     if len(player_move) == 2 and tuple(player_move) in moves:
+                #         game_state = game_state.move(tuple(player_move))
+                #         player_move = []
+                #         moves = game_state.get_moves()
+                #         print(minimax(game_state, 3, float("-inf"), float("inf"), game_state.color == 1))
+                #     elif len(player_move) == 2:
+                #         player_move = [player_move[1]]
+                # if event.button == 3:
+                #     selected_square = None
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_e:
                     print(evaluate(game_state))
 
+        game_state = game_state.move(minimax(game_state, 3, float("-inf"), float("inf"), game_state.color == 1)[1])
         screen.fill(0)
         display_board(screen, game_state.board, selected_square)
         pygame.display.flip()
