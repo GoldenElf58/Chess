@@ -20,7 +20,7 @@ images = [
     pygame.image.load("piece_images/6.png"),
 ]
 
-piece_values = {-6: -9999999,
+piece_values: dict[int, int] = {-6: -9999999,
                 -5: -900,
                 -4: -500,
                 -3: -320,
@@ -36,7 +36,7 @@ piece_values = {-6: -9999999,
                 }
 
 
-def evaluate(game_state: GameState) -> float:
+def evaluate(game_state: GameState) -> int:
     evaluation = 0
     for row in game_state.board:
         for piece in row:
@@ -44,10 +44,10 @@ def evaluate(game_state: GameState) -> float:
     return evaluation
 
 
-def minimax(game_state: GameState, depth: int, alpha: float, beta: float, maximizing_player: bool) -> tuple[
-    float, tuple[tuple[int, int], tuple[int, int]]]:
+def minimax(game_state: GameState, depth: int, alpha: int, beta: int, maximizing_player: bool) -> tuple[
+    int, tuple[tuple[int, int], tuple[int, int]]]:
     moves = game_state.get_moves()
-    best_eval = float("-inf") if maximizing_player else float('inf')
+    best_eval = -10**9 if maximizing_player else 10**9  # Large negative/positive integers
     best_move = ()
     for _move in moves:
         new_game_state = game_state.move(_move)
@@ -63,7 +63,7 @@ def minimax(game_state: GameState, depth: int, alpha: float, beta: float, maximi
             beta = min(beta, evaluation)
         if beta <= alpha:
             break
-    return round(best_eval, 5), best_move
+    return best_eval, best_move
 
 
 def display_board(screen, board, selected_square):
@@ -135,12 +135,14 @@ def main() -> None:
                 if event.key == pygame.K_e:
                     print(round(evaluate(game_state), 2))
 
-        game_state = game_state.move(minimax(game_state, 4, float("-inf"), float("inf"), game_state.color == 1)[1])
-        print(f'{evaluate(game_state):.2f}')
-        if move == 10: print(f'{t0 - time.time()}')  # Why is this negative?
+        game_state = game_state.move(minimax(game_state, 4, -10**9, 10**9, game_state.color == 1)[1])
+        print(f'{evaluate(game_state)}')
         screen.fill(0)
         display_board(screen, game_state.board, selected_square)
         pygame.display.flip()
+        if move == 10:
+            print(f'{time.time() - t0}')
+            break
 
 
 if __name__ == '__main__':
