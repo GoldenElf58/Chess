@@ -1,4 +1,5 @@
 import sys
+import time
 
 import pygame
 from game import GameState, start_board
@@ -46,12 +47,12 @@ def evaluate(game_state: GameState) -> float:
 def minimax(game_state: GameState, depth: int, alpha: float, beta: float, maximizing_player: bool) -> tuple[
     float, tuple[tuple[int, int], tuple[int, int]]]:
     moves = game_state.get_moves()
-    best_eval = float("inf") * (-1 if maximizing_player else 1)
+    best_eval = float("-inf") if maximizing_player else float('inf')
     best_move = ()
     for _move in moves:
         new_game_state = game_state.move(_move)
         evaluation = evaluate(new_game_state) if depth == 0 else \
-        minimax(game_state.move(_move), depth - 1, alpha, beta, not maximizing_player)[0]
+        minimax(new_game_state, depth - 1, alpha, beta, not maximizing_player)[0]
         if maximizing_player and evaluation > best_eval:
             best_eval = evaluation
             best_move = _move
@@ -98,9 +99,13 @@ def main() -> None:
     moves = game_state.get_moves()
     print(moves)
 
+    t0 = time.time()
+
     # player_move = []
 
+    move = 0
     while True:
+        move += 1
         clock.tick(60)
 
         for event in pygame.event.get():
@@ -130,8 +135,9 @@ def main() -> None:
                 if event.key == pygame.K_e:
                     print(round(evaluate(game_state), 2))
 
-        game_state = game_state.move(minimax(game_state, 3, float("-inf"), float("inf"), game_state.color == 1)[1])
-        print(round(evaluate(game_state), 2))
+        game_state = game_state.move(minimax(game_state, 4, float("-inf"), float("inf"), game_state.color == 1)[1])
+        print(f'{evaluate(game_state):.2f}')
+        if move == 10: print(f'{t0 - time.time()}')  # Why is this negative?
         screen.fill(0)
         display_board(screen, game_state.board, selected_square)
         pygame.display.flip()
