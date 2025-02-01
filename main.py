@@ -50,7 +50,8 @@ def minimax(game_state: GameState, depth: int, alpha: float, beta: float, maximi
     best_move = ()
     for _move in moves:
         new_game_state = game_state.move(_move)
-        evaluation = evaluate(new_game_state) if depth == 0 else minimax(game_state.move(_move), depth - 1, alpha, beta, not maximizing_player)[0]
+        evaluation = evaluate(new_game_state) if depth == 0 else \
+        minimax(game_state.move(_move), depth - 1, alpha, beta, not maximizing_player)[0]
         if maximizing_player and evaluation > best_eval:
             best_eval = evaluation
             best_move = _move
@@ -107,24 +108,24 @@ def main() -> None:
                 pygame.quit()
                 sys.exit()
             # if event.type == pygame.MOUSEBUTTONDOWN:
-                # if event.button == 1:
-                #     game_state = game_state.move(minimax(game_state, 4, float("-inf"), float("inf"), game_state.color == 1)[1])
-                #     square = (event.pos[0] // 60, event.pos[1] // 60)
-                #     if selected_square == square:
-                #         selected_square = None
-                #         player_move = []
-                #     else:
-                #         selected_square = square
-                #         player_move.append((selected_square[1], selected_square[0]))
-                #     if len(player_move) == 2 and tuple(player_move) in moves:
-                #         game_state = game_state.move(tuple(player_move))
-                #         player_move = []
-                #         moves = game_state.get_moves()
-                #         print(minimax(game_state, 3, float("-inf"), float("inf"), game_state.color == 1))
-                #     elif len(player_move) == 2:
-                #         player_move = [player_move[1]]
-                # if event.button == 3:
-                #     selected_square = None
+            # if event.button == 1:
+            #     game_state = game_state.move(minimax(game_state, 4, float("-inf"), float("inf"), game_state.color == 1)[1])
+            #     square = (event.pos[0] // 60, event.pos[1] // 60)
+            #     if selected_square == square:
+            #         selected_square = None
+            #         player_move = []
+            #     else:
+            #         selected_square = square
+            #         player_move.append((selected_square[1], selected_square[0]))
+            #     if len(player_move) == 2 and tuple(player_move) in moves:
+            #         game_state = game_state.move(tuple(player_move))
+            #         player_move = []
+            #         moves = game_state.get_moves()
+            #         print(minimax(game_state, 3, float("-inf"), float("inf"), game_state.color == 1))
+            #     elif len(player_move) == 2:
+            #         player_move = [player_move[1]]
+            # if event.button == 3:
+            #     selected_square = None
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_e:
                     print(round(evaluate(game_state), 2))
