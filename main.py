@@ -19,19 +19,19 @@ images = [
     pygame.image.load("piece_images/6.png"),
 ]
 
-piece_values = {-6: -999999,
-                -5: -9,
-                -4: -5,
-                -3: -3.2,
-                -2: -3,
-                -1: -1,
+piece_values = {-6: -9999999,
+                -5: -900,
+                -4: -500,
+                -3: -320,
+                -2: -300,
+                -1: -100,
                 0: 0,
-                1: 1,
-                2: 3,
-                3: 3.2,
-                4: 5,
-                5: 9,
-                6: 999999
+                1: 100,
+                2: 300,
+                3: 320,
+                4: 500,
+                5: 900,
+                6: 9999999
                 }
 
 
@@ -97,7 +97,7 @@ def main() -> None:
     moves = game_state.get_moves()
     print(moves)
 
-    player_move = []
+    # player_move = []
 
     while True:
         clock.tick(60)
@@ -127,9 +127,10 @@ def main() -> None:
                 #     selected_square = None
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_e:
-                    print(evaluate(game_state))
+                    print(round(evaluate(game_state), 2))
 
         game_state = game_state.move(minimax(game_state, 3, float("-inf"), float("inf"), game_state.color == 1)[1])
+        print(round(evaluate(game_state), 2))
         screen.fill(0)
         display_board(screen, game_state.board, selected_square)
         pygame.display.flip()
