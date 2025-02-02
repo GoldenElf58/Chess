@@ -281,9 +281,9 @@ class GameState:
                             moves.append((-5, -1, i, j))
                             moves.append((-6, -1, i, j))
                             moves.append((-7, -1, i, j))
-                    if forward and color == 1 and i == 6 and board[4 * 8 + j] == 0:
+                    if forward and color == 1 and i == 6 and board[4 * 8 + j] == 0 and board[5 * 8 + j] == 0:
                         moves.append((i, j, 4, j))
-                    if forward and color == -1 and i == 1 and board[3 * 8 + j] == 0:
+                    if forward and color == -1 and i == 1 and board[3 * 8 + j] == 0 and board[2 * 8 + j == 0]:
                         moves.append((i, j, 3, j))
                     # En Passant
                     if (last_move is not None and board[last_move[2] * 8 +
@@ -380,14 +380,13 @@ class GameState:
         return GameState(new_board, white_queen, white_king, black_queen, black_king, last_move=move, color=-self.color)
 
     def get_winner(self):
-        white = False
-        black = False
-        for row in self.board:
-            for piece in row:
-                if piece == 6:
-                    white = True
-                elif piece == -6:
-                    black = True
+        white = True
+        black = True
+        for piece in self.board:
+            if piece == 6:
+                white = False
+            elif piece == -6:
+                black = False
         if white and not black:
             return 1
         elif black and not white:
