@@ -1,5 +1,7 @@
 import copy
 
+from utils import flatten, split_table
+
 start_board: list[list[int]] = [[-4, -2, -3, -5, -6, -3, -2, -4],
                                 [-1, -1, -1, -1, -1, -1, -1, -1],
                                 [0, 0, 0, 0, 0, 0, 0, 0],
@@ -8,15 +10,6 @@ start_board: list[list[int]] = [[-4, -2, -3, -5, -6, -3, -2, -4],
                                 [0, 0, 0, 0, 0, 0, 0, 0],
                                 [1, 1, 1, 1, 1, 1, 1, 1],
                                 [4, 2, 3, 5, 6, 3, 2, 4]]
-
-
-def split_table(flat_list):
-    """Converts a flat list of 64 numbers into an 8x8 2D list."""
-    return [flat_list[i * 8:(i + 1) * 8] for i in range(8)]
-
-
-def flatten(board):
-    return [x for row in board for x in row]
 
 
 class GameState:
