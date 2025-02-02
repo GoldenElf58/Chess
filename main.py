@@ -2,7 +2,8 @@ import sys
 import time
 
 import pygame
-from game import GameState, start_board
+
+from game import GameState, split_table, flatten
 
 images = [
     pygame.image.load("piece_images/-6.png"),
@@ -21,52 +22,158 @@ images = [
 ]
 
 piece_values: dict[int, int] = {-6: -9999999,
-                -5: -900,
-                -4: -500,
-                -3: -320,
-                -2: -300,
-                -1: -100,
-                0: 0,
-                1: 100,
-                2: 300,
-                3: 320,
-                4: 500,
-                5: 900,
-                6: 9999999
-                }
+                                -5: -900,
+                                -4: -500,
+                                -3: -320,
+                                -2: -300,
+                                -1: -100,
+                                0: 0,
+                                1: 100,
+                                2: 300,
+                                3: 320,
+                                4: 500,
+                                5: 900,
+                                6: 9999999
+                                }
+
+# Provided piece-square tables for the opening/middlegame
+
+Pawns_flat = [
+    0, 0, 0, 0, 0, 0, 0, 0,
+    50, 50, 50, 50, 50, 50, 50, 50,
+    10, 10, 20, 30, 30, 20, 10, 10,
+    5, 5, 10, 25, 25, 10, 5, 5,
+    0, 0, 0, 20, 20, 0, 0, 0,
+    5, -5, -10, 0, 0, -10, -5, 5,
+    5, 10, 10, -20, -20, 10, 10, 5,
+    0, 0, 0, 0, 0, 0, 0, 0
+]
+
+Rooks_flat = [
+    0, 0, 0, 0, 0, 0, 0, 0,
+    5, 10, 10, 10, 10, 10, 10, 5,
+    -5, 0, 0, 0, 0, 0, 0, -5,
+    -5, 0, 0, 0, 0, 0, 0, -5,
+    -5, 0, 0, 0, 0, 0, 0, -5,
+    -5, 0, 0, 0, 0, 0, 0, -5,
+    -5, 0, 0, 0, 0, 0, 0, -5,
+    0, 0, 0, 5, 5, 0, 0, 0
+]
+
+Knights_flat = [
+    -50, -40, -30, -30, -30, -30, -40, -50,
+    -40, -20, 0, 0, 0, 0, -20, -40,
+    -30, 0, 10, 15, 15, 10, 0, -30,
+    -30, 5, 15, 20, 20, 15, 5, -30,
+    -30, 0, 15, 20, 20, 15, 0, -30,
+    -30, 5, 10, 15, 15, 10, 5, -30,
+    -40, -20, 0, 5, 5, 0, -20, -40,
+    -50, -40, -30, -30, -30, -30, -40, -50
+]
+
+Bishops_flat = [
+    -20, -10, -10, -10, -10, -10, -10, -20,
+    -10, 0, 0, 0, 0, 0, 0, -10,
+    -10, 0, 5, 10, 10, 5, 0, -10,
+    -10, 5, 5, 10, 10, 5, 5, -10,
+    -10, 0, 10, 10, 10, 10, 0, -10,
+    -10, 10, 10, 10, 10, 10, 10, -10,
+    -10, 5, 0, 0, 0, 0, 5, -10,
+    -20, -10, -10, -10, -10, -10, -10, -20
+]
+
+Queens_flat = [
+    -20, -10, -10, -5, -5, -10, -10, -20,
+    -10, 0, 0, 0, 0, 0, 0, -10,
+    -10, 0, 5, 5, 5, 5, 0, -10,
+    -5, 0, 5, 5, 5, 5, 0, -5,
+    0, 0, 5, 5, 5, 5, 0, -5,
+    -10, 5, 5, 5, 5, 5, 0, -10,
+    -10, 0, 5, 0, 0, 0, 0, -10,
+    -20, -10, -10, -5, -5, -10, -10, -20
+]
+
+KingStart_flat = [
+    -80, -70, -70, -70, -70, -70, -70, -80,
+    -60, -60, -60, -60, -60, -60, -60, -60,
+    -40, -50, -50, -60, -60, -50, -50, -40,
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -20, -30, -30, -40, -40, -30, -30, -20,
+    -10, -20, -20, -20, -20, -20, -20, -10,
+    20, 20, -5, -5, -5, -5, 20, 20,
+    20, 30, 10, 0, 0, 10, 30, 20
+]
+
+
+# For black pieces, we mirror the white table vertically.
+def mirror(table):
+    """Mirrors an 8x8 table vertically."""
+    return table[::-1]
+
+
+# Map piece type to its piece-square table.
+# (Assuming that in your piece_values dictionary:
+#   Pawn   -> ±1, Knight -> ±2, Bishop -> ±3,
+#   Rook   -> ±4, Queen  -> ±5, King   -> ±6)
+position_values: dict[int, list[int]] = {
+    # White pieces (positive values)
+    1: Pawns_flat,
+    2: Knights_flat,
+    3: Bishops_flat,
+    4: Rooks_flat,
+    5: Queens_flat,
+    6: KingStart_flat,
+    # Black pieces (negative values) use the mirrored tables
+    -1: flatten(mirror(split_table(Pawns_flat))),
+    -2: flatten(mirror(split_table(Knights_flat))),
+    -3: flatten(mirror(split_table(Bishops_flat))),
+    -4: flatten(mirror(split_table(Rooks_flat))),
+    -5: flatten(mirror(split_table(Queens_flat))),
+    -6: flatten(mirror(split_table(KingStart_flat))),
+}
 
 
 def evaluate(game_state: GameState) -> int:
     evaluation = 0
-    for row in game_state.board:
-        for piece in row:
-            evaluation += piece_values[piece]
+    for i, row in enumerate(split_table(game_state.board)):
+        for j, piece in enumerate(row):
+            if piece != 0:
+                evaluation += piece_values[piece] + position_values[piece][i * 8 + j]
     return evaluation
 
 
 def minimax(game_state: GameState, depth: int, alpha: int, beta: int, maximizing_player: bool) -> tuple[
     int, tuple[tuple[int, int], tuple[int, int]]]:
     moves = game_state.get_moves()
-    best_eval = -10**9 if maximizing_player else 10**9  # Large negative/positive integers
+    new_game_states = {move: game_state.move(move) for move in moves}
+    evaluations = {move: evaluate(new_game_states[move]) for move in moves}  # Cache evaluations
+
+    # Move ordering: Sort moves by evaluation score (best first for maximizing, worst first for minimizing)
+    moves.sort(key=lambda move: evaluations[move], reverse=maximizing_player)
+
+    best_eval = -(1 << 30) if maximizing_player else (1 << 30)  # Large negative/positive integers
     best_move = ()
-    for _move in moves:
-        new_game_state = game_state.move(_move)
-        evaluation = evaluate(new_game_state) if depth == 0 else \
-        minimax(new_game_state, depth - 1, alpha, beta, not maximizing_player)[0]
-        if maximizing_player and evaluation > best_eval:
-            best_eval = evaluation
-            best_move = _move
-            alpha = max(alpha, evaluation)
-        elif not maximizing_player and evaluation < best_eval:
-            best_eval = evaluation
-            best_move = _move
-            beta = min(beta, evaluation)
-        if beta <= alpha:
+
+    for move in moves:
+        evaluation = evaluations[move] if depth == 0 else \
+            minimax(new_game_states[move], depth - 1, alpha, beta, not maximizing_player)[0]
+
+        if maximizing_player:
+            if evaluation > best_eval:
+                best_eval, best_move = evaluation, move
+                alpha = max(alpha, evaluation)
+        else:
+            if evaluation < best_eval:
+                best_eval, best_move = evaluation, move
+                beta = min(beta, evaluation)
+
+        if beta <= alpha:  # Alpha-beta pruning
             break
+
     return best_eval, best_move
 
 
-def display_board(screen, board, selected_square):
+def display_board(screen, board, selected_square=()):
     for i in range(8):
         for j in range(8):
             if selected_square == (j, i):
@@ -75,34 +182,18 @@ def display_board(screen, board, selected_square):
             else:
                 pygame.draw.rect(screen, (240, 217, 181) if (i + j) % 2 == 0 else (181, 136, 99),
                                  (j * 60, i * 60, 60, 60))
-            if board[i][j] != 0:
-                screen.blit(images[board[i][j] + 6], (j * 60, i * 60))
-
-
-def game_loop():
-    game_state = GameState()
-    while game_state.get_winner() is None:
-        print(game_state)
-        moves = game_state.get_moves()
-        print(moves)
-        choice = int(input("Enter move index:  "))
-        game_state = game_state.move(moves[choice])
+            if board[i * 8 + j] != 0:
+                screen.blit(images[board[i * 8 + j] + 6], (j * 60, i * 60))
 
 
 def main() -> None:
     pygame.init()
     clock: pygame.time.Clock = pygame.time.Clock()
     screen = pygame.display.set_mode((480, 480))
-    selected_square = None
 
     game_state = GameState()
-    moves = game_state.get_moves()
-    print(moves)
 
     t0 = time.time()
-
-    # player_move = []
-
     move = 0
     while True:
         move += 1
@@ -112,36 +203,21 @@ def main() -> None:
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            # if event.type == pygame.MOUSEBUTTONDOWN:
-            # if event.button == 1:
-            #     game_state = game_state.move(minimax(game_state, 4, float("-inf"), float("inf"), game_state.color == 1)[1])
-            #     square = (event.pos[0] // 60, event.pos[1] // 60)
-            #     if selected_square == square:
-            #         selected_square = None
-            #         player_move = []
-            #     else:
-            #         selected_square = square
-            #         player_move.append((selected_square[1], selected_square[0]))
-            #     if len(player_move) == 2 and tuple(player_move) in moves:
-            #         game_state = game_state.move(tuple(player_move))
-            #         player_move = []
-            #         moves = game_state.get_moves()
-            #         print(minimax(game_state, 3, float("-inf"), float("inf"), game_state.color == 1))
-            #     elif len(player_move) == 2:
-            #         player_move = [player_move[1]]
-            # if event.button == 3:
-            #     selected_square = None
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_e:
-                    print(round(evaluate(game_state), 2))
+                    print(evaluate(game_state))  # Removed redundant rounding
 
-        game_state = game_state.move(minimax(game_state, 4, -10**9, 10**9, game_state.color == 1)[1])
-        print(f'{evaluate(game_state)}')
+        eval_result, best_move = minimax(game_state, 4, -(1 << 30), (1 << 30), game_state.color == 1)
+        game_state = game_state.move(best_move)
+
+        print(eval_result)
+
         screen.fill(0)
-        display_board(screen, game_state.board, selected_square)
+        display_board(screen, game_state.board)
         pygame.display.flip()
+
         if move == 10:
-            print(f'{time.time() - t0}')
+            print(time.time() - t0)
             break
 
 
