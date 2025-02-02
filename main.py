@@ -1,5 +1,6 @@
 import sys
-import time
+import threading
+# import time
 
 import pygame
 
@@ -188,37 +189,63 @@ def display_board(screen, board, selected_square=()):
 
 def main() -> None:
     pygame.init()
-    clock: pygame.time.Clock = pygame.time.Clock()
+    clock = pygame.time.Clock()
     screen = pygame.display.set_mode((480, 480))
-
     game_state = GameState()
+    selected_square = None  # For human move selection (as (col, row))
+    computer_thread = None
+    computer_move_result = []  # Container to hold the minimax result
 
-    t0 = time.time()
-    move = 0
-    while True:
-        move += 1
+    running = True
+    while running:
         clock.tick(60)
-
+        # Allow quitting even if the computer thread is busy
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+                running = False
+
+            # Human moves (only when white's turn)
+            if game_state.color == 1 and event.type == pygame.MOUSEBUTTONDOWN:
+                x, y = event.pos
+                col, row = x // 60, y // 60
+                # If no square is selected yet, select this square if it has a white piece.
+                if selected_square is None:
+                    if game_state.board[row * 8 + col] > 0:
+                        selected_square = (col, row)
+                else:
+                    # Second click is the destination.
+                    move = (selected_square[1], selected_square[0], row, col)
+                    if move in game_state.get_moves():
+                        game_state = game_state.move(move)
+                        selected_square = None
+                    elif game_state.board[row * 8 + col] > 0:
+                        selected_square = (col, row)
+
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_e:
-                    print(evaluate(game_state))  # Removed redundant rounding
+                    print(evaluate(game_state))
 
-        eval_result, best_move = minimax(game_state, 4, -(1 << 30), (1 << 30), game_state.color == 1)
-        game_state = game_state.move(best_move)
-
-        print(eval_result)
+        # Computer move: when it's black's turn, spawn a thread for minimax.
+        if game_state.color == -1:
+            # If no thread is running, start one.
+            if computer_thread is None:
+                computer_move_result.clear()
+                computer_thread = threading.Thread(target=lambda: computer_move_result.append(
+                    minimax(game_state, 4, -(1 << 30), (1 << 30), False)))
+                computer_thread.start()
+            # If the thread is finished, update the game state.
+            elif not computer_thread.is_alive():
+                if computer_move_result:
+                    _, best_move = computer_move_result.pop(0)
+                    game_state = game_state.move(best_move)
+                computer_thread = None
 
         screen.fill(0)
-        display_board(screen, game_state.board)
+        display_board(screen, game_state.board, selected_square)
         pygame.display.flip()
 
-        if move == 10:
-            print(time.time() - t0)
-            break
+    pygame.quit()
+    sys.exit()
 
 
 if __name__ == '__main__':
