@@ -134,9 +134,9 @@ class GameState:
                     for k in range(1, 8):
                         if i + k > 7 or j + k > 7:
                             break
-                        if board[i + k * 8 + j + k] * color <= 0:
+                        if board[(i + k) * 8 + (j + k)] * color <= 0:
                             moves.append(((i, j), (i + k, j + k)))
-                        if board[i + k * 8 + j + k] == 0:
+                        if board[(i + k) * 8 + (j + k)] == 0:
                             continue
                         break
                     for k in range(1, 8):
@@ -336,8 +336,8 @@ class GameState:
             return GameState(new_board, white_queen, white_king, black_queen, black_king, move, color=-self.color)
 
         if move[0][0] <= -4:  # Promotion while taking
-            new_board[move[1][0]][move[1][1]] = 0
-            new_board[move[1][0] - self.color][move[1][1] + move[0][1]] = (move[0][0] + 2) * -self.color
+            new_board[move[1][0] * 8 + move[1][1]] = 0
+            new_board[(move[1][0] - self.color) * 8 + (move[1][1] + move[0][1])] = (move[0][0] + 2) * -self.color
 
             return GameState(new_board, white_queen, white_king, black_queen, black_king, move, color=-self.color)
 
