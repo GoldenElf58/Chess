@@ -14,7 +14,7 @@ start_board: list[list[int]] = [[-4, -2, -3, -5, -6, -3, -2, -4],
 
 class GameState:
     def __init__(self, board=None, white_queen=True, white_king=True, black_queen=True, back_king=True, last_move=None,
-                 color=1):
+                 color=1, turn=0):
         """
         Initialize a GameState object.
 
@@ -44,6 +44,7 @@ class GameState:
         self.black_queen = black_queen
         self.black_king = back_king
         self.last_move = last_move
+        self.turn = turn
 
     def get_hashable_state(self):
         """ Convert the game state into a hashable format for caching. """
@@ -85,10 +86,6 @@ class GameState:
         list[tuple[int, int, int, int]]
             A list of tuples, each representing a move in the format (start_row, start_col, end_row, end_col).
         """
-        if color is None:
-            color = color
-        else:
-            color = color
         moves: list[tuple[int, int, int, int]] = []
         for i, row in enumerate(split_table(board)):
             for j, piece in enumerate(row):
@@ -287,7 +284,6 @@ class GameState:
                             moves.append((-2, 1, i, j))
                         if j == last_move[3] - 1 and j > 0:
                             moves.append((-2, -1, i, j))
-
         return moves
 
     def move(self, move: tuple[int, int, int, int]) -> 'GameState':
@@ -325,13 +321,15 @@ class GameState:
             new_board[move[2] * 8 + move[1] * 7] = 0
             new_board[move[2] * 8 + 4 + move[1] * 2] = self.board[move[2] * 8 + move[3]]
             new_board[move[2] * 8 + 4 + move[1]] = self.board[move[2] * 8 + move[1] * 7]
-            return GameState(new_board, white_queen, white_king, black_queen, black_king)
+            return GameState(new_board, white_queen, white_king, black_queen, black_king, last_move=move,
+                             color=-self.color, turn=self.turn + 1)
 
         if move[0] == -2:  # En Passant
             new_board[move[2] * 8 + move[3]] = 0
             new_board[(move[2] - self.color) * 8 + move[3] + move[1]] = self.board[move[2] * 8 + move[3]]
             new_board[move[2] * 8 + move[3] + move[1]] = 0
-            return GameState(new_board, white_queen, white_king, black_queen, black_king, move, color=-self.color)
+            return GameState(new_board, white_queen, white_king, black_queen, black_king, last_move=move,
+                             color=-self.color, turn=self.turn + 1)
 
         if move[0] == -3:  # Promotion
             new_board[move[2] * 8 + move[3]] = 0
@@ -342,7 +340,8 @@ class GameState:
             new_board[move[2] * 8 + move[3]] = 0
             new_board[(move[2] - self.color) * 8 + (move[3] + move[1])] = (move[0] + 2) * -self.color
 
-            return GameState(new_board, white_queen, white_king, black_queen, black_king, move, color=-self.color)
+            return GameState(new_board, white_queen, white_king, black_queen, black_king, last_move=move,
+                             color=-self.color, turn=self.turn + 1)
 
         if new_board[move[2] * 8 + move[3]] in {-4, 4}:  # Can never take kings
             if move[2] == 7 and move[3] == 0:
@@ -370,7 +369,8 @@ class GameState:
                 white_king = False
         new_board[move[2] * 8 + move[3]] = new_board[move[0] * 8 + move[1]]
         new_board[move[0] * 8 + move[1]] = 0
-        return GameState(new_board, white_queen, white_king, black_queen, black_king, last_move=move, color=-self.color)
+        return GameState(new_board, white_queen, white_king, black_queen, black_king, last_move=move, color=-self.color,
+                         turn=self.turn + 1)
 
     def get_winner(self):
         white = True
