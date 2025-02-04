@@ -428,7 +428,7 @@ class GameState:
         :return: A string representation of the board.
         """
         result = "_________________________________\n"
-        for row in self.board:
+        for row in split_table(self.board):
             result += "| "
             for piece in row:
                 if piece == 6:

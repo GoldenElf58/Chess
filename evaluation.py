@@ -144,7 +144,7 @@ def iterative_deepening(game_state: GameState, maximizing_player: bool, alloted_
         minimax_thread.join(alloted_time - (time.time() - t0))
         minimax_thread = threading.Thread(
             target=lambda: results.append(minimax_tt(game_state, depth, -(1 << 30), (1 << 30), maximizing_player)))
-        minimax_thread.start()
+        if time.time() - t0 < alloted_time: minimax_thread.start()
     print(depth, len(results))
     return results[-1], len(results)
 
