@@ -118,6 +118,7 @@ transposition_table = {}
 def evaluate(game_state: GameState) -> int:
     global eval_lookup
     evaluation = 0
+    if game_state.draw: return 0
     hash_state = game_state.get_efficient_hashable_state()
     if hash_state in eval_lookup:
         return eval_lookup[hash_state]

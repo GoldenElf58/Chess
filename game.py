@@ -17,7 +17,7 @@ move_lookup_black: dict[int, list[tuple[int, int, int, int]]] = {}
 
 class GameState:
     def __init__(self, board=None, white_queen=True, white_king=True, black_queen=True, back_king=True, last_move=None,
-                 color=1, turn=0):
+                 color=1, turn=0, draw=False):
         """
         Initialize a GameState object.
 
@@ -48,6 +48,7 @@ class GameState:
         self.black_king: bool = back_king
         self.last_move = last_move
         self.turn = turn
+        self.draw = draw
 
     def get_hashable_state(self):
         """ Convert the game state into a hashable format for caching. """
@@ -322,6 +323,9 @@ class GameState:
         white_king = self.white_king
         black_queen = self.black_queen
         black_king = self.black_king
+
+        if len(move) == 0:
+            return GameState(new_board, draw=True)
 
         if move[0] == -1:  # Castle
             if move[2] == 7:
