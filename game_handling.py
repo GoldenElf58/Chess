@@ -8,7 +8,7 @@ import sys
 import threading
 import time
 
-from evaluation import evaluate, minimax
+from evaluation import evaluate, minimax, iterative_deepening, minimax_tt
 from game import GameState
 
 images = [
@@ -177,17 +177,24 @@ def game_loop():
             if game_mode == GameMode.MENU and event.type == pygame.MOUSEBUTTONDOWN:
                 pos = event.pos
                 t0 = time.time()
-                if buttons[0].check_hover(pos): game_mode = game_mode.PLAY_WHITE
-                if buttons[1].check_hover(pos): game_mode = game_mode.PLAY_BLACK
-                if buttons[2].check_hover(pos): game_mode = game_mode.AI_VS_AI
+                if buttons[0].check_hover(pos):
+                    game_mode = game_mode.PLAY_WHITE
+                    game_state = GameState()
+                if buttons[1].check_hover(pos):
+                    game_mode = game_mode.PLAY_BLACK
+                    game_state = GameState()
+                if buttons[2].check_hover(pos):
+                    game_mode = game_mode.AI_VS_AI
+                    game_state = GameState()
 
-            if game_mode != GameMode.MENU and game_state.color == 1 and event.type == pygame.MOUSEBUTTONDOWN:
+            if game_mode != GameMode.MENU and event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = event.pos
                 col, row = (x - offset) // 60, y // 60
                 # Store selected square as (col, row)
                 if selected_square is None:
                     # Only select a piece if it belongs to the human.
-                    if game_state.board[row * 8 + col] > 0:
+                    if ((game_state.board[row * 8 + col] > 0 and game_state.color == 1 and game_mode == GameMode.PLAY_WHITE)
+                            or (game_state.board[row * 8 + col] < 0 and game_state.color == -1 and game_mode == GameMode.PLAY_BLACK)):
                         selected_square = (col, row)
                 else:
                     # Convert selected_square (col, row) to (row, col)
@@ -198,6 +205,9 @@ def game_loop():
                     if chosen_move is not None:
                         game_state = game_state.move(chosen_move)
                     selected_square = None
+                    if ((game_state.board[row * 8 + col] > 0 and game_state.color == 1 and game_mode == GameMode.PLAY_WHITE)
+                        or (game_state.board[row * 8 + col] < 0 and game_state.color == -1 and game_mode == GameMode.PLAY_BLACK)):
+                        selected_square = user_dest[1], user_dest[0]
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_e:
                     print(evaluate(game_state))
@@ -205,12 +215,14 @@ def game_loop():
         if game_mode != GameMode.MENU:
             if computer_thread is None:
                 computer_move_result.clear()
-                computer_thread = threading.Thread(target=lambda: computer_move_result.append(
-                    minimax(game_state, 4, -(1 << 30), (1 << 30), game_state.color == 1)))
-                computer_thread.start()
+                if game_mode == GameMode.AI_VS_AI or (game_mode == GameMode.PLAY_WHITE and game_state.color == -1) or (
+                        game_mode == GameMode.PLAY_BLACK and game_state.color == 1):
+                    computer_thread = threading.Thread(target=lambda: computer_move_result.append(
+                        iterative_deepening(game_state, game_state.color == 1, 1)))
+                    computer_thread.start()
             elif not computer_thread.is_alive():
                 if computer_move_result:
-                    (last_eval, best_move), depth = computer_move_result.pop(0), 4
+                    (last_eval, best_move), depth = computer_move_result.pop(0)
                     depths.append(depth)
                     game_state = game_state.move(best_move)
                     if game_state.turn == 10: print(time.time() - t0)

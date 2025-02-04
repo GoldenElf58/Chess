@@ -244,59 +244,57 @@ class GameState:
                             (i + l) * 8 + (j + k)] * color <= 0:
                             moves.append((i, j, i + l, j + k))
             if piece_type == 1:  # Pawn
-                    forward = (i - color) % 8 == i - color
-                    if forward and board[(i - color) * 8 + j] == 0:
-                        if i - color != 0 and i - color != 7:
-                            moves.append((i, j, i - color, j))
-                        elif i - color == 0:  # Promotion
-                            moves.append((-3, 2, i, j))
-                            moves.append((-3, 3, i, j))
-                            moves.append((-3, 4, i, j))
-                            moves.append((-3, 5, i, j))
-                        elif i - color == 7:  # Promotion
-                            moves.append((-3, -2, i, j))
-                            moves.append((-3, -3, i, j))
-                            moves.append((-3, -4, i, j))
-                            moves.append((-3, -5, i, j))
-                    if forward and (j + 1) % 8 == j + 1 and board[(i - color) * 8 + (j + 1)] * color < 0:
-                        if i - color != 0 and i - color != 7:
-                            moves.append((i, j, i - color, j + 1))
-                        elif i - color == 0:  # Promotion
-                            moves.append((-4, 1, i, j))
-                            moves.append((-5, 1, i, j))
-                            moves.append((-6, 1, i, j))
-                            moves.append((-7, 1, i, j))
-                        elif i - color == 7:  # Promotion
-                            moves.append((-4, 1, i, j))
-                            moves.append((-5, 1, i, j))
-                            moves.append((-6, 1, i, j))
-                            moves.append((-7, 1, i, j))
-                    if forward and (j - 1) % 8 == j - 1 and board[(i - color) * 8 + (j - 1)] * color < 0:
-                        if i - color != 0 and i - color != 7:
-                            moves.append((i, j, i - color, j - 1))
-                        elif i - color == 0:  # Promotion
-                            moves.append((-4, -1, i, j))
-                            moves.append((-5, -1, i, j))
-                            moves.append((-6, -1, i, j))
-                            moves.append((-7, -1, i, j))
-                        elif i - color == 7:  # Promotion
-                            moves.append((-4, -1, i, j))
-                            moves.append((-5, -1, i, j))
-                            moves.append((-6, -1, i, j))
-                            moves.append((-7, -1, i, j))
-                    if forward and color == 1 and i == 6 and board[4 * 8 + j] == 0 and board[5 * 8 + j] == 0:
-                        moves.append((i, j, 4, j))
-                    if forward and color == -1 and i == 1 and board[3 * 8 + j] == 0 and board[2 * 8 + j == 0]:
-                        moves.append((i, j, 3, j))
-                    # En Passant
-                    if (last_move is not None and board[last_move[2] * 8 +
-                                                        last_move[3]] == -color and abs(
-                        last_move[2] - last_move[0]) == 2
-                            and i == last_move[2]):
-                        if j == last_move[3] + 1 and j < 7:
-                            moves.append((-2, 1, i, j))
-                        if j == last_move[3] - 1 and j > 0:
-                            moves.append((-2, -1, i, j))
+                forward = (i - color) % 8 == i - color
+                if forward and board[(i - color) * 8 + j] == 0:
+                    if i - color != 0 and i - color != 7:
+                        moves.append((i, j, i - color, j))
+                    elif i - color == 0:  # Promotion
+                        moves.append((-3, 2, i, j))
+                        moves.append((-3, 3, i, j))
+                        moves.append((-3, 4, i, j))
+                        moves.append((-3, 5, i, j))
+                    elif i - color == 7:  # Promotion
+                        moves.append((-3, -2, i, j))
+                        moves.append((-3, -3, i, j))
+                        moves.append((-3, -4, i, j))
+                        moves.append((-3, -5, i, j))
+                if forward and (j + 1) % 8 == j + 1 and board[(i - color) * 8 + (j + 1)] * color < 0:
+                    if i - color != 0 and i - color != 7:
+                        moves.append((i, j, i - color, j + 1))
+                    elif i - color == 0:  # Promotion
+                        moves.append((-4, 1, i, j))
+                        moves.append((-5, 1, i, j))
+                        moves.append((-6, 1, i, j))
+                        moves.append((-7, 1, i, j))
+                    elif i - color == 7:  # Promotion
+                        moves.append((-4, 1, i, j))
+                        moves.append((-5, 1, i, j))
+                        moves.append((-6, 1, i, j))
+                        moves.append((-7, 1, i, j))
+                if forward and (j - 1) % 8 == j - 1 and board[(i - color) * 8 + (j - 1)] * color < 0:
+                    if i - color != 0 and i - color != 7:
+                        moves.append((i, j, i - color, j - 1))
+                    elif i - color == 0:  # Promotion
+                        moves.append((-4, -1, i, j))
+                        moves.append((-5, -1, i, j))
+                        moves.append((-6, -1, i, j))
+                        moves.append((-7, -1, i, j))
+                    elif i - color == 7:  # Promotion
+                        moves.append((-4, -1, i, j))
+                        moves.append((-5, -1, i, j))
+                        moves.append((-6, -1, i, j))
+                        moves.append((-7, -1, i, j))
+                if forward and color == 1 and i == 6 and board[4 * 8 + j] == 0 and board[5 * 8 + j] == 0:
+                    moves.append((i, j, 4, j))
+                if forward and color == -1 and i == 1 and board[3 * 8 + j] == 0 and board[2 * 8 + j] == 0:
+                    moves.append((i, j, 3, j))
+                # En Passant
+                if (last_move is not None and board[last_move[2] * 8 + last_move[3]] == -color and abs(
+                        last_move[2] - last_move[0]) == 2 and i == last_move[2]):
+                    if j == last_move[3] + 1 and j < 7:
+                        moves.append((-2, 1, i, j))
+                    if j == last_move[3] - 1 and j > 0:
+                        moves.append((-2, -1, i, j))
         # if color == 1: move_lookup_white[hash_state] = moves
         # else: move_lookup_black[hash_state] = moves
         return moves

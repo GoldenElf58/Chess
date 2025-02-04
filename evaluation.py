@@ -110,25 +110,21 @@ position_values: dict[int, list[int]] = {
 }
 
 
-eval_lookup_white: dict[int, int] = {}
-eval_lookup_black: dict[int, int] = {}
+eval_lookup: dict[int, int] = {}
+
+transposition_table = {}
 
 
 def evaluate(game_state: GameState) -> int:
-    global eval_lookup_white, eval_lookup_black
+    global eval_lookup
     evaluation = 0
     hash_state = game_state.get_efficient_hashable_state()
-    if game_state.color == 1 and hash_state in eval_lookup_white:
-        return eval_lookup_white[hash_state]
-    elif hash_state in eval_lookup_black:
-        return eval_lookup_black[hash_state]
+    if hash_state in eval_lookup:
+        return eval_lookup[hash_state]
     for i, piece in enumerate(game_state.board):
             if piece != 0:
                 evaluation += piece_values[piece] + position_values[piece][i]
-    if game_state.color == 1:
-        eval_lookup_white[hash_state] = evaluation
-    else:
-        eval_lookup_black[hash_state] = evaluation
+    eval_lookup[hash_state] = evaluation
     return evaluation
 
 
@@ -136,21 +132,21 @@ def iterative_deepening(game_state: GameState, maximizing_player: bool, alloted_
     if depth >= 0:
         result = None
         for i in range(1, depth + 1):
-            result = minimax(game_state, depth, -(1 << 30), (1 << 30), maximizing_player)
-        return *result, depth
+            result = minimax_tt(game_state, i, -(1 << 30), (1 << 30), maximizing_player)
+        return result, depth
     t0 = time.time()
-    results:  list[tuple[int, tuple[int, int, int, int]]] = [minimax(game_state, 0, -(1 << 30), (1 << 30), maximizing_player)]
+    results:  list[tuple[int, tuple[int, int, int, int]]] = [minimax_tt(game_state, 0, -(1 << 30), (1 << 30), maximizing_player)]
     depth = 1
-    minimax_thread = threading.Thread(target=lambda: results.append(minimax(game_state, depth, -(1 << 30), (1 << 30), maximizing_player)))
+    minimax_thread = threading.Thread(target=lambda: results.append(minimax_tt(game_state, depth, -(1 << 30), (1 << 30), maximizing_player)))
     minimax_thread.start()
     while time.time() - t0 < alloted_time:
         depth += 1
         minimax_thread.join(alloted_time - (time.time() - t0))
         minimax_thread = threading.Thread(
-            target=lambda: results.append(minimax(game_state, depth, -(1 << 30), (1 << 30), maximizing_player)))
+            target=lambda: results.append(minimax_tt(game_state, depth, -(1 << 30), (1 << 30), maximizing_player)))
         minimax_thread.start()
     print(depth, len(results))
-    return *results[-1], len(results)
+    return results[-1], len(results)
 
 def minimax(game_state: GameState, depth: int, alpha: int, beta: int, maximizing_player: bool) -> tuple[
     int, tuple[int, int, int, int]]:
@@ -181,3 +177,86 @@ def minimax(game_state: GameState, depth: int, alpha: int, beta: int, maximizing
             break
 
     return best_eval, best_move
+
+def minimax_tt(game_state: GameState, depth: int, alpha: int, beta: int, maximizing_player: bool):
+    state_key = hash((tuple(game_state.board), depth, maximizing_player))
+    if state_key in transposition_table:
+        return transposition_table[state_key]
+    moves = game_state.get_moves()
+    new_game_states = {move: game_state.move(move) for move in moves}
+    evaluations = {move: evaluate(new_game_states[move]) for move in moves}  # Cache evaluations
+
+    # Move ordering: Sort moves by evaluation score (best first for maximizing, worst first for minimizing)
+    moves.sort(key=lambda move: evaluations[move], reverse=maximizing_player)
+
+    best_eval = -(1 << 30) if maximizing_player else (1 << 30)  # Large negative/positive integers
+    best_move = ()
+
+    for move in moves:
+        evaluation = evaluations[move] if depth == 0 else \
+            minimax_tt(new_game_states[move], depth - 1, alpha, beta, not maximizing_player)[0]
+
+        if maximizing_player:
+            if evaluation > best_eval:
+                best_eval, best_move = evaluation, move
+                alpha = max(alpha, evaluation)
+        else:
+            if evaluation < best_eval:
+                best_eval, best_move = evaluation, move
+                beta = min(beta, evaluation)
+
+        if beta <= alpha:  # Alpha-beta pruning
+            break
+
+    transposition_table[state_key] = best_eval, best_move
+    return best_eval, best_move
+
+# Global transposition table
+# transposition_table: dict[tuple[int, int, bool], tuple[int, tuple[int, int, int, int]]] = {}
+
+# def minimax_tt(game_state: GameState, depth: int, alpha: int, beta: int, maximizing_player: bool) -> tuple[int, tuple[int, int, int, int]]:
+#     # Compute a hash for the board; here we assume game_state.board is hashable.
+#     state_key = (hash(tuple(game_state.board)), depth, maximizing_player)
+#     if state_key in transposition_table:
+#         return transposition_table[state_key]
+#
+#     # Terminal or leaf node check
+#     if depth == 0 or game_state.is_terminal():
+#         eval_val = evaluate(game_state)
+#         return eval_val, ()
+#
+#     moves = game_state.get_moves()
+#     best_move = ()
+#     if maximizing_player:
+#         best_eval = -10**9
+#         for move in moves:
+#             child_state = game_state.move(move)
+#             eval_val, _ = minimax_tt(child_state, depth - 1, alpha, beta, False)
+#             if eval_val > best_eval:
+#                 best_eval, best_move = eval_val, move
+#             alpha = max(alpha, best_eval)
+#             if beta <= alpha:
+#                 break
+#     else:
+#         best_eval = 10**9
+#         for move in moves:
+#             child_state = game_state.move(move)
+#             eval_val, _ = minimax_tt(child_state, depth - 1, alpha, beta, True)
+#             if eval_val < best_eval:
+#                 best_eval, best_move = eval_val, move
+#             beta = min(beta, best_eval)
+#             if beta <= alpha:
+#                 break
+#
+#     transposition_table[state_key] = (best_eval, best_move)
+#     return best_eval, best_move
+#
+# def iterative_deepening(game_state: GameState, maximizing_player: bool, alloted_time: float = 3) -> tuple[int, tuple[int, int, int, int]]:
+#     t0 = time.time()
+#     best_eval, best_move = evaluate(game_state), ()
+#     depth = 1
+#     while time.time() - t0 < alloted_time:
+#         eval_val, move = minimax_tt(game_state, depth, -10**9, 10**9, maximizing_player)
+#         best_eval, best_move = eval_val, move
+#         depth += 1
+#     return best_eval, best_move
