@@ -41,7 +41,7 @@ def display_board(screen, board, selected_square=(), offset=0):
                 screen.blit(images[board[i * 8 + j] + 6], (j * 60 + offset, i * 60))
 
 
-def display_info(screen: Surface, game_state: GameState, last_eval, font: Font, t0):
+def display_info(screen: Surface, game_state: GameState, last_eval, font: Font, t0, depths=None):
     info_x = 667
     info_rect = pygame.Rect(info_x, 0, screen.get_width() - info_x, screen.get_height())
 
@@ -56,6 +56,11 @@ def display_info(screen: Surface, game_state: GameState, last_eval, font: Font, 
     screen.blit(eval_surf, (info_rect.x + 10, 10))
     screen.blit(turn_surf, (info_rect.x + 10, 40))
     screen.blit(time_surf, (info_rect.x + 10, 70))
+
+    if depths is not None and len(depths) != 0:
+        depths_text = f"Depth Average: {sum(depths) / len(depths):.1f}"
+        depths_surf = font.render(depths_text, True, "white")
+        screen.blit(depths_surf, (info_rect.x + 10, 100))
 
 
 # Define a simple Button class.
@@ -159,6 +164,8 @@ def game_loop():
     computer_thread = None
     computer_move_result = []  # Container to hold the minimax result
     last_eval = 0
+    depths = []
+    t0 = time.time()
 
     running = True
     while running:
@@ -203,8 +210,10 @@ def game_loop():
                 computer_thread.start()
             elif not computer_thread.is_alive():
                 if computer_move_result:
-                    last_eval, best_move = computer_move_result.pop(0)
+                    (last_eval, best_move), depth = computer_move_result.pop(0), 4
+                    depths.append(depth)
                     game_state = game_state.move(best_move)
+                    if game_state.turn == 10: print(time.time() - t0)
                 computer_thread = None
 
         screen.fill(0)
@@ -215,7 +224,7 @@ def game_loop():
         if game_mode == GameMode.MENU:
             for btn in buttons: btn.draw(screen, font)
         else:
-            display_info(screen, game_state, last_eval, font, t0)
+            display_info(screen, game_state, last_eval, font, t0, depths=depths)
 
         pygame.display.flip()
 
