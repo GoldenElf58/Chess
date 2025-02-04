@@ -108,7 +108,7 @@ position_values: dict[int, list[int]] = {
     -6: mirror(KingStart_flat),
 }
 
-class Bot:
+class OldBot:
     def __init__(self, transposition_table=None, eval_lookup=None):
         self.transposition_table = transposition_table if transposition_table is not None else {}
         self.eval_lookup = eval_lookup if eval_lookup is not None else {}
@@ -140,9 +140,8 @@ class Bot:
                 result = self.minimax_tt(game_state, i, -(1 << 40), (1 << 40), maximizing_player)
             return result, depth
         t0 = time.time()
-        results: list[tuple[int, tuple[int, int, int, int]]] = [
-            self.minimax_tt(game_state, 0, -(1 << 40), (1 << 40), maximizing_player)]
-        depth = 1
+        results: list[tuple[int, tuple[int, int, int, int]]] = [(0, game_state.get_moves()[0])]
+        depth = 0
         minimax_thread = threading.Thread(
             target=lambda: results.append(self.minimax_tt(game_state, depth, -(1 << 40), (1 << 40), maximizing_player)))
         minimax_thread.start()
@@ -150,9 +149,10 @@ class Bot:
             depth += 1
             minimax_thread.join(allotted_time - (time.time() - t0))
             minimax_thread = threading.Thread(
-                target=lambda: results.append(self.minimax_tt(game_state, depth, -(1 << 40), (1 << 40), maximizing_player)))
+                target=lambda: results.append(
+                    self.minimax_tt(game_state, depth, -(1 << 40), (1 << 40), maximizing_player)))
             if time.time() - t0 < allotted_time: minimax_thread.start()
-        print(len(results))
+        # print(len(results))
         return results[-1], len(results)
 
 

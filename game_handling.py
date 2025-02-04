@@ -8,8 +8,10 @@ import sys
 import threading
 import time
 
-from evaluation import Bot
-from evaluation_old import OldBot
+import evaluationv2_capturecheck
+import evaluationv2_extension
+from evaluationv1 import OldBot
+from fen_utils import game_state_from_line
 from game import GameState
 
 images = [
@@ -89,6 +91,7 @@ class GameMode(Enum):
     PLAY_WHITE = auto()
     PLAY_BLACK = auto()
     AI_VS_AI = auto()
+    DEEP_TEST = auto()
 
 
 def find_move(user_src: tuple[int, int], user_dest: tuple[int, int], legal_moves: list[tuple[int, int, int, int]],
@@ -157,9 +160,10 @@ def game_loop():
 
     # Create the three buttons.
     buttons = [
-        Button((43, 190, 100, 20), "Play White", "gray", "lightgray", (0, 0, 0)),
-        Button((43, 230, 100, 20), "Play Black", "gray", "lightgray", (0, 0, 0)),
-        Button((43, 270, 100, 20), "AI vs AI", "gray", "lightgray", (0, 0, 0))
+        Button((43, 170, 100, 20), "Play White", "gray", "lightgray", (0, 0, 0)),
+        Button((43, 210, 100, 20), "Play Black", "gray", "lightgray", (0, 0, 0)),
+        Button((43, 250, 100, 20), "AI vs AI", "gray", "lightgray", (0, 0, 0)),
+        Button((43, 290, 100, 20), "Deep Test", "gray", "lightgray", (0, 0, 0))
     ]
 
     computer_thread = None
@@ -168,7 +172,13 @@ def game_loop():
     depths = []
     t0 = time.time()
 
-    bots = (Bot(), OldBot())
+    line = 1
+    num_lines = 500
+    reverse = False
+    bots = (evaluationv2_extension.Bot(default_capture_depth=1), evaluationv2_capturecheck.Bot(default_capture_depth=1))
+    wins = 0
+    draws = 0
+    losses = 0
 
     running = True
     while running:
@@ -186,17 +196,26 @@ def game_loop():
                     bots[0].clear_cache()
                     bots[1].clear_cache()
                 elif buttons[1].check_hover(pos):
+                    reverse = False
                     game_mode = game_mode.PLAY_BLACK
                     game_state = GameState()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
                 elif buttons[2].check_hover(pos):
+                    reverse = False
                     game_mode = game_mode.AI_VS_AI
                     game_state = GameState()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
+                elif buttons[3].check_hover(pos):
+                    game_mode = game_mode.DEEP_TEST
+                    line = 1
+                    reverse = False
+                    game_state = game_state_from_line(line, "fens.txt")
+                    bots[0].clear_cache()
+                    bots[1].clear_cache()
 
-            if game_mode != GameMode.MENU and event.type == pygame.MOUSEBUTTONDOWN:
+            if game_mode in {GameMode.PLAY_WHITE, GameMode.PLAY_BLACK} and event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = event.pos
                 col, row = (x - offset) // 60, y // 60
                 # Store selected square as (col, row)
@@ -224,11 +243,11 @@ def game_loop():
         if game_mode != GameMode.MENU:
             if computer_thread is None:
                 computer_move_result.clear()
-                if game_mode == GameMode.AI_VS_AI or (game_mode == GameMode.PLAY_WHITE and game_state.color == -1) or (
+                if game_mode in {GameMode.AI_VS_AI, GameMode.DEEP_TEST} or (
+                        game_mode == GameMode.PLAY_WHITE and game_state.color == -1) or (
                         game_mode == GameMode.PLAY_BLACK and game_state.color == 1):
                     computer_thread = threading.Thread(target=lambda: computer_move_result.append(
-                        bots[0 if game_state.color == 1 else 1].iterative_deepening(game_state, game_state.color == 1,
-                                                                                    1, depth=4)))
+                        bots[0 if (game_state.color == 1) != reverse else 1].generate_move(game_state, .1)))
                     computer_thread.start()
             elif not computer_thread.is_alive():
                 if computer_move_result:
@@ -241,7 +260,25 @@ def game_loop():
         screen.fill(0)
         display_board(screen, game_state.board, selected_square, offset)
 
-        if game_state.get_winner() is not None: game_mode = GameMode.MENU
+        if (winner := game_state.get_winner()) is not None:
+            if game_mode != GameMode.DEEP_TEST:
+                game_mode = GameMode.MENU
+            elif game_mode == GameMode.DEEP_TEST:
+                if winner == 0:
+                    draws += 1
+                elif (winner == 1 and not reverse) or (winner == -1 and reverse):
+                    wins += 1
+                elif (winner == -1 and not reverse) or (winner == 1 and reverse):
+                    losses += 1
+                if reverse:
+                    line += 1
+                reverse = not reverse
+                if line > num_lines and reverse:
+                    game_mode = GameMode.MENU
+                game_state = game_state_from_line(line, "fens.txt")
+                bots[0].clear_cache()
+                bots[1].clear_cache()
+                print(f"Wins: {wins}, Draws: {draws}, Losses: {losses}")
 
         if game_mode == GameMode.MENU:
             for btn in buttons: btn.draw(screen, font)

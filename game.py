@@ -1,15 +1,17 @@
 import copy
 
-from utils import flatten, split_table
+from utils import split_table
 
-start_board: list[list[int]] = [[-4, -2, -3, -5, -6, -3, -2, -4],
-                                [-1, -1, -1, -1, -1, -1, -1, -1],
-                                [0, 0, 0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0, 0, 0],
-                                [1, 1, 1, 1, 1, 1, 1, 1],
-                                [4, 2, 3, 5, 6, 3, 2, 4]]
+start_board = [
+    -4, -2, -3, -5, -6, -3, -2, -4,
+    -1, -1, -1, -1, -1, -1, -1, -1,
+     0,  0,  0,  0,  0,  0,  0,  0,
+     0,  0,  0,  0,  0,  0,  0,  0,
+     0,  0,  0,  0,  0,  0,  0,  0,
+     0,  0,  0,  0,  0,  0,  0,  0,
+     1,  1,  1,  1,  1,  1,  1,  1,
+     4,  2,  3,  5,  6,  3,  2,  4
+]
 
 move_lookup_white: dict[int, list[tuple[int, int, int, int]]] = {}
 move_lookup_black: dict[int, list[tuple[int, int, int, int]]] = {}
@@ -39,7 +41,7 @@ class GameState:
             The color of the current player (1 for white, -1 for black). Defaults to 1.
         """
         if board is None:
-            board = flatten(start_board)
+            board = start_board
         self.board: list[int] = board
         self.color = color
         self.white_queen: bool = white_queen
@@ -296,6 +298,21 @@ class GameState:
                         moves.append((-2, -1, i, j))
         return moves
 
+    def are_captures(self):
+        moves = self.get_moves()
+        empty_count = 0
+        for piece in self.board:
+            if piece == 0:
+                empty_count += 1
+        current_empty_count = 0
+        for move in moves:
+            for piece in self.move(move).board:
+                if piece == 0:
+                    current_empty_count += 1
+            if current_empty_count != empty_count:
+                return True
+        return False
+
     def move(self, move: tuple[int, int, int, int]) -> 'GameState':
         """
         Make a move on the board.
@@ -398,7 +415,7 @@ class GameState:
             return 1
         elif black and not white:
             return -1
-        elif black and white:
+        elif (black and white) or self.draw:
             return 0
         return None
 

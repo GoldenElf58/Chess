@@ -108,13 +108,15 @@ position_values: dict[int, list[int]] = {
     -6: mirror(KingStart_flat),
 }
 
-class OldBot:
-    def __init__(self, transposition_table=None, eval_lookup=None):
+
+class Bot:
+    def __init__(self, transposition_table=None, eval_lookup=None, default_capture_depth=1):
         self.transposition_table = transposition_table if transposition_table is not None else {}
         self.eval_lookup = eval_lookup if eval_lookup is not None else {}
+        self.default_capture_depth = default_capture_depth
 
     def generate_move(self, game_state, allotted_time=3, depth=-1):
-        return self.iterative_deepening(game_state, game_state.color==1, allotted_time=allotted_time, depth=depth)
+        return self.iterative_deepening(game_state, game_state.color == 1, allotted_time=allotted_time, depth=depth)
 
     def clear_cache(self):
         self.transposition_table.clear()
@@ -132,7 +134,6 @@ class OldBot:
         self.eval_lookup[hash_state] = evaluation
         return evaluation
 
-
     def iterative_deepening(self, game_state: GameState, maximizing_player: bool, allotted_time: float = 3, depth=-1):
         if depth >= 0:
             result = None
@@ -140,9 +141,8 @@ class OldBot:
                 result = self.minimax_tt(game_state, i, -(1 << 40), (1 << 40), maximizing_player)
             return result, depth
         t0 = time.time()
-        results: list[tuple[int, tuple[int, int, int, int]]] = [
-            self.minimax_tt(game_state, 0, -(1 << 40), (1 << 40), maximizing_player)]
-        depth = 1
+        results: list[tuple[int, tuple[int, int, int, int]]] = [(0, game_state.get_moves()[0])]
+        depth = 0
         minimax_thread = threading.Thread(
             target=lambda: results.append(self.minimax_tt(game_state, depth, -(1 << 40), (1 << 40), maximizing_player)))
         minimax_thread.start()
@@ -150,32 +150,42 @@ class OldBot:
             depth += 1
             minimax_thread.join(allotted_time - (time.time() - t0))
             minimax_thread = threading.Thread(
-                target=lambda: results.append(self.minimax_tt(game_state, depth, -(1 << 40), (1 << 40), maximizing_player)))
+                target=lambda: results.append(
+                    self.minimax_tt(game_state, depth, -(1 << 40), (1 << 40), maximizing_player)))
             if time.time() - t0 < allotted_time: minimax_thread.start()
-        print(len(results))
+        # print(len(results))
         return results[-1], len(results)
 
-
-    def minimax_tt(self, game_state: GameState, depth: int, alpha: int, beta: int, maximizing_player: bool):
+    def minimax_tt(self, game_state: GameState, depth: int, alpha: int, beta: int, maximizing_player: bool,
+                   capture_depth: int = None, extension: int = 0, parent_eval=None):
+        my_eval = self.evaluate(game_state)
+        if capture_depth is None:
+            capture_depth = self.default_capture_depth
+        if depth + extension <= 0 and not game_state.are_captures():
+            return my_eval, game_state.last_move
         state_key = hash((tuple(game_state.board),
-                          ((game_state.color == 1) << 4) | (game_state.white_queen << 3) | (game_state.white_king << 2) | (
+                          ((game_state.color == 1) << 4) | (game_state.white_queen << 3) | (
+                                      game_state.white_king << 2) | (
                                   game_state.black_queen << 1 | game_state.black_king) | (
-                                  (depth | (maximizing_player << 10)) << 5)))
+                                  ((depth + capture_depth) | (maximizing_player << 10)) << 5)))
         if state_key in self.transposition_table:
             return self.transposition_table[state_key]
         moves = game_state.get_moves()
         new_game_states = {move: game_state.move(move) for move in moves}
         evaluations = {move: self.evaluate(new_game_states[move]) for move in moves}  # Cache evaluations
-
         # Move ordering: Sort moves by evaluation score (best first for maximizing, worst first for minimizing)
         moves.sort(key=lambda move: evaluations[move], reverse=maximizing_player)
 
         best_eval = -(1 << 40) if maximizing_player else (1 << 40)  # Large negative/positive integers
         best_move = ()
 
+        if parent_eval is not None and abs(parent_eval - my_eval) > 1000:
+            extension += 1
+
         for move in moves:
-            evaluation = evaluations[move] if depth == 0 else \
-                self.minimax_tt(new_game_states[move], depth - 1, alpha, beta, not maximizing_player)[0]
+            evaluation = evaluations[move] if depth + extension == 0 - capture_depth else \
+                self.minimax_tt(new_game_states[move], depth - 1, alpha, beta, not maximizing_player, capture_depth,
+                                parent_eval=my_eval, extension=extension)[0]
 
             if maximizing_player:
                 if evaluation > best_eval:
