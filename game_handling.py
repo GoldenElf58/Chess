@@ -8,7 +8,7 @@ import sys
 import threading
 import time
 
-from evaluation import evaluate, iterative_deepening
+from evaluation import Bot
 from game import GameState
 
 images = [
@@ -167,6 +167,8 @@ def game_loop():
     depths = []
     t0 = time.time()
 
+    bots = (Bot(), Bot())
+
     running = True
     while running:
         clock.tick(60)
@@ -180,12 +182,18 @@ def game_loop():
                 if buttons[0].check_hover(pos):
                     game_mode = game_mode.PLAY_WHITE
                     game_state = GameState()
-                if buttons[1].check_hover(pos):
+                    bots[0].clear_cache()
+                    bots[1].clear_cache()
+                elif buttons[1].check_hover(pos):
                     game_mode = game_mode.PLAY_BLACK
                     game_state = GameState()
-                if buttons[2].check_hover(pos):
+                    bots[0].clear_cache()
+                    bots[1].clear_cache()
+                elif buttons[2].check_hover(pos):
                     game_mode = game_mode.AI_VS_AI
                     game_state = GameState()
+                    bots[0].clear_cache()
+                    bots[1].clear_cache()
 
             if game_mode != GameMode.MENU and event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = event.pos
@@ -193,8 +201,10 @@ def game_loop():
                 # Store selected square as (col, row)
                 if selected_square is None:
                     # Only select a piece if it belongs to the human.
-                    if ((game_state.board[row * 8 + col] > 0 and game_state.color == 1 and game_mode == GameMode.PLAY_WHITE)
-                            or (game_state.board[row * 8 + col] < 0 and game_state.color == -1 and game_mode == GameMode.PLAY_BLACK)):
+                    if ((game_state.board[
+                             row * 8 + col] > 0 and game_state.color == 1 and game_mode == GameMode.PLAY_WHITE)
+                            or (game_state.board[
+                                    row * 8 + col] < 0 and game_state.color == -1 and game_mode == GameMode.PLAY_BLACK)):
                         selected_square = (col, row)
                 else:
                     # Convert selected_square (col, row) to (row, col)
@@ -205,12 +215,11 @@ def game_loop():
                     if chosen_move is not None:
                         game_state = game_state.move(chosen_move)
                     selected_square = None
-                    if ((game_state.board[row * 8 + col] > 0 and game_state.color == 1 and game_mode == GameMode.PLAY_WHITE)
-                        or (game_state.board[row * 8 + col] < 0 and game_state.color == -1 and game_mode == GameMode.PLAY_BLACK)):
+                    if ((game_state.board[
+                             row * 8 + col] > 0 and game_state.color == 1 and game_mode == GameMode.PLAY_WHITE)
+                            or (game_state.board[
+                                    row * 8 + col] < 0 and game_state.color == -1 and game_mode == GameMode.PLAY_BLACK)):
                         selected_square = user_dest[1], user_dest[0]
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_e:
-                    print(evaluate(game_state))
 
         if game_mode != GameMode.MENU:
             if computer_thread is None:
@@ -218,7 +227,8 @@ def game_loop():
                 if game_mode == GameMode.AI_VS_AI or (game_mode == GameMode.PLAY_WHITE and game_state.color == -1) or (
                         game_mode == GameMode.PLAY_BLACK and game_state.color == 1):
                     computer_thread = threading.Thread(target=lambda: computer_move_result.append(
-                        iterative_deepening(game_state, game_state.color == 1, 1, depth=4)))
+                        bots[0 if game_state.color == 1 else 1].iterative_deepening(game_state, game_state.color == 1,
+                                                                                    1, depth=4)))
                     computer_thread.start()
             elif not computer_thread.is_alive():
                 if computer_move_result:

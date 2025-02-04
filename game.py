@@ -387,6 +387,7 @@ class GameState:
             if move[2] == 7 and move[3] == 4:
                 white_queen = False
                 white_king = False
+
         new_board[move[2] * 8 + move[3]] = new_board[move[0] * 8 + move[1]]
         new_board[move[0] * 8 + move[1]] = 0
         return GameState(new_board, white_queen, white_king, black_queen, black_king, last_move=move, color=-self.color,
