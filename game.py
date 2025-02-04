@@ -56,8 +56,7 @@ class GameState:
         return board_tuple, self.color, self.white_queen, self.white_king, self.black_queen, self.black_king, self.last_move
 
     def get_efficient_hashable_state_hashed(self):
-        return hash((tuple(self.board), (((self.color == 1) << 4) | (self.white_queen << 3) | (self.white_king << 2) | (
-                    self.black_queen << 1) | self.black_king), self.last_move))
+        return hash(self.get_efficient_hashable_state())
 
     def get_efficient_hashable_state(self):
         return tuple(self.board), (((self.color == 1) << 4) | (self.white_queen << 3) | (self.white_king << 2) | (

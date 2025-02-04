@@ -8,7 +8,7 @@ import sys
 import threading
 import time
 
-from evaluation import evaluate, minimax, iterative_deepening, minimax_tt
+from evaluation import evaluate, iterative_deepening
 from game import GameState
 
 images = [
