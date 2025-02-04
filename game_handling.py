@@ -215,10 +215,9 @@ def game_loop():
                     if chosen_move is not None:
                         game_state = game_state.move(chosen_move)
                     selected_square = None
-                    if ((game_state.board[
-                             row * 8 + col] > 0 and game_state.color == 1 and game_mode == GameMode.PLAY_WHITE)
-                            or (game_state.board[
-                                    row * 8 + col] < 0 and game_state.color == -1 and game_mode == GameMode.PLAY_BLACK)):
+                    if ((game_state.board[row * 8 + col] > 0 and game_state.color == 1 and
+                         game_mode == GameMode.PLAY_WHITE) or (game_state.board[row * 8 + col] < 0 and
+                                                               game_state.color == -1 and game_mode == GameMode.PLAY_BLACK)):
                         selected_square = user_dest[1], user_dest[0]
 
         if game_mode != GameMode.MENU:
