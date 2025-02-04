@@ -9,6 +9,7 @@ import threading
 import time
 
 from evaluation import Bot
+from evaluation_old import OldBot
 from game import GameState
 
 images = [
@@ -167,7 +168,7 @@ def game_loop():
     depths = []
     t0 = time.time()
 
-    bots = (Bot(), Bot())
+    bots = (Bot(), OldBot())
 
     running = True
     while running:

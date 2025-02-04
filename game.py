@@ -73,7 +73,6 @@ class GameState:
     @staticmethod
     def get_moves_cached(board, color, white_queen, white_king, black_queen, black_king, last_move) -> list[
         tuple[int, int, int, int]]:
-        # global move_lookup_white, move_lookup_black
         """
         Get all the possible moves for the current player.
 
@@ -99,10 +98,6 @@ class GameState:
         list[tuple[int, int, int, int]]
             A list of tuples, each representing a move in the format (start_row, start_col, end_row, end_col).
         """
-        # if color == 1 and hash_state in move_lookup_white:
-        #     return move_lookup_white[hash_state]
-        # elif hash_state in move_lookup_black:
-        #     return move_lookup_black[hash_state]
         moves: list[tuple[int, int, int, int]] = []
         for h, piece in enumerate(board):
             i, j = h // 8, h % 8
@@ -299,8 +294,6 @@ class GameState:
                         moves.append((-2, 1, i, j))
                     if j == last_move[3] - 1 and j > 0:
                         moves.append((-2, -1, i, j))
-        # if color == 1: move_lookup_white[hash_state] = moves
-        # else: move_lookup_black[hash_state] = moves
         return moves
 
     def move(self, move: tuple[int, int, int, int]) -> 'GameState':
