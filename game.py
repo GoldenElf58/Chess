@@ -53,11 +53,15 @@ class GameState:
     def get_hashable_state(self):
         """ Convert the game state into a hashable format for caching. """
         board_tuple = tuple(self.board)  # Convert board to tuple
-        last_move_tuple = tuple(self.last_move) if self.last_move else None  # Ensure last move is hashable
-        return board_tuple, self.color, self.white_queen, self.white_king, self.black_queen, self.black_king, last_move_tuple
+        return board_tuple, self.color, self.white_queen, self.white_king, self.black_queen, self.black_king, self.last_move
+
+    def get_efficient_hashable_state_hashed(self):
+        return hash((tuple(self.board), (((self.color == 1) << 4) | (self.white_queen << 3) | (self.white_king << 2) | (
+                    self.black_queen << 1) | self.black_king), self.last_move))
 
     def get_efficient_hashable_state(self):
-        return hash(self.get_hashable_state())
+        return tuple(self.board), (((self.color == 1) << 4) | (self.white_queen << 3) | (self.white_king << 2) | (
+                    self.black_queen << 1) | self.black_king), self.last_move
 
     def get_moves(self):
         """

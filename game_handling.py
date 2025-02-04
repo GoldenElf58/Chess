@@ -218,7 +218,7 @@ def game_loop():
                 if game_mode == GameMode.AI_VS_AI or (game_mode == GameMode.PLAY_WHITE and game_state.color == -1) or (
                         game_mode == GameMode.PLAY_BLACK and game_state.color == 1):
                     computer_thread = threading.Thread(target=lambda: computer_move_result.append(
-                        iterative_deepening(game_state, game_state.color == 1, 1)))
+                        iterative_deepening(game_state, game_state.color == 1, 1, depth=4)))
                     computer_thread.start()
             elif not computer_thread.is_alive():
                 if computer_move_result:
