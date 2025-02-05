@@ -108,7 +108,7 @@ position_values: dict[int, list[int]] = {
     -6: mirror(KingStart_flat),
 }
 
-class OldBot:
+class Bot:
     def __init__(self, transposition_table=None, eval_lookup=None):
         self.transposition_table = transposition_table if transposition_table is not None else {}
         self.eval_lookup = eval_lookup if eval_lookup is not None else {}

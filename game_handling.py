@@ -10,7 +10,6 @@ import time
 
 import evaluationv2_capturecheck
 import evaluationv2_extension
-from evaluationv1 import OldBot
 from fen_utils import game_state_from_line
 from game import GameState
 
