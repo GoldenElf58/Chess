@@ -347,9 +347,9 @@ class GameState:
                 black_queen = False
                 black_king = False
             new_board[move[2] * 8 + move[3]] = 0
-            new_board[move[2] * 8 + 0 if move[1] == -1 else 7] = 0
+            new_board[move[2] * 8 + (0 if move[1] == -1 else 7)] = 0
             new_board[move[2] * 8 + 4 + move[1] * 2] = self.board[move[2] * 8 + move[3]]
-            new_board[move[2] * 8 + 4 + move[1]] = self.board[move[2] * 8 + 0 if move[1] == -1 else 7]
+            new_board[move[2] * 8 + 4 + move[1]] = self.board[move[2] * 8 + (0 if move[1] == -1 else 7)]
             return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king,
                              color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn)
 
