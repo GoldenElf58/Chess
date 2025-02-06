@@ -8,8 +8,8 @@ import sys
 import threading
 import time
 
-import evaluationv2_capturecheck
-import evaluationv2_extension
+import evaluationv2_extension_1
+import evaluationv2_extension_0
 from fen_utils import game_state_from_line
 from game import GameState
 
@@ -185,7 +185,7 @@ def game_loop():
     line = 1
     num_lines = 500
     reverse = False
-    bots = (evaluationv2_extension.Bot(default_capture_depth=1), evaluationv2_capturecheck.Bot(default_capture_depth=1))
+    bots = (evaluationv2_extension_1.Bot(default_capture_depth=1), evaluationv2_extension_0.Bot(default_capture_depth=1))
     wins = 0
     draws = 0
     losses = 0
@@ -219,7 +219,7 @@ def game_loop():
                     bots[1].clear_cache()
                 elif buttons[3].check_hover(pos):
                     game_mode = game_mode.DEEP_TEST
-                    line = 145
+                    line = 1
                     reverse = False
                     game_state = game_state_from_line(line, "fens.txt")
                     bots[0].clear_cache()
