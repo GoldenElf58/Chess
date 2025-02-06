@@ -43,7 +43,7 @@ def display_board(screen, board, selected_square=(), offset=0):
                 screen.blit(images[board[i * 8 + j] + 6], (j * 60 + offset, i * 60))
 
 
-def display_info(screen: Surface, game_state: GameState, last_eval, font: Font, t0, game_mode, depths=None):
+def display_info(screen: Surface, game_state: GameState, last_eval, font: Font, t0, game_mode, wins, draws, losses, depths=None):
     info_x = 667
     info_rect = pygame.Rect(info_x, 0, screen.get_width() - info_x, screen.get_height())
 
@@ -63,6 +63,17 @@ def display_info(screen: Surface, game_state: GameState, last_eval, font: Font, 
         depths_text = f"Depth Average: {sum(depths) / len(depths):.1f}"
         depths_surf = font.render(depths_text, True, "white")
         screen.blit(depths_surf, (info_rect.x + 10, 100))
+
+    if game_mode == GameMode.DEEP_TEST:
+        wins_text = f"Wins: {wins}"
+        draws_text = f"Draws: {draws}"
+        losses_text = f"Losses: {losses}"
+        wins__surf = font.render(wins_text, True, "white")
+        draws_surf = font.render(draws_text, True, "white")
+        losses_surf = font.render(losses_text, True, "white")
+        screen.blit(wins__surf, (info_rect.x + 10, 130))
+        screen.blit(draws_surf, (info_rect.x + 10, 160))
+        screen.blit(losses_surf, (info_rect.x + 10, 190))
 
 
 # Define a simple Button class.
@@ -174,7 +185,7 @@ def game_loop():
     line = 1
     num_lines = 500
     reverse = False
-    bots = (evaluationv2_extension.Bot(default_capture_depth=1), evaluationv2_extension.Bot(default_capture_depth=1))
+    bots = (evaluationv2_extension.Bot(default_capture_depth=1), evaluationv2_capturecheck.Bot(default_capture_depth=1))
     wins = 0
     draws = 0
     losses = 0
@@ -246,7 +257,7 @@ def game_loop():
                         game_mode == GameMode.PLAY_WHITE and game_state.color == -1) or (
                         game_mode == GameMode.PLAY_BLACK and game_state.color == 1):
                     computer_thread = threading.Thread(target=lambda: computer_move_result.append(
-                        bots[0 if (game_state.color == 1) != reverse else 1].generate_move(game_state, 1)))
+                        bots[0 if (game_state.color == 1) != reverse else 1].generate_move(game_state, .1)))
                     computer_thread.start()
             elif not computer_thread.is_alive():
                 if computer_move_result:
@@ -283,7 +294,7 @@ def game_loop():
         if game_mode == GameMode.MENU:
             for btn in buttons: btn.draw(screen, font)
         else:
-            display_info(screen, game_state, last_eval, font, t0, game_mode, depths=depths)
+            display_info(screen, game_state, last_eval, font, t0, game_mode, wins, draws, losses, depths=depths)
 
         pygame.display.flip()
 

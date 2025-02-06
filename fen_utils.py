@@ -84,7 +84,7 @@ def game_state_from_fen(fen: str) -> GameState:
         last_move = None
 
     return GameState(
-        board=board,
+        board=tuple(board),
         white_queen=white_queen,
         white_king=white_king,
         black_queen=black_queen,
