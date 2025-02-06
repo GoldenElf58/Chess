@@ -43,7 +43,7 @@ def display_board(screen, board, selected_square=(), offset=0):
                 screen.blit(images[board[i * 8 + j] + 6], (j * 60 + offset, i * 60))
 
 
-def display_info(screen: Surface, game_state: GameState, last_eval, font: Font, t0, depths=None):
+def display_info(screen: Surface, game_state: GameState, last_eval, font: Font, t0, game_mode, depths=None):
     info_x = 667
     info_rect = pygame.Rect(info_x, 0, screen.get_width() - info_x, screen.get_height())
 
@@ -174,7 +174,7 @@ def game_loop():
     line = 1
     num_lines = 500
     reverse = False
-    bots = (evaluationv2_extension.Bot(default_capture_depth=1), evaluationv2_capturecheck.Bot(default_capture_depth=1))
+    bots = (evaluationv2_extension.Bot(default_capture_depth=1), evaluationv2_extension.Bot(default_capture_depth=1))
     wins = 0
     draws = 0
     losses = 0
@@ -208,7 +208,7 @@ def game_loop():
                     bots[1].clear_cache()
                 elif buttons[3].check_hover(pos):
                     game_mode = game_mode.DEEP_TEST
-                    line = 1
+                    line = 145
                     reverse = False
                     game_state = game_state_from_line(line, "fens.txt")
                     bots[0].clear_cache()
@@ -246,7 +246,7 @@ def game_loop():
                         game_mode == GameMode.PLAY_WHITE and game_state.color == -1) or (
                         game_mode == GameMode.PLAY_BLACK and game_state.color == 1):
                     computer_thread = threading.Thread(target=lambda: computer_move_result.append(
-                        bots[0 if (game_state.color == 1) != reverse else 1].generate_move(game_state, .1)))
+                        bots[0 if (game_state.color == 1) != reverse else 1].generate_move(game_state, 1)))
                     computer_thread.start()
             elif not computer_thread.is_alive():
                 if computer_move_result:
@@ -259,8 +259,9 @@ def game_loop():
         screen.fill(0)
         display_board(screen, game_state.board, selected_square, offset)
 
-        if (winner := game_state.get_winner()) is not None:
+        if (winner := game_state.get_winner()) is not None and game_mode != GameMode.MENU:
             if game_mode != GameMode.DEEP_TEST:
+                print(winner, game_state.moves_since_pawn, game_state.draw, game_state.previous_position_count)
                 game_mode = GameMode.MENU
             elif game_mode == GameMode.DEEP_TEST:
                 if winner == 0:
@@ -282,7 +283,7 @@ def game_loop():
         if game_mode == GameMode.MENU:
             for btn in buttons: btn.draw(screen, font)
         else:
-            display_info(screen, game_state, last_eval, font, t0, depths=depths)
+            display_info(screen, game_state, last_eval, font, t0, game_mode, depths=depths)
 
         pygame.display.flip()
 

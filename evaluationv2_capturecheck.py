@@ -162,7 +162,7 @@ class Bot:
         my_eval = self.evaluate(game_state)
         if capture_depth is None:
             capture_depth = self.default_capture_depth
-        if depth + extension <= 0 and not game_state.are_captures():
+        if game_state.get_winner() is not None or (depth + extension <= 0 and not game_state.are_captures()):
             return my_eval, game_state.last_move
         state_key = hash((tuple(game_state.board),
                           ((game_state.color == 1) << 4) | (game_state.white_queen << 3) | (
