@@ -108,21 +108,25 @@ position_values: dict[int, list[int]] = {
     -6: mirror(KingStart_flat),
 }
 
+
 class Bot:
     def __init__(self, transposition_table=None, eval_lookup=None):
         self.transposition_table = transposition_table if transposition_table is not None else {}
         self.eval_lookup = eval_lookup if eval_lookup is not None else {}
 
     def generate_move(self, game_state, allotted_time=3, depth=-1):
-        return self.iterative_deepening(game_state, game_state.color==1, allotted_time=allotted_time, depth=depth)
+        return self.iterative_deepening(game_state, game_state.color == 1, allotted_time=allotted_time, depth=depth)
 
     def clear_cache(self):
-        self.transposition_table.clear()
-        self.eval_lookup.clear()
+        self.transposition_table = {}
+        self.eval_lookup = {}
 
     def evaluate(self, game_state: GameState) -> int:
         evaluation = 0
-        if game_state.draw: return 0
+        if (winner := game_state.get_winner()) is not None:
+            if winner == 0:
+                return 0
+            return 9999999 * winner
         hash_state = game_state.get_efficient_hashable_state_hashed()
         if hash_state in self.eval_lookup:
             return self.eval_lookup[hash_state]
@@ -131,7 +135,6 @@ class Bot:
                 evaluation += piece_values[piece] + position_values[piece][i]
         self.eval_lookup[hash_state] = evaluation
         return evaluation
-
 
     def iterative_deepening(self, game_state: GameState, maximizing_player: bool, allotted_time: float = 3, depth=-1):
         if depth >= 0:
@@ -152,13 +155,17 @@ class Bot:
                 target=lambda: results.append(
                     self.minimax_tt(game_state, depth, -(1 << 40), (1 << 40), maximizing_player)))
             if time.time() - t0 < allotted_time: minimax_thread.start()
+        if minimax_thread.is_alive():
+            minimax_thread.join(0)
         # print(len(results))
         return results[-1], len(results)
 
-
     def minimax_tt(self, game_state: GameState, depth: int, alpha: int, beta: int, maximizing_player: bool):
+        if game_state.get_winner() is not None or depth <= 0:
+            return self.evaluate(game_state), game_state.last_move
         state_key = hash((tuple(game_state.board),
-                          ((game_state.color == 1) << 4) | (game_state.white_queen << 3) | (game_state.white_king << 2) | (
+                          ((game_state.color == 1) << 4) | (game_state.white_queen << 3) | (
+                                      game_state.white_king << 2) | (
                                   game_state.black_queen << 1 | game_state.black_king) | (
                                   (depth | (maximizing_player << 10)) << 5)))
         if state_key in self.transposition_table:

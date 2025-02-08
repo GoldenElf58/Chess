@@ -416,21 +416,21 @@ class GameState:
                          turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn)
 
     def get_winner(self):
-        white = True
-        black = True
+        white = False
+        black = False
         empty = 0
         for piece in self.board:
             if piece == 0:
                 empty += 1
             elif piece == 6:
-                white = False
+                white = True
             elif piece == -6:
-                black = False
+                black = True
         if white and not black:
             return 1
         elif black and not white:
             return -1
-        elif (black and white) or self.draw or empty == 62 or self.moves_since_pawn >= 50:
+        elif (not black and not white) or self.draw or empty == 62 or self.moves_since_pawn >= 50:
             return 0
         return None
 

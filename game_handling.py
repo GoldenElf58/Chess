@@ -1,6 +1,5 @@
 import pygame
 from pygame import Surface
-from pygame.time import Clock
 from pygame.font import Font
 
 from enum import Enum, auto
@@ -8,8 +7,9 @@ import sys
 import threading
 import time
 
-import evaluationv2_extension_1
 import evaluationv2_extension_0
+import evaluationv3
+import evaluationv1
 from fen_utils import game_state_from_line
 from game import GameState
 
@@ -160,7 +160,6 @@ def find_move(user_src: tuple[int, int], user_dest: tuple[int, int], legal_moves
 
 def game_loop():
     pygame.init()
-    clock: Clock = Clock()
     screen: Surface = pygame.display.set_mode((854, 480))
     offset = 187
     game_state = GameState()
@@ -185,14 +184,14 @@ def game_loop():
     line = 1
     num_lines = 500
     reverse = False
-    bots = (evaluationv2_extension_1.Bot(default_capture_depth=1), evaluationv2_extension_0.Bot(default_capture_depth=1))
+    bots = (evaluationv2_extension_0.Bot(), evaluationv1.Bot())
     wins = 0
     draws = 0
     losses = 0
 
     running = True
     while running:
-        clock.tick(60)
+        # clock.tick(60)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -256,15 +255,17 @@ def game_loop():
                 if game_mode in {GameMode.AI_VS_AI, GameMode.DEEP_TEST} or (
                         game_mode == GameMode.PLAY_WHITE and game_state.color == -1) or (
                         game_mode == GameMode.PLAY_BLACK and game_state.color == 1):
+                    # print(0 if (game_state.color == 1) != reverse else 1)
                     computer_thread = threading.Thread(target=lambda: computer_move_result.append(
-                        bots[0 if (game_state.color == 1) != reverse else 1].generate_move(game_state, .1)))
+                        bots[0 if (game_state.color == 1) != reverse else 1].generate_move(game_state, allotted_time=.1)))
                     computer_thread.start()
             elif not computer_thread.is_alive():
                 if computer_move_result:
+                    computer_thread.join()
                     (last_eval, best_move), depth = computer_move_result.pop(0)
                     depths.append(depth)
                     game_state = game_state.move(best_move)
-                    if game_state.turn == 10: print(time.time() - t0)
+                    if game_state.turn == 10 and game_mode == GameMode.AI_VS_AI: print(time.time() - t0)
                 computer_thread = None
 
         screen.fill(0)
@@ -272,24 +273,27 @@ def game_loop():
 
         if (winner := game_state.get_winner()) is not None and game_mode != GameMode.MENU:
             if game_mode != GameMode.DEEP_TEST:
-                print(winner, game_state.moves_since_pawn, game_state.draw, game_state.previous_position_count)
                 game_mode = GameMode.MENU
             elif game_mode == GameMode.DEEP_TEST:
-                if winner == 0:
-                    draws += 1
-                elif (winner == 1 and not reverse) or (winner == -1 and reverse):
-                    wins += 1
-                elif (winner == -1 and not reverse) or (winner == 1 and reverse):
-                    losses += 1
-                if reverse:
-                    line += 1
-                reverse = not reverse
-                if line > num_lines and reverse:
-                    game_mode = GameMode.MENU
+                if game_mode == GameMode.DEEP_TEST:
+                    # Determine bot[0]'s color for this game.
+                    bot0_color = 1 if not reverse else -1
+                    if winner == 0:
+                        draws += 1
+                    elif winner == bot0_color:
+                        wins += 1
+                    else:
+                        losses += 1
+                    if reverse:
+                        line += 1
+                    reverse = not reverse
+                    if line > num_lines:
+                        line = 1
+                        game_mode = GameMode.MENU
+                    print(wins, draws, losses)
                 game_state = game_state_from_line(line, "fens.txt")
                 bots[0].clear_cache()
                 bots[1].clear_cache()
-                print(f"Wins: {wins}, Draws: {draws}, Losses: {losses}")
 
         if game_mode == GameMode.MENU:
             for btn in buttons: btn.draw(screen, font)

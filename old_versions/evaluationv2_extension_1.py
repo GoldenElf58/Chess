@@ -119,8 +119,8 @@ class Bot:
         return self.iterative_deepening(game_state, game_state.color == 1, allotted_time=allotted_time, depth=depth)
 
     def clear_cache(self):
-        self.transposition_table.clear()
-        self.eval_lookup.clear()
+        self.transposition_table = {}
+        self.eval_lookup = {}
 
     def evaluate(self, game_state: GameState) -> int:
         evaluation = 0
@@ -153,6 +153,8 @@ class Bot:
                 target=lambda: results.append(
                     self.minimax_tt(game_state, depth, -(1 << 30), (1 << 30), maximizing_player)))
             if time.time() - t0 < allotted_time: minimax_thread.start()
+        if minimax_thread.is_alive():
+            minimax_thread.join(0)
         # print(len(results))
         return results[-1], len(results)
 
