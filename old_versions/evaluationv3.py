@@ -122,11 +122,14 @@ class Bot:
         self.eval_lookup = {}
 
     def evaluate(self, game_state: GameState) -> int:
-        evaluation = 0
-        if game_state.draw or game_state.moves_since_pawn >= 50: return 0
+        if (winner := game_state.get_winner()) is not None:
+            if winner == 0:
+                return 0
+            return 9999999 * winner
         hash_state = game_state.get_efficient_hashable_state_hashed()
         if hash_state in self.eval_lookup:
             return self.eval_lookup[hash_state]
+        evaluation = 0
         for i, piece in enumerate(game_state.board):
             if piece != 0:
                 evaluation += piece_values[piece] + position_values[piece][i]
