@@ -81,6 +81,7 @@ class GameState:
             for move_1 in state.get_moves_no_check():
                 if winner := state.move(move_1).get_winner() in {-1, 1}:
                     moves.pop(moves_len - i - 1)
+                    break
         if len(moves) == 0 and moves_len > 0:
             self.winner = winner
         elif self.moves_since_pawn >= 50:

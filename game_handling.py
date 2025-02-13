@@ -8,6 +8,7 @@ import threading
 import time
 
 import evaluationv1
+from old_versions import evaluationv4_game_end_eval
 from fen_utils import game_state_from_line
 from game import GameState
 
@@ -185,7 +186,7 @@ def game_loop():
     line = 1
     num_lines = 500
     reverse = False
-    bots = (evaluationv1.Bot(), evaluationv1.Bot())
+    bots = (evaluationv4_game_end_eval.Bot(), evaluationv1.Bot())
     wins = 0
     draws = 0
     losses = 0

@@ -2,7 +2,7 @@ import threading
 import time
 
 from game import GameState
-from utils import mirror
+from utils import mirror, negate
 
 piece_values: dict[int, int] = {-6: -9999999,
                                 -5: -900,
@@ -100,14 +100,13 @@ position_values: dict[int, list[int]] = {
     5: Queens_flat,
     6: KingStart_flat,
     # Black pieces (negative values) use the mirrored tables
-    -1: mirror(Pawns_flat),
-    -2: mirror(Knights_flat),
-    -3: mirror(Bishops_flat),
-    -4: mirror(Rooks_flat),
-    -5: mirror(Queens_flat),
-    -6: mirror(KingStart_flat),
+    -1: negate(mirror(Pawns_flat)),
+    -2: negate(mirror(Knights_flat)),
+    -3: negate(mirror(Bishops_flat)),
+    -4: negate(mirror(Rooks_flat)),
+    -5: negate(mirror(Queens_flat)),
+    -6: negate(mirror(KingStart_flat))
 }
-
 
 class Bot:
     def __init__(self, transposition_table=None, eval_lookup=None):
@@ -122,8 +121,8 @@ class Bot:
         self.eval_lookup = {}
 
     def evaluate(self, game_state: GameState) -> int:
-        if game_state.draw or game_state.moves_since_pawn >= 50:
-            return 0
+        if game_state.winner is not None:
+            return game_state.winner
         hash_state = game_state.get_efficient_hashable_state_hashed()
         if hash_state in self.eval_lookup:
             return self.eval_lookup[hash_state]
