@@ -187,7 +187,7 @@ def game_loop():
     line = 1
     num_lines = 500
     reverse = False
-    bots = (evaluationv4_game_end_eval.Bot(), evaluationv1.Bot())
+    bots = (evaluationv1.Bot(), evaluationv1.Bot())
     wins = 0
     draws = 0
     losses = 0
@@ -230,8 +230,8 @@ def game_loop():
                     game_mode = GameMode.HUMAN
                     game_state = GameState()
 
-            if game_mode in {GameMode.PLAY_WHITE, GameMode.PLAY_BLACK,
-                             GameMode.HUMAN} and event.type == pygame.MOUSEBUTTONDOWN:
+            if game_mode in {GameMode.PLAY_WHITE, GameMode.PLAY_BLACK, GameMode.HUMAN} and (
+                    event.type == pygame.MOUSEBUTTONDOWN):
                 x, y = event.pos
                 col, row = (x - offset) // 60, y // 60
                 selected_piece = game_state.board[row * 8 + col]
@@ -288,6 +288,7 @@ def game_loop():
             elif game_mode == GameMode.DEEP_TEST:
                 if game_mode == GameMode.DEEP_TEST:
                     # Determine bot[0]'s color for this game.
+                    computer_move_result.clear()
                     bot0_color = 1 if not reverse else -1
                     if winner == 0:
                         draws += 1

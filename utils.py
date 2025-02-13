@@ -13,3 +13,6 @@ def mirror(table, flattened=True):
         return flatten(split_table(table)[::-1])
     return table[::-1]
 
+def negate(lst):
+    return [-x for x in lst]
+

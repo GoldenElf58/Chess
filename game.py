@@ -63,14 +63,6 @@ class GameState:
         return self.board, (((self.color == 1) << 4) | (self.white_queen << 3) | (self.white_king << 2) | (
                 self.black_queen << 1) | self.black_king), self.last_move
 
-    # def get_moves(self):
-    #     """
-    #     Get all possible moves, using caching based on the board's state.
-    #     """
-    #     hash_state = self.get_hashable_state()
-    #     # hash_state_efficient = hash(hash_state)
-    #     return GameState.get_moves_static(*hash_state)
-
     def get_moves(self) -> list[tuple[int, int, int, int]]:
         """
         Get all the possible moves for the current player.
@@ -90,6 +82,8 @@ class GameState:
             for move_1 in state.get_moves_no_check():
                 if winner := state.move(move_1).get_winner() in {-1, 1}:
                     moves.pop(moves_len - i - 1)
+        if self.moves_since_pawn >= 50:
+            self.winner = 0
         if len(moves) == 0 and moves_len > 0:
             self.winner = winner
         self.moves = moves
@@ -368,7 +362,7 @@ class GameState:
             new_board[move[2] * 8 + move[3]] = 0
             new_board[(move[2] - self.color) * 8 + move[3]] = move[1]
             return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king, color=-self.color,
-                             moves_since_pawn=0)
+                             turn=self.turn + 1, moves_since_pawn=0)
 
         if move[0] <= -4:  # Promotion while taking
             new_board[move[2] * 8 + move[3]] = 0
