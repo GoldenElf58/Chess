@@ -3,13 +3,11 @@ from pygame import Surface
 from pygame.font import Font
 
 from enum import Enum, auto
-from math import copysign
 import sys
 import threading
 import time
 
 import evaluationv1
-from old_versions import evaluationv4_game_end_eval
 from fen_utils import game_state_from_line
 from game import GameState
 
@@ -282,6 +280,7 @@ def game_loop():
         screen.fill(0)
         display_board(screen, game_state.board, selected_square, offset)
 
+        game_state.get_moves()
         if (winner := game_state.get_winner()) is not None and game_mode != GameMode.MENU:
             if game_mode != GameMode.DEEP_TEST:
                 game_mode = GameMode.MENU

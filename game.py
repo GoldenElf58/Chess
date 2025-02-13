@@ -73,8 +73,7 @@ class GameState:
             A list of tuples, each representing a move in the format (start_row, start_col, end_row, end_col).
         """
         if self.moves is not None: return self.moves
-        hash_state = self.get_hashable_state()
-        moves: list[tuple[int, int, int, int]] = GameState.get_moves_no_check_static(*hash_state)
+        moves: list[tuple[int, int, int, int]] = self.get_moves_no_check()
         moves_len = len(moves)
         winner = 0
         for i, move_0 in enumerate(reversed(moves)):
@@ -82,10 +81,10 @@ class GameState:
             for move_1 in state.get_moves_no_check():
                 if winner := state.move(move_1).get_winner() in {-1, 1}:
                     moves.pop(moves_len - i - 1)
-        if self.moves_since_pawn >= 50:
-            self.winner = 0
         if len(moves) == 0 and moves_len > 0:
             self.winner = winner
+        elif self.moves_since_pawn >= 50:
+            self.winner = 0
         self.moves = moves
         return moves
 
@@ -435,7 +434,7 @@ class GameState:
             self.winner = -1
         elif (not black and not white) or empty == 62:
             self.winner = 0
-        return None
+        return self.winner
 
     def __repr__(self):
         """

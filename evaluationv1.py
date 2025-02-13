@@ -169,7 +169,7 @@ class Bot:
                                   (depth | (maximizing_player << 10)) << 5)))
         if state_key in self.transposition_table:
             return self.transposition_table[state_key]
-        moves = game_state.get_moves()
+        moves = game_state.get_moves_no_check()
         new_game_states = {move: game_state.move(move) for move in moves}
         evaluations = {move: self.evaluate(new_game_states[move]) for move in moves}  # Cache evaluations
 
