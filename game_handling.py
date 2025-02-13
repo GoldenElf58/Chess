@@ -3,6 +3,7 @@ from pygame import Surface
 from pygame.font import Font
 
 from enum import Enum, auto
+from math import copysign
 import sys
 import threading
 import time
@@ -42,7 +43,8 @@ def display_board(screen, board, selected_square=(), offset=0):
                 screen.blit(images[board[i * 8 + j] + 6], (j * 60 + offset, i * 60))
 
 
-def display_info(screen: Surface, game_state: GameState, last_eval, font: Font, t0, game_mode, wins, draws, losses, depths=None):
+def display_info(screen: Surface, game_state: GameState, last_eval, font: Font, t0, game_mode, wins, draws, losses,
+                 depths=None):
     info_x = 667
     info_rect = pygame.Rect(info_x, 0, screen.get_width() - info_x, screen.get_height())
 
@@ -97,6 +99,7 @@ class Button:
 
 class GameMode(Enum):
     MENU = auto()
+    HUMAN = auto()
     PLAY_WHITE = auto()
     PLAY_BLACK = auto()
     AI_VS_AI = auto()
@@ -168,10 +171,11 @@ def game_loop():
 
     # Create the three buttons.
     buttons = [
-        Button((43, 170, 100, 20), "Play White", "gray", "lightgray", (0, 0, 0)),
-        Button((43, 210, 100, 20), "Play Black", "gray", "lightgray", (0, 0, 0)),
-        Button((43, 250, 100, 20), "AI vs AI", "gray", "lightgray", (0, 0, 0)),
-        Button((43, 290, 100, 20), "Deep Test", "gray", "lightgray", (0, 0, 0))
+        Button((43, 190, 100, 20), "Play White", "gray", "lightgray", (0, 0, 0)),
+        Button((43, 230, 100, 20), "Play Black", "gray", "lightgray", (0, 0, 0)),
+        Button((43, 270, 100, 20), "AI vs AI", "gray", "lightgray", (0, 0, 0)),
+        Button((43, 310, 100, 20), "Deep Test", "gray", "lightgray", (0, 0, 0)),
+        Button((43, 150, 100, 20), "Human", "gray", "lightgray", (0, 0, 0))
     ]
 
     computer_thread = None
@@ -199,40 +203,46 @@ def game_loop():
                 pos = event.pos
                 t0 = time.time()
                 if buttons[0].check_hover(pos):
-                    game_mode = game_mode.PLAY_WHITE
+                    game_mode = GameMode.PLAY_WHITE
                     game_state = GameState()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
                 elif buttons[1].check_hover(pos):
                     reverse = False
-                    game_mode = game_mode.PLAY_BLACK
+                    game_mode = GameMode.PLAY_BLACK
                     game_state = GameState()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
                 elif buttons[2].check_hover(pos):
                     reverse = False
-                    game_mode = game_mode.AI_VS_AI
+                    game_mode = GameMode.AI_VS_AI
                     game_state = GameState()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
                 elif buttons[3].check_hover(pos):
-                    game_mode = game_mode.DEEP_TEST
+                    game_mode = GameMode.DEEP_TEST
                     line = 1
                     reverse = False
                     game_state = game_state_from_line(line, "fens.txt")
                     bots[0].clear_cache()
                     bots[1].clear_cache()
+                elif buttons[4].check_hover(pos):
+                    game_mode = GameMode.HUMAN
+                    game_state = GameState()
 
-            if game_mode in {GameMode.PLAY_WHITE, GameMode.PLAY_BLACK} and event.type == pygame.MOUSEBUTTONDOWN:
+            if game_mode in {GameMode.PLAY_WHITE, GameMode.PLAY_BLACK,
+                             GameMode.HUMAN} and event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = event.pos
                 col, row = (x - offset) // 60, y // 60
+                selected_piece = game_state.board[row * 8 + col]
+                color = game_state.color
                 # Store selected square as (col, row)
                 if selected_square is None:
                     # Only select a piece if it belongs to the human.
-                    if ((game_state.board[
-                             row * 8 + col] > 0 and game_state.color == 1 and game_mode == GameMode.PLAY_WHITE)
-                            or (game_state.board[
-                                    row * 8 + col] < 0 and game_state.color == -1 and game_mode == GameMode.PLAY_BLACK)):
+                    if ((game_mode == GameMode.HUMAN and ((selected_piece > 0 and color == 1) or (
+                            selected_piece < 0 and color == -1))) or (selected_piece > 0 and color == 1
+                            and game_mode == GameMode.PLAY_WHITE) or (selected_piece < 0 and color == -1 and
+                            game_mode == GameMode.PLAY_BLACK)):
                         selected_square = (col, row)
                 else:
                     # Convert selected_square (col, row) to (row, col)
@@ -242,21 +252,23 @@ def game_loop():
                     chosen_move = find_move(user_src, user_dest, legal, game_state)
                     if chosen_move is not None:
                         game_state = game_state.move(chosen_move)
+                        game_state.get_moves()
                     selected_square = None
-                    if ((game_state.board[row * 8 + col] > 0 and game_state.color == 1 and
-                         game_mode == GameMode.PLAY_WHITE) or (game_state.board[row * 8 + col] < 0 and
-                                                               game_state.color == -1 and game_mode == GameMode.PLAY_BLACK)):
+                    if ((game_mode == GameMode.HUMAN and ((selected_piece > 0 and color == 1) or (
+                            selected_piece < 0 and color == -1))) or (selected_piece > 0 and color == 1
+                            and game_mode == GameMode.PLAY_WHITE) or (selected_piece < 0 and color == -1 and
+                            game_mode == GameMode.PLAY_BLACK)):
                         selected_square = user_dest[1], user_dest[0]
 
         if game_mode != GameMode.MENU:
             if computer_thread is None:
-                computer_move_result.clear()
                 if game_mode in {GameMode.AI_VS_AI, GameMode.DEEP_TEST} or (
                         game_mode == GameMode.PLAY_WHITE and game_state.color == -1) or (
                         game_mode == GameMode.PLAY_BLACK and game_state.color == 1):
+                    computer_move_result.clear()
                     # print(0 if (game_state.color == 1) != reverse else 1)
                     computer_thread = threading.Thread(target=lambda: computer_move_result.append(
-                        bots[0 if (game_state.color == 1) != reverse else 1].generate_move(game_state, allotted_time=.1)))
+                        bots[0 if (game_state.color == 1) != reverse else 1].generate_move(game_state, .1)))
                     computer_thread.start()
             elif not computer_thread.is_alive():
                 if computer_move_result:

@@ -46,9 +46,10 @@ class GameState:
         self.black_king: bool = back_king
         self.last_move = last_move
         self.turn = turn
-        self.draw = draw
+        self.winner = None
         self.previous_position_count = previous_position_count if previous_position_count is not None else {}
         self.moves_since_pawn = moves_since_pawn
+        self.moves = None
 
     def get_hashable_state(self):
         """ Convert the game state into a hashable format for caching. """
@@ -62,42 +63,44 @@ class GameState:
         return self.board, (((self.color == 1) << 4) | (self.white_queen << 3) | (self.white_king << 2) | (
                 self.black_queen << 1) | self.black_king), self.last_move
 
-    def get_moves(self):
-        """
-        Get all possible moves, using caching based on the board's state.
-        """
-        hash_state = self.get_hashable_state()
-        # hash_state_efficient = hash(hash_state)
-        return GameState.get_moves_cached(*hash_state)
+    # def get_moves(self):
+    #     """
+    #     Get all possible moves, using caching based on the board's state.
+    #     """
+    #     hash_state = self.get_hashable_state()
+    #     # hash_state_efficient = hash(hash_state)
+    #     return GameState.get_moves_static(*hash_state)
 
-    @staticmethod
-    def get_moves_cached(board, color, white_queen, white_king, black_queen, black_king, last_move) -> list[
-        tuple[int, int, int, int]]:
+    def get_moves(self) -> list[tuple[int, int, int, int]]:
         """
         Get all the possible moves for the current player.
-
-        Parameters
-        ----------
-        board : list[int]
-            A flat list of 64 integers representing the board state.
-        color : int, optional
-            The color of the player to get the moves for (1 for white, -1 for black). Defaults to `self.color`.
-        white_queen : bool
-            Indicates if the white queen is still on the board.
-        white_king : bool
-            Indicates if the white king is still on the board.
-        black_queen : bool
-            Indicates if the black queen is still on the board.
-        black_king : bool
-            Indicates if the black king is still on the board.
-        last_move : tuple[int, int, int, int] or None
-            The last move made on the board, represented as a tuple of four integers, or None if no move has been made.
 
         Returns
         -------
         list[tuple[int, int, int, int]]
             A list of tuples, each representing a move in the format (start_row, start_col, end_row, end_col).
         """
+        if self.moves is not None: return self.moves
+        hash_state = self.get_hashable_state()
+        moves: list[tuple[int, int, int, int]] = GameState.get_moves_no_check_static(*hash_state)
+        moves_len = len(moves)
+        winner = 0
+        for i, move_0 in enumerate(reversed(moves)):
+            state = self.move(move_0)
+            for move_1 in state.get_moves_no_check():
+                if winner := state.move(move_1).get_winner() in {-1, 1}:
+                    moves.pop(moves_len - i - 1)
+        if len(moves) == 0 and moves_len > 0:
+            self.winner = winner
+        self.moves = moves
+        return moves
+
+    def get_moves_no_check(self):
+        hash_state = self.get_hashable_state()
+        return self.get_moves_no_check_static(*hash_state)
+
+    @staticmethod
+    def get_moves_no_check_static(board, color, white_queen, white_king, black_queen, black_king, last_move):
         moves: list[tuple[int, int, int, int]] = []
         for h, piece in enumerate(board):
             i, j = h // 8, h % 8
@@ -296,6 +299,7 @@ class GameState:
                         moves.append((-2, -1, i, j))
         return moves
 
+
     def are_captures(self):
         moves = self.get_moves()
         empty_count = 0
@@ -416,7 +420,10 @@ class GameState:
                          turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn)
 
     def get_winner(self):
-        if self.draw or self.moves_since_pawn >= 50:
+        if self.winner is not None:
+            return self.winner
+        if self.moves_since_pawn >= 50:
+            self.winner = 0
             return 0
         white = False
         black = False
@@ -429,11 +436,11 @@ class GameState:
             elif piece == -6:
                 black = True
         if white and not black:
-            return 1
+            self.winner = 1
         elif black and not white:
-            return -1
+            self.winner = -1
         elif (not black and not white) or empty == 62:
-            return 0
+            self.winner = 0
         return None
 
     def __repr__(self):
