@@ -92,7 +92,6 @@ def game_state_from_fen(fen: str) -> GameState:
         last_move=last_move,
         color=color,
         turn=turn,
-        draw=False
     )
 
 

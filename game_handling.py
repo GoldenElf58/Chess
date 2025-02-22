@@ -186,7 +186,7 @@ def game_loop():
     line = 1
     num_lines = 500
     reverse = False
-    bots = (evaluationv4_game_end_eval.Bot(), evaluationv1.Bot())
+    bots = (evaluationv1.Bot(), evaluationv1.Bot())
     wins = 0
     draws = 0
     losses = 0
@@ -284,6 +284,7 @@ def game_loop():
         game_state.get_moves()
         if (winner := game_state.get_winner()) is not None and game_mode != GameMode.MENU:
             if game_mode != GameMode.DEEP_TEST:
+                print(winner)
                 game_mode = GameMode.MENU
             elif game_mode == GameMode.DEEP_TEST:
                 if game_mode == GameMode.DEEP_TEST:

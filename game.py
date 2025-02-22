@@ -15,7 +15,7 @@ start_board = (
 
 class GameState:
     def __init__(self, board: tuple = None, white_queen=True, white_king=True, black_queen=True, back_king=True, last_move=None,
-                 color=1, turn=0, draw=False, previous_position_count=None, moves_since_pawn=0):
+                 color=1, turn=0, winner=None, previous_position_count=None, moves_since_pawn=0):
         """
         Initialize a GameState object.
 
@@ -46,7 +46,7 @@ class GameState:
         self.black_king: bool = back_king
         self.last_move = last_move
         self.turn = turn
-        self.winner = None
+        self.winner = winner
         self.previous_position_count = previous_position_count if previous_position_count is not None else {}
         self.moves_since_pawn = moves_since_pawn
         self.moves = None
@@ -79,7 +79,7 @@ class GameState:
         for i, move_0 in enumerate(reversed(moves)):
             state = self.move(move_0)
             for move_1 in state.get_moves_no_check():
-                if winner := state.move(move_1).get_winner() in {-1, 1}:
+                if (winner := state.move(move_1).get_winner()) in {-1, 1}:
                     moves.pop(moves_len - i - 1)
                     break
         if len(moves) == 0 and moves_len > 0:
@@ -335,7 +335,7 @@ class GameState:
         new_moves_since_pawn = self.moves_since_pawn + 1
 
         if len(move) == 0:
-            return GameState(tuple(new_board), draw=True)
+            return GameState(tuple(new_board), turn=self.turn + 1, winner=self.winner)
 
         if move[0] == -1:  # Castle
             if move[2] == 7:
@@ -405,7 +405,7 @@ class GameState:
         if (hash_state := hash(self.board)) in new_previous_position_count:
             new_previous_position_count[hash_state] += 1
             if new_previous_position_count[hash_state] >= 3:
-                return GameState(tuple(new_board), draw=True)
+                return GameState(tuple(new_board), winner=0)
         else:
             new_previous_position_count[hash_state] = 1
         if not (self.board[move[0] * 8 + move[1]] == 1 and (move[0] == move[2] - self.color * 2)):
