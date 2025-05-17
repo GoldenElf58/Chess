@@ -1,6 +1,5 @@
 import threading
 import time
-from readline import set_auto_history
 
 from game import GameState
 from utils import mirror
@@ -116,7 +115,7 @@ class Bot:
         self.eval_lookup = eval_lookup if eval_lookup is not None else {}
         self.default_capture_depth = default_capture_depth
 
-    def generate_move(self, game_state, allotted_time=3, depth=-1):
+    def generate_move(self, game_state, allotted_time=3, depth=-1) -> tuple[tuple[int, tuple[int, int, int, int]], int]:
         return self.iterative_deepening(game_state, game_state.color == 1, allotted_time=allotted_time, depth=depth)
 
     def clear_cache(self):
@@ -124,20 +123,20 @@ class Bot:
         self.eval_lookup.clear()
 
     def evaluate(self, game_state: GameState) -> int:
-        evaluation = 0
-        if game_state.draw: return 0
+        if (winner := game_state.get_winner()) is not None: return winner * 9999999
         hash_state = game_state.get_efficient_hashable_state_hashed()
         if hash_state in self.eval_lookup:
             return self.eval_lookup[hash_state]
+        evaluation = 0
         for i, piece in enumerate(game_state.board):
             if piece != 0:
                 evaluation += piece_values[piece] + position_values[piece][i]
         self.eval_lookup[hash_state] = evaluation
         return evaluation
 
-    def iterative_deepening(self, game_state: GameState, maximizing_player: bool, allotted_time: float = 3, depth=-1):
+    def iterative_deepening(self, game_state: GameState, maximizing_player: bool, allotted_time: float = 3, depth=-1) -> tuple[tuple[int, tuple[int, int, int, int]], int]:
         if depth >= 0:
-            result = None
+            result: tuple[int, tuple[int, int, int, int]] = 0, game_state.get_moves()[0]
             for i in range(1, depth + 1):
                 result = self.minimax_tt(game_state, i, -(1 << 40), (1 << 40), maximizing_player)
             return result, depth
@@ -158,8 +157,8 @@ class Bot:
         return results[-1], len(results)
 
     def minimax_tt(self, game_state: GameState, depth: int, alpha: int, beta: int, maximizing_player: bool,
-                   capture_depth: int = None, extension: int = 0):
-        my_eval = self.evaluate(game_state)
+                   capture_depth: int | None = None, extension: int = 0) -> tuple[int, tuple[int, int, int, int]]:
+        my_eval: int = self.evaluate(game_state)
         if capture_depth is None:
             capture_depth = self.default_capture_depth
         if game_state.get_winner() is not None or (depth + extension <= 0 and not game_state.are_captures()):
@@ -178,7 +177,7 @@ class Bot:
         moves.sort(key=lambda move: evaluations[move], reverse=maximizing_player)
 
         best_eval = -(1 << 40) if maximizing_player else (1 << 40)  # Large negative/positive integers
-        best_move = ()
+        best_move: tuple[int, int, int, int] | tuple = ()
 
         for move in moves:
             evaluation = evaluations[move] if depth + extension == 0 - capture_depth else \

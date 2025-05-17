@@ -114,7 +114,7 @@ class Bot:
         self.transposition_table = transposition_table if transposition_table is not None else {}
         self.eval_lookup = eval_lookup if eval_lookup is not None else {}
 
-    def generate_move(self, game_state, allotted_time=3, depth=-1):
+    def generate_move(self, game_state, allotted_time=3, depth=-1) -> tuple[tuple[int, tuple[int, int, int, int]], int]:
         return self.iterative_deepening(game_state, game_state.color == 1, allotted_time=allotted_time, depth=depth)
 
     def clear_cache(self):
@@ -178,7 +178,7 @@ class Bot:
         moves.sort(key=lambda move: evaluations[move], reverse=maximizing_player)
 
         best_eval = -(1 << 40) if maximizing_player else (1 << 40)  # Large negative/positive integers
-        best_move = ()
+        best_move: tuple[int, int, int, int] | tuple = ()
 
         for move in moves:
             evaluation = evaluations[move] if depth == 0 else \

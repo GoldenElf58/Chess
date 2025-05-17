@@ -14,7 +14,7 @@ start_board = (
 )
 
 class GameState:
-    def __init__(self, board: tuple = None, white_queen=True, white_king=True, black_queen=True, back_king=True, last_move=None,
+    def __init__(self, board: tuple | None = None, white_queen=True, white_king=True, black_queen=True, back_king=True, last_move=None,
                  color=1, turn=0, winner=None, previous_position_count=None, moves_since_pawn=0):
         """
         Initialize a GameState object.
@@ -49,7 +49,7 @@ class GameState:
         self.winner = winner
         self.previous_position_count = previous_position_count if previous_position_count is not None else {}
         self.moves_since_pawn = moves_since_pawn
-        self.moves = None
+        self.moves: list[tuple[int, int, int, int]] | None = None
 
     def get_hashable_state(self):
         """ Convert the game state into a hashable format for caching. """
@@ -75,7 +75,7 @@ class GameState:
         if self.moves is not None: return self.moves
         moves: list[tuple[int, int, int, int]] = self.get_moves_no_check()
         moves_len = len(moves)
-        winner = 0
+        winner: int | None = 0
         for i, move_0 in enumerate(reversed(moves)):
             state = self.move(move_0)
             for move_1 in state.get_moves_no_check():
@@ -94,7 +94,7 @@ class GameState:
         return self.get_moves_no_check_static(*hash_state)
 
     @staticmethod
-    def get_moves_no_check_static(board, color, white_queen, white_king, black_queen, black_king, last_move):
+    def get_moves_no_check_static(board, color, white_queen, white_king, black_queen, black_king, last_move) -> list[tuple[int, int, int, int]]:
         moves: list[tuple[int, int, int, int]] = []
         for h, piece in enumerate(board):
             i, j = h // 8, h % 8
@@ -115,7 +115,7 @@ class GameState:
                             continue
                         if board[(i + k) * 8 + (j + l)] * color <= 0:
                             moves.append((i, j, i + k, j + l))
-            if piece_type == 5:  # Queen
+            if piece_type == 4 or piece_type == 5:  # Rook and Queen
                 for k in range(j + 1, 8):
                     if board[h - j + k] * color <= 0:
                         moves.append((i, j, i, k))
@@ -140,64 +140,7 @@ class GameState:
                     if board[k * 8 + j] == 0:
                         continue
                     break
-                for k in range(1, 8):
-                    if i + k > 7 or j + k > 7:
-                        break
-                    if board[(i + k) * 8 + (j + k)] * color <= 0:
-                        moves.append((i, j, i + k, j + k))
-                    if board[(i + k) * 8 + (j + k)] == 0:
-                        continue
-                    break
-                for k in range(1, 8):
-                    if i - k < 0 or j + k > 7:
-                        break
-                    if board[(i - k) * 8 + (j + k)] * color <= 0:
-                        moves.append((i, j, i - k, j + k))
-                    if board[(i - k) * 8 + (j + k)] == 0:
-                        continue
-                    break
-                for k in range(1, 8):
-                    if i + k > 7 or j - k < 0:
-                        break
-                    if board[(i + k) * 8 + (j - k)] * color <= 0:
-                        moves.append((i, j, i + k, j - k))
-                    if board[(i + k) * 8 + (j - k)] == 0:
-                        continue
-                    break
-                for k in range(1, 8):
-                    if i - k < 0 or j - k < 0:
-                        break
-                    if board[(i - k) * 8 + (j - k)] * color <= 0:
-                        moves.append((i, j, i - k, j - k))
-                    if board[(i - k) * 8 + (j - k)] == 0:
-                        continue
-                    break
-            if piece_type == 4:  # Rook
-                for k in range(j + 1, 8):
-                    if board[h - j + k] * color <= 0:
-                        moves.append((i, j, i, k))
-                    if board[h - j + k] == 0:
-                        continue
-                    break
-                for k in range(j - 1, -1, -1):
-                    if board[h - j + k] * color <= 0:
-                        moves.append((i, j, i, k))
-                    if board[h - j + k] == 0:
-                        continue
-                    break
-                for k in range(i - 1, -1, -1):
-                    if board[k * 8 + j] * color <= 0:
-                        moves.append((i, j, k, j))
-                    if board[k * 8 + j] == 0:
-                        continue
-                    break
-                for k in range(i + 1, 8):
-                    if board[k * 8 + j] * color <= 0:
-                        moves.append((i, j, k, j))
-                    if board[k * 8 + j] == 0:
-                        continue
-                    break
-            if piece_type == 3:  # Bishop
+            if piece_type == 3 or piece_type == 5:  # Bishop
                 for k in range(1, 8):
                     if i + k > 7 or j + k > 7:
                         break
@@ -236,9 +179,6 @@ class GameState:
                         if (i + k) % 8 == i + k and (j + l) % 8 == j + l and board[
                             (i + k) * 8 + (j + l)] * color <= 0:
                             moves.append((i, j, i + k, j + l))
-                        if (i + l) % 8 == i + l and (j + k) % 8 == j + k and board[
-                            (i + l) * 8 + (j + k)] * color <= 0:
-                            moves.append((i, j, i + l, j + k))
             if piece_type == 1:  # Pawn
                 forward = (i - color) % 8 == i - color
                 if forward and board[(i - color) * 8 + j] == 0:
@@ -257,12 +197,7 @@ class GameState:
                 if forward and (j + 1) % 8 == j + 1 and board[(i - color) * 8 + (j + 1)] * color < 0:
                     if i - color != 0 and i - color != 7:
                         moves.append((i, j, i - color, j + 1))
-                    elif i - color == 0:  # Promotion
-                        moves.append((-4, 1, i, j))
-                        moves.append((-5, 1, i, j))
-                        moves.append((-6, 1, i, j))
-                        moves.append((-7, 1, i, j))
-                    elif i - color == 7:  # Promotion
+                    elif i - color == 0 or i - color == 7:  # Promotion
                         moves.append((-4, 1, i, j))
                         moves.append((-5, 1, i, j))
                         moves.append((-6, 1, i, j))
@@ -270,12 +205,7 @@ class GameState:
                 if forward and (j - 1) % 8 == j - 1 and board[(i - color) * 8 + (j - 1)] * color < 0:
                     if i - color != 0 and i - color != 7:
                         moves.append((i, j, i - color, j - 1))
-                    elif i - color == 0:  # Promotion
-                        moves.append((-4, -1, i, j))
-                        moves.append((-5, -1, i, j))
-                        moves.append((-6, -1, i, j))
-                        moves.append((-7, -1, i, j))
-                    elif i - color == 7:  # Promotion
+                    elif i - color == 0 or i - color == 7:  # Promotion
                         moves.append((-4, -1, i, j))
                         moves.append((-5, -1, i, j))
                         moves.append((-6, -1, i, j))
@@ -371,7 +301,8 @@ class GameState:
             return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king,
                              color=-self.color, turn=self.turn + 1, moves_since_pawn=0)
 
-        if new_board[move[2] * 8 + move[3]] in {-4, 4}:  # Can never take kings
+        condition2: bool = new_board[move[0] * 8 + move[1]] in {-6, -4, 4, 6}
+        if new_board[move[2] * 8 + move[3]] in {-4, 4} or condition2:  # Can never take kings
             if move[2] == 7 and move[3] == 0:
                 white_queen = False
             if move[2] == 7 and move[3] == 7:
@@ -380,15 +311,7 @@ class GameState:
                 black_queen = False
             if move[2] == 0 and move[3] == 7:
                 black_king = False
-        if new_board[move[0] * 8 + move[1]] in {-6, -4, 4, 6}:
-            if move[2] == 7 and move[3] == 0:
-                white_queen = False
-            if move[2] == 7 and move[3] == 7:
-                white_king = False
-            if move[2] == 0 and move[3] == 0:
-                black_queen = False
-            if move[2] == 0 and move[3] == 7:
-                black_king = False
+        if condition2:
             if move[2] == 0 and move[3] == 4:
                 black_queen = False
                 black_king = False
@@ -408,12 +331,11 @@ class GameState:
                 return GameState(tuple(new_board), winner=0)
         else:
             new_previous_position_count[hash_state] = 1
-        if not (self.board[move[0] * 8 + move[1]] == 1 and (move[0] == move[2] - self.color * 2)):
-            move = None
-        return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king, last_move=move, color=-self.color,
-                         turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn)
+        last_move: tuple[int, int, int, int] | None = move if (self.board[move[0] * 8 + move[1]] == 1 and (move[0] == move[2] - self.color * 2)) else None
+        return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king, last_move=last_move,
+                         color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn)
 
-    def get_winner(self):
+    def get_winner(self) -> int | None:
         if self.winner is not None:
             return self.winner
         if self.moves_since_pawn >= 50:

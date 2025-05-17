@@ -8,7 +8,6 @@ import threading
 import time
 
 import evaluationv1
-from old_versions import evaluationv4_game_end_eval
 from fen_utils import game_state_from_line
 from game import GameState
 
@@ -159,7 +158,7 @@ def find_move(user_src: tuple[int, int], user_dest: tuple[int, int], legal_moves
     return None
 
 
-def game_loop():
+def game_loop() -> None:
     pygame.init()
     screen: Surface = pygame.display.set_mode((854, 480))
     offset = 187
@@ -178,15 +177,15 @@ def game_loop():
     ]
 
     computer_thread = None
-    computer_move_result = []  # Container to hold the minimax result
+    computer_move_result: list[tuple[tuple[int, tuple[int, int, int, int]], int]] = []  # Container to hold the minimax result
     last_eval = 0
-    depths = []
+    depths: list[int] = []
     t0 = time.time()
 
     line = 1
     num_lines = 500
     reverse = False
-    bots = (evaluationv1.Bot(), evaluationv1.Bot())
+    bots: tuple[evaluationv1.Bot, evaluationv1.Bot] = (evaluationv1.Bot(), evaluationv1.Bot())
     wins = 0
     draws = 0
     losses = 0
@@ -235,14 +234,14 @@ def game_loop():
                 col, row = (x - offset) // 60, y // 60
                 selected_piece = game_state.board[row * 8 + col]
                 color = game_state.color
+                can_select: bool = ((game_mode == GameMode.HUMAN and ((selected_piece > 0 and color == 1) or (
+                            selected_piece < 0 and color == -1))) or (selected_piece > 0 and color == 1 and
+                            game_mode == GameMode.PLAY_WHITE) or (selected_piece < 0 and color == -1 and
+                            game_mode == GameMode.PLAY_BLACK))
                 # Store selected square as (col, row)
                 if selected_square is None:
                     # Only select a piece if it belongs to the human.
-                    if ((game_mode == GameMode.HUMAN and ((selected_piece > 0 and color == 1) or (
-                            selected_piece < 0 and color == -1))) or (selected_piece > 0 and color == 1
-                            and game_mode == GameMode.PLAY_WHITE) or (selected_piece < 0 and color == -1 and
-                            game_mode == GameMode.PLAY_BLACK)):
-                        selected_square = (col, row)
+                    if can_select: selected_square = (col, row)
                 else:
                     # Convert selected_square (col, row) to (row, col)
                     user_src = (selected_square[1], selected_square[0])
@@ -253,11 +252,7 @@ def game_loop():
                         game_state = game_state.move(chosen_move)
                         game_state.get_moves()
                     selected_square = None
-                    if ((game_mode == GameMode.HUMAN and ((selected_piece > 0 and color == 1) or (
-                            selected_piece < 0 and color == -1))) or (selected_piece > 0 and color == 1
-                            and game_mode == GameMode.PLAY_WHITE) or (selected_piece < 0 and color == -1 and
-                            game_mode == GameMode.PLAY_BLACK)):
-                        selected_square = user_dest[1], user_dest[0]
+                    if can_select: selected_square = user_dest[1], user_dest[0]
 
         if game_mode != GameMode.MENU:
             if computer_thread is None:
@@ -267,7 +262,7 @@ def game_loop():
                     computer_move_result.clear()
                     # print(0 if (game_state.color == 1) != reverse else 1)
                     computer_thread = threading.Thread(target=lambda: computer_move_result.append(
-                        bots[0 if (game_state.color == 1) != reverse else 1].generate_move(game_state, .1)))
+                        bots[0 if (game_state.color == 1) != reverse else 1].generate_move(game_state, .5)))
                     computer_thread.start()
             elif not computer_thread.is_alive():
                 if computer_move_result:

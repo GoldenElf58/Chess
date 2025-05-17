@@ -114,7 +114,7 @@ class Bot:
         self.transposition_table = transposition_table if transposition_table is not None else {}
         self.eval_lookup = eval_lookup if eval_lookup is not None else {}
 
-    def generate_move(self, game_state, allotted_time=3, depth=-1):
+    def generate_move(self, game_state, allotted_time=3, depth=-1) -> tuple[tuple[int, tuple[int, int, int, int]], int]:
         return self.iterative_deepening(game_state, game_state.color == 1, allotted_time=allotted_time, depth=depth)
 
     def clear_cache(self):
@@ -122,8 +122,8 @@ class Bot:
         self.eval_lookup.clear()
 
     def evaluate(self, game_state: GameState) -> int:
-        if game_state.draw or game_state.moves_since_pawn >= 50:
-            return 0
+        if (winner := game_state.get_winner()) is not None:
+            return winner * 9999999
         hash_state = game_state.get_efficient_hashable_state_hashed()
         if hash_state in self.eval_lookup:
             return self.eval_lookup[hash_state]
@@ -134,9 +134,9 @@ class Bot:
         self.eval_lookup[hash_state] = evaluation
         return evaluation
 
-    def iterative_deepening(self, game_state: GameState, maximizing_player: bool, allotted_time: float = 3, depth=-1):
+    def iterative_deepening(self, game_state: GameState, maximizing_player: bool, allotted_time: float = 3, depth=-1) -> tuple[tuple[int, tuple[int, int, int, int]], int]:
         if depth >= 0:
-            result = None
+            result = (0, game_state.get_moves()[0])
             for i in range(1, depth + 1):
                 result = self.minimax_tt(game_state, i, -(1 << 40), (1 << 40), maximizing_player)
             return result, depth
@@ -159,7 +159,7 @@ class Bot:
         return results[-1], len(results)
 
     def minimax_tt(self, game_state: GameState, depth: int, alpha: int, beta: int, maximizing_player: bool,
-                   extension: int = 0, parent_eval=None):
+                   extension: int = 0, parent_eval=None) -> tuple[int, tuple[int, int, int, int]]:
         my_eval = self.evaluate(game_state)
         if game_state.get_winner() is not None or depth + extension <= 0:
             return my_eval, game_state.last_move
@@ -170,14 +170,14 @@ class Bot:
                                   (depth | (maximizing_player << 10)) << 5)))
         if state_key in self.transposition_table:
             return self.transposition_table[state_key]
-        moves = game_state.get_moves()
+        moves: list[tuple[int, int, int, int]] = game_state.get_moves()
         new_game_states = {move: game_state.move(move) for move in moves}
         evaluations = {move: self.evaluate(new_game_states[move]) for move in moves}  # Cache evaluations
         # Move ordering: Sort moves by evaluation score (best first for maximizing, worst first for minimizing)
         moves.sort(key=lambda move: evaluations[move], reverse=maximizing_player)
 
         best_eval = -(1 << 40) if maximizing_player else (1 << 40)  # Large negative/positive integers
-        best_move = ()
+        best_move: tuple[int, int, int, int] | tuple = ()
 
         if parent_eval is not None and abs(parent_eval - my_eval) > 899:
                 extension += 1
