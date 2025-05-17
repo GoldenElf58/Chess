@@ -14,8 +14,9 @@ start_board = (
 )
 
 class GameState:
-    def __init__(self, board: tuple | None = None, white_queen=True, white_king=True, black_queen=True, back_king=True, last_move=None,
-                 color=1, turn=0, winner=None, previous_position_count=None, moves_since_pawn=0):
+    def __init__(self, board: tuple | None = None, white_queen=True, white_king=True, black_queen=True, back_king=True,
+                 last_move: tuple[int, int, int, int] | None = None, color=1, turn=0, winner=None,
+                 previous_position_count=None, moves_since_pawn=0) -> None:
         """
         Initialize a GameState object.
 
@@ -38,13 +39,13 @@ class GameState:
         """
         if board is None:
             board = start_board
-        self.board: tuple[int] = board
+        self.board: tuple[int, ...] = board
         self.color = color
         self.white_queen: bool = white_queen
         self.white_king: bool = white_king
         self.black_queen: bool = black_queen
         self.black_king: bool = back_king
-        self.last_move = last_move
+        self.last_move: tuple[int, int, int, int] = last_move if last_move is not None else (0, 0, 0, 0)
         self.turn = turn
         self.winner = winner
         self.previous_position_count = previous_position_count if previous_position_count is not None else {}
