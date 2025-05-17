@@ -7,7 +7,8 @@ import sys
 import threading
 import time
 
-import evaluationv1
+from bot_v1 import Botv1
+from bot import Bot
 from fen_utils import game_state_from_line
 from game import GameState
 
@@ -161,14 +162,14 @@ def find_move(user_src: tuple[int, int], user_dest: tuple[int, int], legal_moves
 def game_loop() -> None:
     pygame.init()
     screen: Surface = pygame.display.set_mode((854, 480))
-    offset = 187
-    game_state = GameState()
-    selected_square = None  # For human move selection (as (col, row))
-    game_mode = GameMode.MENU  # Will be set when a button is clicked
-    font = Font(None, 24)
+    offset: int = 187
+    game_state: GameState = GameState()
+    selected_square: tuple[int, int] | None = None  # For human move selection (as (col, row))
+    game_mode: GameMode = GameMode.MENU  # Will be set when a button is clicked
+    font: Font = Font(None, 24)
 
     # Create the three buttons.
-    buttons = [
+    buttons: list[Button] = [
         Button((43, 190, 100, 20), "Play White", "gray", "lightgray", (0, 0, 0)),
         Button((43, 230, 100, 20), "Play Black", "gray", "lightgray", (0, 0, 0)),
         Button((43, 270, 100, 20), "AI vs AI", "gray", "lightgray", (0, 0, 0)),
@@ -176,21 +177,21 @@ def game_loop() -> None:
         Button((43, 150, 100, 20), "Human", "gray", "lightgray", (0, 0, 0))
     ]
 
-    computer_thread = None
+    computer_thread: threading.Thread | None = None
     computer_move_result: list[tuple[tuple[int, tuple[int, int, int, int]], int]] = []  # Container to hold the minimax result
-    last_eval = 0
+    last_eval: int = 0
     depths: list[int] = []
-    t0 = time.time()
+    t0: float = time.time()
 
-    line = 1
-    num_lines = 500
-    reverse = False
-    bots: tuple[evaluationv1.Bot, evaluationv1.Bot] = (evaluationv1.Bot(), evaluationv1.Bot())
-    wins = 0
-    draws = 0
-    losses = 0
+    line: int = 1
+    num_lines: int = 500
+    reverse: bool = False
+    bots: tuple[Bot, Bot] = (Botv1(), Botv1())
+    wins: int = 0
+    draws: int = 0
+    losses: int = 0
 
-    running = True
+    running: bool = True
     while running:
         # clock.tick(60)
         for event in pygame.event.get():
@@ -244,10 +245,10 @@ def game_loop() -> None:
                     if can_select: selected_square = (col, row)
                 else:
                     # Convert selected_square (col, row) to (row, col)
-                    user_src = (selected_square[1], selected_square[0])
-                    user_dest = (row, col)
-                    legal = game_state.get_moves()
-                    chosen_move = find_move(user_src, user_dest, legal, game_state)
+                    user_src: tuple[int, int] = (selected_square[1], selected_square[0])
+                    user_dest: tuple[int, int] = (row, col)
+                    legal: list[tuple[int, int, int, int]] = game_state.get_moves()
+                    chosen_move: tuple[int, int, int, int] | None = find_move(user_src, user_dest, legal, game_state)
                     if chosen_move is not None:
                         game_state = game_state.move(chosen_move)
                         game_state.get_moves()
@@ -262,7 +263,7 @@ def game_loop() -> None:
                     computer_move_result.clear()
                     # print(0 if (game_state.color == 1) != reverse else 1)
                     computer_thread = threading.Thread(target=lambda: computer_move_result.append(
-                        bots[0 if (game_state.color == 1) != reverse else 1].generate_move(game_state, .1)))
+                        bots[0 if (game_state.color == 1) != reverse else 1].generate_move(game_state, depth=4)))
                     computer_thread.start()
             elif not computer_thread.is_alive():
                 if computer_move_result:
