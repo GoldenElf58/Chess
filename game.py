@@ -5,10 +5,10 @@ from utils import split_table
 # Precompute index-to-coordinate mapping for faster lookups
 index_to_coord: list[tuple[int, int]] = [(h // 8, h % 8) for h in range(64)]
 
-knight_targets: tuple[tuple[tuple[int, int, int], ...], ...] = tuple([((0, 0, 0),) for _ in range(64)])
-king_targets: tuple[tuple[tuple[int, int, int], ...], ...] = tuple([((0, 0, 0),) for _ in range(64)])
-rook_rays: tuple[tuple[tuple[int, ...], tuple[int, ...], tuple[int, ...], tuple[int, ...]], ...] = (
-    ((0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0)),)
+knight_targets: tuple[tuple[tuple[int, int, int], ...], ...]
+king_targets: tuple[tuple[tuple[int, int, int], ...], ...]
+rook_rays: tuple[tuple[tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...],
+tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]], ...]
 
 
 def populate_precomputed_tables() -> None:
@@ -17,14 +17,15 @@ def populate_precomputed_tables() -> None:
     global rook_rays
     temp_knight: list[tuple[tuple[int, int, int], ...]] = []
     temp_king: list[tuple[tuple[int, int, int], ...]] = []
-    temp_rook: list[tuple[tuple[int, ...], tuple[int, ...], tuple[int, ...], tuple[int, ...]]] = []
+    temp_rook: list[tuple[tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...],
+    tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]]] = []
     for h in range(64):
         i, j = index_to_coord[h]
         curr: list = []
         for k in range(-2, 3, 4):
             for l in range(-1, 2, 2):
                 if 8 > i + k >= 0 and 0 <= j + l < 8:
-                    curr.append(((i + k) * 8 + j + l, i + k, j + l))
+                    curr.append((((i + k) * 8 + j + l), i + k, j + l))
         temp_knight.append(tuple(curr))
         curr = []
         for k in range(-1, 2):
@@ -33,22 +34,21 @@ def populate_precomputed_tables() -> None:
                     curr.append(((i + k) * 8 + j + l, i + k, j + l))
         temp_king.append(tuple(curr))
         curr = []
-        curr2: list[int] = []
+        curr2: list = []
         for k in range(j + 1, 8):
-            curr2.append(h - j + k)
+            curr2.append((h - j + k, i, k))
         curr.append(tuple(curr2))
         curr2 = []
         for k in range(j - 1, -1, -1):
-            curr2.append(h - j + k)
+            curr2.append((h - j + k, i, k))
         curr.append(tuple(curr2))
         curr2 = []
         for k in range(i + 1, 8):
-            curr2.append(k * 8 + j)
+            curr2.append((k * 8 + j, k, j))
         curr.append(tuple(curr2))
         curr2 = []
         for k in range(i - 1, -1, -1):
-            curr2.append(k * 8 + j)
-        curr.append(tuple(curr2))
+            curr2.append((k * 8 + j, k, j))
         temp_rook.append(tuple(curr))
 
     knight_targets = tuple(temp_knight)
@@ -175,12 +175,13 @@ class GameState:
         coords_local: list[tuple[int, int]] = index_to_coord
         knight_targets_local: tuple[tuple[tuple[int, int, int], ...], ...] = knight_targets
         king_targets_local: tuple[tuple[tuple[int, int, int], ...], ...] = king_targets
-        rook_rays_local: tuple[tuple[tuple[int, ...], tuple[int, ...], tuple[int, ...], tuple[int, ...]], ...] = rook_rays
+        rook_rays_local: tuple[tuple[tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...],
+        tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]], ...] = rook_rays
         for h, piece in enumerate(board_local):
             i, j = coords_local[h]
             if piece * color_local <= 0:  # If piece is 0, blank so skip; if color doesn't match player color skip
                 continue
-            piece_type: int = abs(piece)
+            piece_type: int = piece * color_local
             if piece_type == 6:  # King
                 if (((color_local == 1 and white_king) or (color_local == -1 and black_king)) and board_local[
                     h - j + 7] == 4 * color_local
@@ -195,9 +196,9 @@ class GameState:
                         moves.append((i, j, target_i, target_j))
             elif piece_type == 4 or piece_type == 5:  # Rook and Queen
                 for ray in rook_rays_local[h]:
-                    for idx in ray:
+                    for (idx, ray_i, ray_j) in ray:
                         if board_local[idx] * color_local <= 0:
-                            moves.append((i, j, *coords_local[idx]))
+                            moves.append((i, j, ray_i, ray_j))
                         if board_local[idx] == 0:
                             continue
                         break
@@ -235,8 +236,8 @@ class GameState:
                         continue
                     break
             elif piece_type == 2:  # Knight
-                for (index, target_i, target_j) in knight_targets_local[h]:
-                    if board_local[index] * color_local <= 0:
+                for (idx, target_i, target_j) in knight_targets_local[h]:
+                    if board_local[idx] * color_local <= 0:
                         moves.append((i, j, target_i, target_j))
             elif piece_type == 1:  # Pawn
                 forward: bool = 0 <= (i - color_local) < 8
