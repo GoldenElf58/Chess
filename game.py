@@ -146,7 +146,7 @@ class GameState:
                     if board[k * 8 + j] == 0:
                         continue
                     break
-            if piece_type == 3 or piece_type == 5:  # Bishop
+            if piece_type == 3 or piece_type == 5:  # Bishop and Queen
                 for k in range(1, 8):
                     if i + k > 7 or j + k > 7:
                         break
