@@ -263,7 +263,7 @@ def game_loop() -> None:
                     computer_move_result.clear()
                     # print(0 if (game_state.color == 1) != reverse else 1)
                     computer_thread = threading.Thread(target=lambda: computer_move_result.append(
-                        bots[0 if (game_state.color == 1) != reverse else 1].generate_move(game_state, depth=4)))
+                        bots[0 if (game_state.color == 1) != reverse else 1].generate_move(game_state, .1)))
                     computer_thread.start()
             elif not computer_thread.is_alive():
                 if computer_move_result:
