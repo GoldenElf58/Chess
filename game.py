@@ -255,38 +255,38 @@ class GameState:
             elif piece_type == 1:  # Pawn
                 if 0 <= (i - color_local) < 8:
                     if board_local[(i - color_local) * 8 + j] == 0:
-                        if i - color_local != 0 and i - color_local != 7:
+                        if 7 != i - color_local != 0:
                             moves.append((i, j, i - color_local, j))
                         elif i - color_local == 0:  # Promotion
                             moves.append((-3, 2, i, j))
                             moves.append((-3, 3, i, j))
                             moves.append((-3, 4, i, j))
                             moves.append((-3, 5, i, j))
-                        elif i - color_local == 7:  # Promotion
+                        else:  # Promotion
                             moves.append((-3, -2, i, j))
                             moves.append((-3, -3, i, j))
                             moves.append((-3, -4, i, j))
                             moves.append((-3, -5, i, j))
                     if 8 > (j + 1) >= 0 > board_local[(i - color_local) * 8 + (j + 1)] * color_local:
-                        if i - color_local != 0 and i - color_local != 7:
+                        if 7 != i - color_local != 0:
                             moves.append((i, j, i - color_local, j + 1))
-                        elif i - color_local == 0 or i - color_local == 7:  # Promotion
+                        else:  # Promotion
                             moves.append((-4, 1, i, j))
                             moves.append((-5, 1, i, j))
                             moves.append((-6, 1, i, j))
                             moves.append((-7, 1, i, j))
                     if 8 > (j - 1) >= 0 > board_local[(i - color_local) * 8 + (j - 1)] * color_local:
-                        if i - color_local != 0 and i - color_local != 7:
+                        if 7 != i - color_local != 0:
                             moves.append((i, j, i - color_local, j - 1))
-                        elif i - color_local == 0 or i - color_local == 7:  # Promotion
+                        else:  # Promotion
                             moves.append((-4, -1, i, j))
                             moves.append((-5, -1, i, j))
                             moves.append((-6, -1, i, j))
                             moves.append((-7, -1, i, j))
                     if color_local == 1:
-                        if i == 6 and board_local[4 * 8 + j] == 0 and board_local[5 * 8 + j] == 0:
+                        if i == 6 and board_local[4 * 8 + j] == 0 == board_local[5 * 8 + j]:
                             moves.append((i, j, 4, j))
-                    elif i == 1 and board_local[3 * 8 + j] == 0 and board_local[2 * 8 + j] == 0:
+                    elif i == 1 and board_local[3 * 8 + j] == 0 == board_local[2 * 8 + j]:
                         moves.append((i, j, 3, j))
                 # En Passant
                 if (last_move_local is not None and board_local[
