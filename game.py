@@ -222,13 +222,14 @@ class GameState:
                 continue
             piece_type: int = piece * color_local
             if piece_type == 6:  # King
+                row_base: int = h - j
                 if (((color_local == 1 and white_king) or (color_local == -1 and black_king)) and board_local[
-                    h - j + 7] == 4 * color_local
-                        and board_local[h - j + 5] == board_local[h - j + 6] == 0):
+                    row_base + 7] == 4 * color_local
+                        and board_local[row_base + 5] == board_local[row_base + 6] == 0):
                     moves.append((-1, 1, i, j))
                 if (((color_local == 1 and white_queen) or (color_local == -1 and black_queen)) and board_local[
-                    h - j + 7] == 4 * color_local
-                        and board_local[h - j + 1] == board_local[h - j + 2] == board_local[h - j + 3] == 0):
+                    row_base + 7] == 4 * color_local
+                        and board_local[row_base + 1] == board_local[row_base + 2] == board_local[row_base + 3] == 0):
                     moves.append((-1, -1, i, j))
                 for (index, target_i, target_j) in king_targets_local[h]:
                     if board_local[index] * color_local <= 0:
@@ -256,7 +257,8 @@ class GameState:
                         moves.append((i, j, target_i, target_j))
             elif piece_type == 1:  # Pawn
                 if 0 <= (i - color_local) < 8:
-                    if board_local[(i - color_local) * 8 + j] == 0:
+                    dest_square: int = (i - color_local) * 8 + j
+                    if board_local[dest_square] == 0:
                         if 7 != i - color_local != 0:
                             moves.append((i, j, i - color_local, j))
                         elif i - color_local == 0:  # Promotion
@@ -269,7 +271,7 @@ class GameState:
                             moves.append((-3, -3, i, j))
                             moves.append((-3, -4, i, j))
                             moves.append((-3, -5, i, j))
-                    if 8 > (j + 1) >= 0 > board_local[(i - color_local) * 8 + (j + 1)] * color_local:
+                    if 8 > (j + 1) >= 0 > board_local[dest_square + 1] * color_local:
                         if 7 != i - color_local != 0:
                             moves.append((i, j, i - color_local, j + 1))
                         else:  # Promotion
@@ -277,7 +279,7 @@ class GameState:
                             moves.append((-5, 1, i, j))
                             moves.append((-6, 1, i, j))
                             moves.append((-7, 1, i, j))
-                    if 8 > (j - 1) >= 0 > board_local[(i - color_local) * 8 + (j - 1)] * color_local:
+                    if 8 > (j - 1) >= 0 > board_local[dest_square - 1] * color_local:
                         if 7 != i - color_local != 0:
                             moves.append((i, j, i - color_local, j - 1))
                         else:  # Promotion
