@@ -206,33 +206,33 @@ class GameState:
                 for k in range(1, 8):
                     if i + k > 7 or j + k > 7:
                         break
-                    if board_local[(i + k) * 8 + (j + k)] * color_local <= 0:
+                    if (target := board_local[(i + k) * 8 + (j + k)]) * color_local <= 0:
                         moves.append((i, j, i + k, j + k))
-                    if board_local[(i + k) * 8 + (j + k)] == 0:
+                    if target == 0:
                         continue
                     break
                 for k in range(1, 8):
                     if i - k < 0 or j + k > 7:
                         break
-                    if board_local[(i - k) * 8 + (j + k)] * color_local <= 0:
+                    if (target := board_local[(i - k) * 8 + (j + k)]) * color_local <= 0:
                         moves.append((i, j, i - k, j + k))
-                    if board_local[(i - k) * 8 + (j + k)] == 0:
+                    if target == 0:
                         continue
                     break
                 for k in range(1, 8):
                     if i + k > 7 or j - k < 0:
                         break
-                    if board_local[(i + k) * 8 + (j - k)] * color_local <= 0:
+                    if (target := board_local[(i + k) * 8 + (j - k)]) * color_local <= 0:
                         moves.append((i, j, i + k, j - k))
-                    if board_local[(i + k) * 8 + (j - k)] == 0:
+                    if target == 0:
                         continue
                     break
                 for k in range(1, 8):
                     if i - k < 0 or j - k < 0:
                         break
-                    if board_local[(i - k) * 8 + (j - k)] * color_local <= 0:
+                    if (target := board_local[(i - k) * 8 + (j - k)]) * color_local <= 0:
                         moves.append((i, j, i - k, j - k))
-                    if board_local[(i - k) * 8 + (j - k)] == 0:
+                    if target == 0:
                         continue
                     break
             elif piece_type == 2:  # Knight
