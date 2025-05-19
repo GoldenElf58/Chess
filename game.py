@@ -2,6 +2,62 @@ import copy
 
 from utils import split_table
 
+# Precompute index-to-coordinate mapping for faster lookups
+index_to_coord: list[tuple[int, int]] = [(h // 8, h % 8) for h in range(64)]
+
+knight_targets: tuple[tuple[tuple[int, int, int], ...], ...] = tuple([((0, 0, 0),) for _ in range(64)])
+king_targets: tuple[tuple[tuple[int, int, int], ...], ...] = tuple([((0, 0, 0),) for _ in range(64)])
+rook_rays: tuple[tuple[tuple[int, ...], tuple[int, ...], tuple[int, ...], tuple[int, ...]], ...] = (
+    ((0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0)),)
+
+
+def populate_precomputed_tables() -> None:
+    global knight_targets
+    global king_targets
+    global rook_rays
+    temp_knight: list[tuple[tuple[int, int, int], ...]] = []
+    temp_king: list[tuple[tuple[int, int, int], ...]] = []
+    temp_rook: list[tuple[tuple[int, ...], tuple[int, ...], tuple[int, ...], tuple[int, ...]]] = []
+    for h in range(64):
+        i, j = index_to_coord[h]
+        curr: list = []
+        for k in range(-2, 3, 4):
+            for l in range(-1, 2, 2):
+                if 8 > i + k >= 0 and 0 <= j + l < 8:
+                    curr.append(((i + k) * 8 + j + l, i + k, j + l))
+        temp_knight.append(tuple(curr))
+        curr = []
+        for k in range(-1, 2):
+            for l in range(-1, 2):
+                if 0 <= i + k < 8 and 0 <= j + l < 8:
+                    curr.append(((i + k) * 8 + j + l, i + k, j + l))
+        temp_king.append(tuple(curr))
+        curr = []
+        curr2: list[int] = []
+        for k in range(j + 1, 8):
+            curr2.append(h - j + k)
+        curr.append(tuple(curr2))
+        curr2 = []
+        for k in range(j - 1, -1, -1):
+            curr2.append(h - j + k)
+        curr.append(tuple(curr2))
+        curr2 = []
+        for k in range(i + 1, 8):
+            curr2.append(k * 8 + j)
+        curr.append(tuple(curr2))
+        curr2 = []
+        for k in range(i - 1, -1, -1):
+            curr2.append(k * 8 + j)
+        curr.append(tuple(curr2))
+        temp_rook.append(tuple(curr))
+
+    knight_targets = tuple(temp_knight)
+    king_targets = tuple(temp_king)
+    rook_rays = tuple(temp_rook)
+
+
+populate_precomputed_tables()
+
 start_board: tuple[int, ...] = (
     -4, -2, -3, -5, -6, -3, -2, -4,
     -1, -1, -1, -1, -1, -1, -1, -1,
@@ -15,6 +71,9 @@ start_board: tuple[int, ...] = (
 
 
 class GameState:
+    __slots__ = ('board', 'color', 'white_queen', 'white_king', 'black_queen', 'black_king', 'last_move', 'turn',
+                 'winner', 'previous_position_count', 'moves_since_pawn', 'moves')
+
     def __init__(self, board: tuple | None = None, white_queen: bool = True, white_king: bool = True,
                  black_queen: bool = True, back_king: bool = True, last_move: tuple[int, int, int, int] | None = None,
                  color=1, turn=0, winner: int | None = None, previous_position_count: dict[int, int] | None = None,
@@ -83,7 +142,7 @@ class GameState:
         for i, move_0 in enumerate(reversed(moves)):
             state: GameState = self.move(move_0)
             for move_1 in state.get_moves_no_check():
-                if (winner := state.move(move_1).get_winner()) in {-1, 1}:
+                if (winner := state.move(move_1).get_winner()) == -1 or winner == 1:
                     moves.pop(moves_len - i - 1)
                     break
         if len(moves) == 0 and moves_len > 0:
@@ -99,148 +158,141 @@ class GameState:
         return self.get_moves_no_check_static(*hash_state)
 
     @staticmethod
-    def get_moves_no_check_static(board, color, white_queen, white_king, black_queen, black_king, last_move) -> list[
-        tuple[int, int, int, int]]:
+    def get_moves_no_check_static(
+            board: tuple[int, ...],
+            color: int,
+            white_queen: bool,
+            white_king: bool,
+            black_queen: bool,
+            black_king: bool,
+            last_move: tuple[int, int, int, int] | None
+    ) -> list[tuple[int, int, int, int]]:
         moves: list[tuple[int, int, int, int]] = []
-        for h, piece in enumerate(board):
-            i, j = h // 8, h % 8
-            if piece * color <= 0:  # If piece is 0, blank so skip; if color doesn't match player color skip
+        # Local binds for speed
+        color_local: int = color
+        board_local: tuple[int, ...] = board
+        last_move_local: tuple[int, int, int, int] | None = last_move
+        coords_local: list[tuple[int, int]] = index_to_coord
+        knight_targets_local: tuple[tuple[tuple[int, int, int], ...], ...] = knight_targets
+        king_targets_local: tuple[tuple[tuple[int, int, int], ...], ...] = king_targets
+        rook_rays_local: tuple[tuple[tuple[int, ...], tuple[int, ...], tuple[int, ...], tuple[int, ...]], ...] = rook_rays
+        for h, piece in enumerate(board_local):
+            i, j = coords_local[h]
+            if piece * color_local <= 0:  # If piece is 0, blank so skip; if color doesn't match player color skip
                 continue
             piece_type: int = abs(piece)
             if piece_type == 6:  # King
-                if (((color == 1 and white_king) or (color == -1 and black_king))
-                        and board[h - j + 7] == 4 * color and {board[h - j + 5], board[h - j + 6]} == {0}):
+                if (((color_local == 1 and white_king) or (color_local == -1 and black_king)) and board_local[
+                    h - j + 7] == 4 * color_local
+                        and board_local[h - j + 5] == board_local[h - j + 6] == 0):
                     moves.append((-1, 1, i, j))
-                if (((color == 1 and white_queen) or (color == -1 and black_queen))
-                        and board[h - j + 7] == 4 * color and {board[h - j + 1], board[h - j + 2],
-                                                               board[h - j + 3]} == {0}):
+                if (((color_local == 1 and white_queen) or (color_local == -1 and black_queen)) and board_local[
+                    h - j + 7] == 4 * color_local
+                        and board_local[h - j + 1] == board_local[h - j + 2] == board_local[h - j + 3] == 0):
                     moves.append((-1, -1, i, j))
-                for k in range(-1, 2):
-                    for l in range(-1, 2):
-                        if (i + k) % 8 != i + k or (j + l) % 8 != j + l:
+                for (index, target_i, target_j) in king_targets_local[h]:
+                    if board_local[index] * color_local <= 0:
+                        moves.append((i, j, target_i, target_j))
+            elif piece_type == 4 or piece_type == 5:  # Rook and Queen
+                for ray in rook_rays_local[h]:
+                    for idx in ray:
+                        if board_local[idx] * color_local <= 0:
+                            moves.append((i, j, *coords_local[idx]))
+                        if board_local[idx] == 0:
                             continue
-                        if board[(i + k) * 8 + (j + l)] * color <= 0:
-                            moves.append((i, j, i + k, j + l))
-            if piece_type == 4 or piece_type == 5:  # Rook and Queen
-                for k in range(j + 1, 8):
-                    if board[h - j + k] * color <= 0:
-                        moves.append((i, j, i, k))
-                    if board[h - j + k] == 0:
-                        continue
-                    break
-                for k in range(j - 1, -1, -1):
-                    if board[h - j + k] * color <= 0:
-                        moves.append((i, j, i, k))
-                    if board[h - j + k] == 0:
-                        continue
-                    break
-                for k in range(i - 1, -1, -1):
-                    if board[k * 8 + j] * color <= 0:
-                        moves.append((i, j, k, j))
-                    if board[k * 8 + j] == 0:
-                        continue
-                    break
-                for k in range(i + 1, 8):
-                    if board[k * 8 + j] * color <= 0:
-                        moves.append((i, j, k, j))
-                    if board[k * 8 + j] == 0:
-                        continue
-                    break
+                        break
             if piece_type == 3 or piece_type == 5:  # Bishop and Queen
                 for k in range(1, 8):
                     if i + k > 7 or j + k > 7:
                         break
-                    if board[(i + k) * 8 + (j + k)] * color <= 0:
+                    if board_local[(i + k) * 8 + (j + k)] * color_local <= 0:
                         moves.append((i, j, i + k, j + k))
-                    if board[(i + k) * 8 + (j + k)] == 0:
+                    if board_local[(i + k) * 8 + (j + k)] == 0:
                         continue
                     break
                 for k in range(1, 8):
                     if i - k < 0 or j + k > 7:
                         break
-                    if board[(i - k) * 8 + (j + k)] * color <= 0:
+                    if board_local[(i - k) * 8 + (j + k)] * color_local <= 0:
                         moves.append((i, j, i - k, j + k))
-                    if board[(i - k) * 8 + (j + k)] == 0:
+                    if board_local[(i - k) * 8 + (j + k)] == 0:
                         continue
                     break
                 for k in range(1, 8):
                     if i + k > 7 or j - k < 0:
                         break
-                    if board[(i + k) * 8 + (j - k)] * color <= 0:
+                    if board_local[(i + k) * 8 + (j - k)] * color_local <= 0:
                         moves.append((i, j, i + k, j - k))
-                    if board[(i + k) * 8 + (j - k)] == 0:
+                    if board_local[(i + k) * 8 + (j - k)] == 0:
                         continue
                     break
                 for k in range(1, 8):
                     if i - k < 0 or j - k < 0:
                         break
-                    if board[(i - k) * 8 + (j - k)] * color <= 0:
+                    if board_local[(i - k) * 8 + (j - k)] * color_local <= 0:
                         moves.append((i, j, i - k, j - k))
-                    if board[(i - k) * 8 + (j - k)] == 0:
+                    if board_local[(i - k) * 8 + (j - k)] == 0:
                         continue
                     break
-            if piece_type == 2:  # Knight
-                for k in range(-2, 3, 4):
-                    for l in range(-1, 2, 2):
-                        if (i + k) % 8 == i + k and (j + l) % 8 == j + l and board[
-                            (i + k) * 8 + (j + l)] * color <= 0:
-                            moves.append((i, j, i + k, j + l))
-            if piece_type == 1:  # Pawn
-                forward: bool = (i - color) % 8 == i - color
-                if forward and board[(i - color) * 8 + j] == 0:
-                    if i - color != 0 and i - color != 7:
-                        moves.append((i, j, i - color, j))
-                    elif i - color == 0:  # Promotion
+            elif piece_type == 2:  # Knight
+                for (index, target_i, target_j) in knight_targets_local[h]:
+                    if board_local[index] * color_local <= 0:
+                        moves.append((i, j, target_i, target_j))
+            elif piece_type == 1:  # Pawn
+                forward: bool = 0 <= (i - color_local) < 8
+                if forward and board_local[(i - color_local) * 8 + j] == 0:
+                    if i - color_local != 0 and i - color_local != 7:
+                        moves.append((i, j, i - color_local, j))
+                    elif i - color_local == 0:  # Promotion
                         moves.append((-3, 2, i, j))
                         moves.append((-3, 3, i, j))
                         moves.append((-3, 4, i, j))
                         moves.append((-3, 5, i, j))
-                    elif i - color == 7:  # Promotion
+                    elif i - color_local == 7:  # Promotion
                         moves.append((-3, -2, i, j))
                         moves.append((-3, -3, i, j))
                         moves.append((-3, -4, i, j))
                         moves.append((-3, -5, i, j))
-                if forward and (j + 1) % 8 == j + 1 and board[(i - color) * 8 + (j + 1)] * color < 0:
-                    if i - color != 0 and i - color != 7:
-                        moves.append((i, j, i - color, j + 1))
-                    elif i - color == 0 or i - color == 7:  # Promotion
+                if forward and 8 > (j + 1) >= 0 > board_local[(i - color_local) * 8 + (j + 1)] * color_local:
+                    if i - color_local != 0 and i - color_local != 7:
+                        moves.append((i, j, i - color_local, j + 1))
+                    elif i - color_local == 0 or i - color_local == 7:  # Promotion
                         moves.append((-4, 1, i, j))
                         moves.append((-5, 1, i, j))
                         moves.append((-6, 1, i, j))
                         moves.append((-7, 1, i, j))
-                if forward and (j - 1) % 8 == j - 1 and board[(i - color) * 8 + (j - 1)] * color < 0:
-                    if i - color != 0 and i - color != 7:
-                        moves.append((i, j, i - color, j - 1))
-                    elif i - color == 0 or i - color == 7:  # Promotion
+                if forward and 8 > (j - 1) >= 0 > board_local[(i - color_local) * 8 + (j - 1)] * color_local:
+                    if i - color_local != 0 and i - color_local != 7:
+                        moves.append((i, j, i - color_local, j - 1))
+                    elif i - color_local == 0 or i - color_local == 7:  # Promotion
                         moves.append((-4, -1, i, j))
                         moves.append((-5, -1, i, j))
                         moves.append((-6, -1, i, j))
                         moves.append((-7, -1, i, j))
-                if forward and color == 1 and i == 6 and board[4 * 8 + j] == 0 and board[5 * 8 + j] == 0:
-                    moves.append((i, j, 4, j))
-                if forward and color == -1 and i == 1 and board[3 * 8 + j] == 0 and board[2 * 8 + j] == 0:
-                    moves.append((i, j, 3, j))
+                if forward:
+                    if color_local == 1:
+                        if i == 6 and board_local[4 * 8 + j] == 0 and board_local[5 * 8 + j] == 0:
+                            moves.append((i, j, 4, j))
+                    else:
+                        if i == 1 and board_local[3 * 8 + j] == 0 and board_local[2 * 8 + j] == 0:
+                            moves.append((i, j, 3, j))
                 # En Passant
-                if (last_move is not None and board[last_move[2] * 8 + last_move[3]] == -color and abs(
-                        last_move[2] - last_move[0]) == 2 and i == last_move[2]):
-                    if j == last_move[3] + 1 and j < 7:
+                if (last_move_local and board_local[
+                    last_move_local[2] * 8 + last_move_local[3]] == -color_local and abs(
+                    last_move_local[2] - last_move_local[0]) == 2 and i == last_move_local[2]):
+                    if j == last_move_local[3] + 1 and j < 7:
                         moves.append((-2, 1, i, j))
-                    if j == last_move[3] - 1 and j > 0:
+                    elif j == last_move_local[3] - 1 and j > 0:
                         moves.append((-2, -1, i, j))
         return moves
 
     def are_captures(self) -> bool:
         moves: list[tuple[int, int, int, int]] = self.get_moves()
-        empty_count: int = 0
-        for piece in self.board:
-            if piece == 0:
-                empty_count += 1
-        current_empty_count: int = 0
+        board_local: tuple[int, ...] = self.board
+        empty_count: int = board_local.count(0)
         for move in moves:
-            for piece in self.move(move).board:
-                if piece == 0:
-                    current_empty_count += 1
-            if current_empty_count != empty_count:
+            new_board: tuple[int, ...] = self.move(move).board
+            if new_board.count(0) != empty_count:
                 return True
         return False
 

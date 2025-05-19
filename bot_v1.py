@@ -1,5 +1,6 @@
 import threading
 import time
+from typing import Callable
 
 from game import GameState
 from utils import mirror, negate
@@ -111,12 +112,19 @@ position_values: dict[int, tuple[int, ...]] = {
 
 # Precompute combined piece and position tables for faster evaluation
 combined_tables: list[tuple[int, ...]] = [() for _ in range(13)]
-for piece, base_val in piece_values.items():
-    # Skip empty square (piece=0), which has no position table
-    if piece == 0:
-        continue
-    pos_vals = position_values[piece]
-    combined_tables[piece + 6] = tuple(base_val + pos_vals[i] for i in range(len(pos_vals)))
+
+
+def populate_combined_tables():
+    global combined_tables
+    for piece, base_val in piece_values.items():
+        # Skip empty square (piece=0), which has no position table
+        if piece == 0:
+            continue
+        pos_vals = position_values[piece]
+        combined_tables[piece + 6] = tuple(base_val + pos_vals[i] for i in range(len(pos_vals)))
+
+
+populate_combined_tables()
 
 
 class Botv1(Bot):
@@ -140,11 +148,12 @@ class Botv1(Bot):
         combined: list[tuple[int, ...]] = combined_tables
         board: tuple[int, ...] = game_state.board
         hash_state: int = game_state.get_efficient_hashable_state_hashed()
-        if hash_state in self.eval_lookup:
-            return self.eval_lookup[hash_state]
+        eval_cache = self.eval_lookup
+        if hash_state in eval_cache:
+            return eval_cache[hash_state]
         for i, piece in enumerate(board):
             if piece != 0: evaluation += combined[piece + 6][i]
-        self.eval_lookup[hash_state] = evaluation
+        eval_cache[hash_state] = evaluation
         return evaluation
 
     def iterative_deepening(self, game_state: GameState, maximizing_player: bool, allotted_time: float = 3.0,
@@ -181,22 +190,29 @@ class Botv1(Bot):
                                        game_state.white_king << 2) | (
                                        game_state.black_queen << 1 | game_state.black_king) | (
                                        (depth | (maximizing_player << 10)) << 5)))
-        if state_key in self.transposition_table:
-            return self.transposition_table[state_key]
+        transposition_table: dict[int, tuple[int, tuple[int, int, int, int]]] = self.transposition_table
+        if (cached := transposition_table.get(state_key)) is not None:
+            return cached
         moves: list[tuple[int, int, int, int]] = game_state.get_moves_no_check()
-        new_game_states: dict[tuple[int, int, int, int], GameState] = {move: game_state.move(move) for move in moves}
-        evaluations: dict[tuple[int, int, int, int], int] = {move: self.evaluate(new_game_states[move]) for move in
-                                                             moves}  # Cache evaluations
+        move_fn: Callable[[tuple[int, int, int, int]], GameState] = game_state.move
+        eval_fn: Callable[[GameState], int] = self.evaluate
+        child_data: list[tuple[tuple[int, int, int, int], GameState, int]] = [
+            (move, child_state := move_fn(move), eval_fn(child_state)) for move in moves]  # Cache evaluations
 
         # Move ordering: Sort moves by evaluation score (best first for maximizing, worst first for minimizing)
-        moves.sort(key=lambda move: evaluations[move], reverse=maximizing_player)
+        child_data.sort(key=lambda move: move[2], reverse=maximizing_player)
+
+        moves = [m[0] for m in child_data]
+        children: list[GameState] = [m[1] for m in child_data]
+        scores: list[int] = [m[2] for m in child_data]
 
         best_eval: int = -(1 << 40) if maximizing_player else (1 << 40)  # Large negative/positive integers
         best_move: tuple[int, int, int, int] | tuple = ()
+        recurse: Callable = self.minimax_tt
 
-        for move in moves:
-            evaluation = evaluations[move] if depth <= 0 else \
-                self.minimax_tt(new_game_states[move], depth - 1, alpha, beta, not maximizing_player)[0]
+        for i, move in enumerate(moves):
+            evaluation = scores[i] if depth <= 0 else \
+                recurse(children[i], depth - 1, alpha, beta, not maximizing_player)[0]
 
             if maximizing_player:
                 if evaluation > best_eval:
@@ -210,5 +226,5 @@ class Botv1(Bot):
             if beta <= alpha:  # Alpha-beta pruning
                 break
 
-        self.transposition_table[state_key] = best_eval, best_move
+        transposition_table[state_key] = best_eval, best_move
         return best_eval, best_move

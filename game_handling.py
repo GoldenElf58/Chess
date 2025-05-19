@@ -263,7 +263,7 @@ def game_loop() -> None:
                     computer_move_result.clear()
                     # print(0 if (game_state.color == 1) != reverse else 1)
                     computer_thread = threading.Thread(target=lambda: computer_move_result.append(
-                        bots[0 if (game_state.color == 1) != reverse else 1].generate_move(game_state, .1)))
+                        bots[0 if (game_state.color == 1) != reverse else 1].generate_move(game_state, depth=4)))
                     computer_thread.start()
             elif not computer_thread.is_alive():
                 if computer_move_result:
@@ -271,7 +271,7 @@ def game_loop() -> None:
                     (last_eval, best_move), depth = computer_move_result.pop(0)
                     depths.append(depth)
                     game_state = game_state.move(best_move)
-                    if game_state.turn == 10 and game_mode == GameMode.AI_VS_AI: print(time.time() - t0)
+                    if game_state.turn % 10 == 0 and game_mode == GameMode.AI_VS_AI: print(game_state.turn,time.time() - t0)
                 computer_thread = None
 
         screen.fill(0)
