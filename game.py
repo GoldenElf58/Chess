@@ -24,8 +24,10 @@ def populate_precomputed_tables() -> None:
         curr: list = []
         for k in range(-2, 3, 4):
             for l in range(-1, 2, 2):
-                if 8 > i + k >= 0 and 0 <= j + l < 8:
+                if 8 > i + k >= 0 <= j + l < 8:
                     curr.append((((i + k) * 8 + j + l), i + k, j + l))
+                if 8 > i + l >= 0 <= j + k < 8:
+                    curr.append((((i + l) * 8 + j + k), i + l, j + k))
         temp_knight.append(tuple(curr))
         curr = []
         for k in range(-1, 2):
