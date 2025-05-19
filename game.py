@@ -9,16 +9,20 @@ knight_targets: tuple[tuple[tuple[int, int, int], ...], ...]
 king_targets: tuple[tuple[tuple[int, int, int], ...], ...]
 rook_rays: tuple[tuple[tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...],
 tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]], ...]
-
+bishop_diagonals: tuple[tuple[tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...],
+tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]], ...]
 
 def populate_precomputed_tables() -> None:
     global knight_targets
     global king_targets
     global rook_rays
+    global bishop_diagonals
     temp_knight: list[tuple[tuple[int, int, int], ...]] = []
     temp_king: list[tuple[tuple[int, int, int], ...]] = []
     temp_rook: list[tuple[tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...],
     tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]]] = []
+    temp_bishop: list[tuple[tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...],
+tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]]] = []
     for h in range(64):
         i, j = index_to_coord[h]
 
@@ -55,12 +59,40 @@ def populate_precomputed_tables() -> None:
         for k in range(i - 1, -1, -1):
             curr2.append((k * 8 + j, k, j))
         curr.append(tuple(curr2))
-
         temp_rook.append(tuple(curr))
+
+        curr = []
+        curr2 = []
+        for k in range(1, 8):
+            if i + k > 7 or j + k > 7: break
+            curr2.append(((i + k) * 8 + (j + k), i + k, j + k))
+        curr.append(tuple(curr2))
+        curr2 = []
+        for k in range(1, 8):
+            if i - k < 0 or j + k > 7: break
+            curr2.append(((i - k) * 8 + (j + k), i - k, j + k))
+        curr.append(tuple(curr2))
+        curr2 = []
+        for k in range(1, 8):
+            if i + k > 7 or j - k < 0: break
+            curr2.append(((i + k) * 8 + (j - k), i + k, j - k))
+        curr.append(tuple(curr2))
+        curr2 = []
+        for k in range(1, 8):
+            if i - k < 0 or j - k < 0: break
+            curr2.append(((i - k) * 8 + (j - k), i - k, j - k))
+        curr.append(tuple(curr2))
+        curr2 = []
+        for k in range(1, 8):
+            if i - k < 0 or j - k < 0: break
+            curr2.append(((i - k) * 8 + (j - k), i - k, j - k))
+        curr.append(tuple(curr2))
+        temp_bishop.append(tuple(curr))
 
     knight_targets = tuple(temp_knight)
     king_targets = tuple(temp_king)
     rook_rays = tuple(temp_rook)
+    bishop_diagonals = tuple(temp_bishop)
 
 
 populate_precomputed_tables()
@@ -182,6 +214,8 @@ class GameState:
         king_targets_local: tuple[tuple[tuple[int, int, int], ...], ...] = king_targets
         rook_rays_local: tuple[tuple[tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...],
         tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]], ...] = rook_rays
+        bishop_diagonals_local: tuple[tuple[tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...],
+        tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]], ...] = bishop_diagonals
         for h, piece in enumerate(board_local):
             i, j = coords_local[h]
             if piece * color_local <= 0:  # If piece is 0, blank so skip; if color doesn't match player color skip
@@ -208,46 +242,14 @@ class GameState:
                             continue
                         break
             if piece_type == 3 or piece_type == 5:  # Bishop and Queen
-                for k in range(1, 8):
-                    if i + k > 7 or j + k > 7: break
-                    if (target := board_local[(i + k) * 8 + (j + k)]) == 0:
-                        moves.append((i, j, i + k, j + k))
-                        continue
-                    if target * color_local < 0:
-                        moves.append((i, j, i + k, j + k))
-                    break
-                for k in range(1, 8):
-                    if i - k < 0 or j + k > 7: break
-                    if (target := board_local[(i - k) * 8 + (j + k)]) == 0:
-                        moves.append((i, j, i - k, j + k))
-                        continue
-                    if target * color_local < 0:
-                        moves.append((i, j, i - k, j + k))
-                    break
-                for k in range(1, 8):
-                    if i + k > 7 or j - k < 0: break
-                    if (target := board_local[(i + k) * 8 + (j - k)]) == 0:
-                        moves.append((i, j, i + k, j - k))
-                        continue
-                    if target * color_local < 0:
-                        moves.append((i, j, i + k, j - k))
-                    break
-                for k in range(1, 8):
-                    if i - k < 0 or j - k < 0: break
-                    if (target := board_local[(i - k) * 8 + (j - k)]) == 0:
-                        moves.append((i, j, i - k, j - k))
-                        continue
-                    if target * color_local < 0:
-                        moves.append((i, j, i - k, j - k))
-                    break
-                for k in range(1, 8):
-                    if i - k < 0 or j - k < 0:
+                for diagonal in bishop_diagonals_local[h]:
+                    for (idx, diagonal_i, diagonal_j) in diagonal:
+                        if board_local[idx] == 0:
+                            moves.append((i, j, diagonal_i, diagonal_j))
+                            continue
+                        if board_local[idx] * color_local < 0:
+                            moves.append((i, j, diagonal_i, diagonal_j))
                         break
-                    if (target := board_local[(i - k) * 8 + (j - k)]) * color_local <= 0:
-                        moves.append((i, j, i - k, j - k))
-                    if target == 0:
-                        continue
-                    break
             elif piece_type == 2:  # Knight
                 for (idx, target_i, target_j) in knight_targets_local[h]:
                     if board_local[idx] * color_local <= 0:
