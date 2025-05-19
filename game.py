@@ -21,6 +21,7 @@ def populate_precomputed_tables() -> None:
     tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]]] = []
     for h in range(64):
         i, j = index_to_coord[h]
+
         curr: list = []
         for k in range(-2, 3, 4):
             for l in range(-1, 2, 2):
@@ -29,12 +30,14 @@ def populate_precomputed_tables() -> None:
                 if 8 > i + l >= 0 <= j + k < 8:
                     curr.append((((i + l) * 8 + j + k), i + l, j + k))
         temp_knight.append(tuple(curr))
+
         curr = []
         for k in range(-1, 2):
             for l in range(-1, 2):
                 if 0 <= i + k < 8 and 0 <= j + l < 8:
                     curr.append(((i + k) * 8 + j + l, i + k, j + l))
         temp_king.append(tuple(curr))
+
         curr = []
         curr2: list = []
         for k in range(j + 1, 8):
@@ -51,6 +54,8 @@ def populate_precomputed_tables() -> None:
         curr2 = []
         for k in range(i - 1, -1, -1):
             curr2.append((k * 8 + j, k, j))
+        curr.append(tuple(curr2))
+
         temp_rook.append(tuple(curr))
 
     knight_targets = tuple(temp_knight)
@@ -284,12 +289,12 @@ class GameState:
                     elif i == 1 and board_local[3 * 8 + j] == 0 and board_local[2 * 8 + j] == 0:
                         moves.append((i, j, 3, j))
                 # En Passant
-                if (last_move_local and board_local[
+                if (last_move_local is not None and board_local[
                     last_move_local[2] * 8 + last_move_local[3]] == -color_local and abs(
-                    last_move_local[2] - last_move_local[0]) == 2 and i == last_move_local[2]):
-                    if j == last_move_local[3] + 1 and j < 7:
+                        last_move_local[2] - last_move_local[0]) == 2 and i == last_move_local[2]):
+                    if 7 != j == last_move_local[3] + 1:
                         moves.append((-2, 1, i, j))
-                    elif j == last_move_local[3] - 1 and j > 0:
+                    elif 0 != j == last_move_local[3] - 1:
                         moves.append((-2, -1, i, j))
         return moves
 
