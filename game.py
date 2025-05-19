@@ -98,9 +98,7 @@ class GameState:
         color : int, optional
             The color of the current player (1 for white, -1 for black). Defaults to 1.
         """
-        if board is None:
-            board = start_board
-        self.board: tuple[int, ...] = board
+        self.board: tuple[int, ...] = start_board if board is None else board
         self.color: int = color
         self.white_queen: bool = white_queen
         self.white_king: bool = white_king
