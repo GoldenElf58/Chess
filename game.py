@@ -204,28 +204,36 @@ class GameState:
                         break
             if piece_type == 3 or piece_type == 5:  # Bishop and Queen
                 for k in range(1, 8):
-                    if i + k > 7 or j + k > 7:
-                        break
-                    if (target := board_local[(i + k) * 8 + (j + k)]) * color_local <= 0:
+                    if i + k > 7 or j + k > 7: break
+                    if (target := board_local[(i + k) * 8 + (j + k)]) == 0:
                         moves.append((i, j, i + k, j + k))
-                    if target == 0:
                         continue
+                    if target * color_local < 0:
+                        moves.append((i, j, i + k, j + k))
                     break
                 for k in range(1, 8):
-                    if i - k < 0 or j + k > 7:
-                        break
-                    if (target := board_local[(i - k) * 8 + (j + k)]) * color_local <= 0:
+                    if i - k < 0 or j + k > 7: break
+                    if (target := board_local[(i - k) * 8 + (j + k)]) == 0:
                         moves.append((i, j, i - k, j + k))
-                    if target == 0:
                         continue
+                    if target * color_local < 0:
+                        moves.append((i, j, i - k, j + k))
                     break
                 for k in range(1, 8):
-                    if i + k > 7 or j - k < 0:
-                        break
-                    if (target := board_local[(i + k) * 8 + (j - k)]) * color_local <= 0:
+                    if i + k > 7 or j - k < 0: break
+                    if (target := board_local[(i + k) * 8 + (j - k)]) == 0:
                         moves.append((i, j, i + k, j - k))
-                    if target == 0:
                         continue
+                    if target * color_local < 0:
+                        moves.append((i, j, i + k, j - k))
+                    break
+                for k in range(1, 8):
+                    if i - k < 0 or j - k < 0: break
+                    if (target := board_local[(i - k) * 8 + (j - k)]) == 0:
+                        moves.append((i, j, i - k, j - k))
+                        continue
+                    if target * color_local < 0:
+                        moves.append((i, j, i - k, j - k))
                     break
                 for k in range(1, 8):
                     if i - k < 0 or j - k < 0:
