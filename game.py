@@ -82,11 +82,6 @@ tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]]] = []
             if i - k < 0 or j - k < 0: break
             curr2.append(((i - k) * 8 + (j - k), i - k, j - k))
         curr.append(tuple(curr2))
-        curr2 = []
-        for k in range(1, 8):
-            if i - k < 0 or j - k < 0: break
-            curr2.append(((i - k) * 8 + (j - k), i - k, j - k))
-        curr.append(tuple(curr2))
         temp_bishop.append(tuple(curr))
 
     knight_targets = tuple(temp_knight)
