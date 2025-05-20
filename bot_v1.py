@@ -142,15 +142,15 @@ class Botv1(Bot):
         self.eval_lookup = {}
 
     def evaluate(self, game_state: GameState) -> int:
-        evaluation: int = 0
         if game_state.winner is not None:
             return game_state.winner * 9999999
-        combined: list[tuple[int, ...]] = combined_tables
-        board: tuple[int, ...] = game_state.board
         hash_state: int = game_state.get_hashed()
-        eval_cache = self.eval_lookup
+        eval_cache: dict[int, int] = self.eval_lookup
         if hash_state in eval_cache:
             return eval_cache[hash_state]
+        evaluation: int = 0
+        combined: list[tuple[int, ...]] = combined_tables
+        board: tuple[int, ...] = game_state.board
         for i, piece in enumerate(board):
             if piece != 0: evaluation += combined[piece + 6][i]
         eval_cache[hash_state] = evaluation
