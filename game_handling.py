@@ -78,7 +78,7 @@ def display_info(screen: Surface, game_state: GameState, last_eval, font: Font, 
 
 # Define a simple Button class.
 class Button:
-    def __init__(self, rect, text, color, hover_color, text_color):
+    def __init__(self, rect, text, color="gray", hover_color="lightgray", text_color=(0,0,0)):
         self.rect = pygame.Rect(rect)
         self.text = text
         self.color = color
@@ -170,15 +170,16 @@ def game_loop() -> None:
 
     # Create the three buttons.
     buttons: list[Button] = [
-        Button((43, 190, 100, 20), "Play White", "gray", "lightgray", (0, 0, 0)),
-        Button((43, 230, 100, 20), "Play Black", "gray", "lightgray", (0, 0, 0)),
-        Button((43, 270, 100, 20), "AI vs AI", "gray", "lightgray", (0, 0, 0)),
-        Button((43, 310, 100, 20), "Deep Test", "gray", "lightgray", (0, 0, 0)),
-        Button((43, 150, 100, 20), "Human", "gray", "lightgray", (0, 0, 0))
+        Button((43, 190, 100, 20), "Play White"),
+        Button((43, 230, 100, 20), "Play Black"),
+        Button((43, 270, 100, 20), "AI vs AI"),
+        Button((43, 310, 100, 20), "Deep Test"),
+        Button((43, 150, 100, 20), "Human"),
+        Button((43, 110, 100, 20), "Normal"),
     ]
 
     computer_thread: threading.Thread | None = None
-    computer_move_result: list[tuple[tuple[int, tuple[int, int, int, int]], int]] = []  # Container to hold the minimax result
+    computer_move_result: list[tuple[tuple[int, tuple[int, int, int, int]], int]] = []
     last_eval: int = 0
     depths: list[int] = []
     t0: float = time.time()
@@ -190,6 +191,12 @@ def game_loop() -> None:
     wins: int = 0
     draws: int = 0
     losses: int = 0
+
+    test_mode: bool = False
+    test_depth = 4
+    test_allotted_time = .1
+    normal_depth = -1
+    normal_allotted_time = .1
 
     running: bool = True
     while running:
@@ -228,6 +235,9 @@ def game_loop() -> None:
                 elif buttons[4].check_hover(pos):
                     game_mode = GameMode.HUMAN
                     game_state = GameState()
+                elif buttons[5].check_hover(pos):
+                    test_mode = not test_mode
+                    buttons[5].text = "Test" if test_mode else "Normal"
 
             if game_mode in {GameMode.PLAY_WHITE, GameMode.PLAY_BLACK, GameMode.HUMAN} and (
                     event.type == pygame.MOUSEBUTTONDOWN):
@@ -261,9 +271,10 @@ def game_loop() -> None:
                         game_mode == GameMode.PLAY_WHITE and game_state.color == -1) or (
                         game_mode == GameMode.PLAY_BLACK and game_state.color == 1):
                     computer_move_result.clear()
-                    # print(0 if (game_state.color == 1) != reverse else 1)
                     computer_thread = threading.Thread(target=lambda: computer_move_result.append(
-                        bots[0 if (game_state.color == 1) != reverse else 1].generate_move(game_state, depth=4)))
+                        bots[0 if (game_state.color == 1) != reverse else 1]
+                        .generate_move(game_state, test_allotted_time if test_mode else normal_allotted_time,
+                                       depth=test_depth if test_mode else normal_depth)))
                     computer_thread.start()
             elif not computer_thread.is_alive():
                 if computer_move_result:
@@ -271,7 +282,7 @@ def game_loop() -> None:
                     (last_eval, best_move), depth = computer_move_result.pop(0)
                     depths.append(depth)
                     game_state = game_state.move(best_move)
-                    if game_state.turn % 10 == 0 and game_mode == GameMode.AI_VS_AI:
+                    if game_state.turn % 10 == 0 and game_mode == GameMode.AI_VS_AI and test_mode:
                         print(time.time() - t0)
                         game_mode = GameMode.MENU
                 computer_thread = None
@@ -282,9 +293,10 @@ def game_loop() -> None:
         game_state.get_moves()
         if (winner := game_state.get_winner()) is not None and game_mode != GameMode.MENU:
             if game_mode != GameMode.DEEP_TEST:
-                print(winner)
+                print(winner, game_state.turn, time.time() - t0)
                 game_mode = GameMode.MENU
-            elif game_mode == GameMode.DEEP_TEST:
+                depths.clear()
+            else:
                 if game_mode == GameMode.DEEP_TEST:
                     # Determine bot[0]'s color for this game.
                     computer_move_result.clear()
