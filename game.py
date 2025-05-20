@@ -420,6 +420,22 @@ class GameState:
         return self.winner
 
     def __repr__(self) -> str:
+        return f"""GameState(board={self.board}
+          color={self.color},
+          turn={self.turn},
+          winner={self.winner},
+          previous_position_count={self.previous_position_count},
+          moves_since_pawn={self.moves_since_pawn},
+          moves={self.moves},
+          hash_state={self.hash_state},
+          white_queen={self.white_queen},
+          white_king={self.white_king},
+          black_queen={self.black_queen},
+          black_king={self.black_king},
+          last_move={self.last_move})
+"""
+
+    def __str__(self) -> str:
         """
         Return a string representation of the board.
 
