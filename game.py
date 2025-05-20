@@ -12,6 +12,7 @@ tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]], ...]
 bishop_diagonals: tuple[tuple[tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...],
 tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]], ...]
 
+
 def populate_precomputed_tables() -> None:
     global knight_targets
     global king_targets
@@ -22,7 +23,7 @@ def populate_precomputed_tables() -> None:
     temp_rook: list[tuple[tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...],
     tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]]] = []
     temp_bishop: list[tuple[tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...],
-tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]]] = []
+    tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]]] = []
     for h in range(64):
         i, j = index_to_coord[h]
 
@@ -106,7 +107,7 @@ start_board: tuple[int, ...] = (
 
 class GameState:
     __slots__ = ('board', 'color', 'white_queen', 'white_king', 'black_queen', 'black_king', 'last_move', 'turn',
-                 'winner', 'previous_position_count', 'moves_since_pawn', 'moves')
+                 'winner', 'previous_position_count', 'moves_since_pawn', 'moves', 'hash_state')
 
     def __init__(self, board: tuple | None = None, white_queen: bool = True, white_king: bool = True,
                  black_queen: bool = True, back_king: bool = True, last_move: tuple[int, int, int, int] | None = None,
@@ -145,18 +146,17 @@ class GameState:
             int, int] = previous_position_count if previous_position_count is not None else {}
         self.moves_since_pawn: int = moves_since_pawn
         self.moves: list[tuple[int, int, int, int]] | None = None
+        self.hash_state: int | None = None
 
     def get_hashable_state(self) -> tuple[tuple[int, ...], int, bool, bool, bool, bool, tuple[int, int, int, int]]:
         """ Convert the game state into a hashable format for caching. """
         board_tuple: tuple[int, ...] = self.board  # Convert board to tuple
         return board_tuple, self.color, self.white_queen, self.white_king, self.black_queen, self.black_king, self.last_move
 
-    def get_efficient_hashable_state_hashed(self) -> int:
-        return hash(self.get_efficient_hashable_state())
-
-    def get_efficient_hashable_state(self) -> tuple[tuple[int, ...], int, tuple[int, int, int, int]]:
-        return self.board, (((self.color == 1) << 4) | (self.white_queen << 3) | (self.white_king << 2) | (
-                self.black_queen << 1) | self.black_king), self.last_move
+    def get_hashed(self) -> int:
+        return hash((self.board, (((self.color == 1) << 4) | (self.white_queen << 3) | (self.white_king << 2) | (
+                self.black_queen << 1) | self.black_king),
+                     self.last_move)) if self.hash_state is None else self.hash_state
 
     def get_moves(self) -> list[tuple[int, int, int, int]]:
         """
@@ -290,7 +290,7 @@ class GameState:
                 # En Passant
                 if (last_move_local is not None and board_local[
                     last_move_local[2] * 8 + last_move_local[3]] == -color_local and abs(
-                        last_move_local[2] - last_move_local[0]) == 2 and i == last_move_local[2]):
+                    last_move_local[2] - last_move_local[0]) == 2 and i == last_move_local[2]):
                     if 7 != j == last_move_local[3] + 1:
                         moves.append((-2, 1, i, j))
                     elif 0 != j == last_move_local[3] - 1:

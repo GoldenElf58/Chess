@@ -271,7 +271,9 @@ def game_loop() -> None:
                     (last_eval, best_move), depth = computer_move_result.pop(0)
                     depths.append(depth)
                     game_state = game_state.move(best_move)
-                    if game_state.turn % 10 == 0 and game_mode == GameMode.AI_VS_AI: print(game_state.turn,time.time() - t0)
+                    if game_state.turn % 10 == 0 and game_mode == GameMode.AI_VS_AI:
+                        print(time.time() - t0)
+                        game_mode = GameMode.MENU
                 computer_thread = None
 
         screen.fill(0)

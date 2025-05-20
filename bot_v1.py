@@ -147,7 +147,7 @@ class Botv1(Bot):
             return game_state.winner * 9999999
         combined: list[tuple[int, ...]] = combined_tables
         board: tuple[int, ...] = game_state.board
-        hash_state: int = game_state.get_efficient_hashable_state_hashed()
+        hash_state: int = game_state.get_hashed()
         eval_cache = self.eval_lookup
         if hash_state in eval_cache:
             return eval_cache[hash_state]
