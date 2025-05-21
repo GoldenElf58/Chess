@@ -11,8 +11,8 @@ rook_rays: tuple[tuple[tuple[tuple[int, int, int], ...], tuple[tuple[int, int, i
 tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]], ...]
 bishop_diagonals: tuple[tuple[tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...],
 tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]], ...]
-promotion_forward: tuple[tuple[int, int], ...] = ((-3, 2), (-3, 3), (-3, 4), (-3, 5))
-promotion_taking: tuple[tuple[int, int], ...] = ((-4, 1), (-5, 1), (-6, 1), (-7, 1))
+promotion_forward: tuple[tuple[int, int], ...] = ((-3, 5), (-3, 4), (-3, 3), (-3, 2))
+promotion_taking: tuple[tuple[int, int], ...] = ((-7, 1), (-6, 1), (-5, 1), (-4, 1))
 
 def populate_precomputed_tables() -> None:
     global knight_targets

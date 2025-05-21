@@ -76,31 +76,31 @@ def benchmark(condition: bool) -> None:
                             if 7 != i - color_local != 0:
                                 moves.append((i, j, i - color_local, j))
                             elif i - color_local == 0:  # Promotion
-                                moves.append((-3, 2, i, j))
-                                moves.append((-3, 3, i, j))
-                                moves.append((-3, 4, i, j))
                                 moves.append((-3, 5, i, j))
+                                moves.append((-3, 4, i, j))
+                                moves.append((-3, 3, i, j))
+                                moves.append((-3, 2, i, j))
                             else:  # Promotion
-                                moves.append((-3, -2, i, j))
-                                moves.append((-3, -3, i, j))
-                                moves.append((-3, -4, i, j))
                                 moves.append((-3, -5, i, j))
+                                moves.append((-3, -4, i, j))
+                                moves.append((-3, -3, i, j))
+                                moves.append((-3, -2, i, j))
                         if 8 > (j + 1) >= 0 > board_local[dest_square + 1] * color_local:
                             if 7 != i - color_local != 0:
                                 moves.append((i, j, i - color_local, j + 1))
                             else:  # Promotion
-                                moves.append((-4, 1, i, j))
-                                moves.append((-5, 1, i, j))
-                                moves.append((-6, 1, i, j))
                                 moves.append((-7, 1, i, j))
+                                moves.append((-6, 1, i, j))
+                                moves.append((-5, 1, i, j))
+                                moves.append((-4, 1, i, j))
                         if 8 > (j - 1) >= 0 > board_local[dest_square - 1] * color_local:
                             if 7 != i - color_local != 0:
                                 moves.append((i, j, i - color_local, j - 1))
                             else:  # Promotion
-                                moves.append((-4, -1, i, j))
-                                moves.append((-5, -1, i, j))
-                                moves.append((-6, -1, i, j))
                                 moves.append((-7, -1, i, j))
+                                moves.append((-6, -1, i, j))
+                                moves.append((-5, -1, i, j))
+                                moves.append((-4, -1, i, j))
                         if color_local == 1:
                             if i == 6 and board_local[4 * 8 + j] == 0 == board_local[5 * 8 + j]:
                                 moves.append((i, j, 4, j))
