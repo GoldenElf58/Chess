@@ -100,9 +100,9 @@ start_board: tuple[int, ...] = (
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    1, 1, 1, 1, 1, 1, 1, 1,
-    4, 2, 3, 5, 6, 3, 2, 4
+    0, 0, 0, 0, 0, 0, -3, 0,
+    1, 1, 1, 1, 1, 0, 0, 1,
+    4, 2, 3, 5, 6, 0, 0, 4
 )
 
 
@@ -175,9 +175,25 @@ class GameState:
         for i, move_0 in enumerate(reversed(moves)):
             state: GameState = self.move(move_0)
             for move_1 in state.get_moves_no_check():
-                if (winner := state.move(move_1).get_winner()) == -1 or winner == 1:
+                if (winner := (state_2 := state.move(move_1)).get_winner()) == -1 or winner == 1:
                     moves.pop(moves_len - i - 1)
                     break
+                elif move_0[0] == -1:
+                    king_idx: int = move_0[2] * 8 + move_0[3]
+                    broke: bool = False
+                    if move_0[1] == 1:
+                        for idx in range(king_idx, king_idx + 2):
+                            if state_2.board[idx] * self.color < 0:
+                                broke = True
+                                break
+                    else:
+                        for idx in range(king_idx - 2, king_idx + 1):
+                            if state_2.board[idx] * self.color < 0:
+                                broke = True
+                                break
+                    if broke:
+                        moves.pop(moves_len - i - 1)
+                        break
         if len(moves) == 0 and moves_len > 0:
             self.winner = winner
         elif self.moves_since_pawn >= 50:
