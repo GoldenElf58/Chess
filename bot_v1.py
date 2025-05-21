@@ -181,7 +181,7 @@ class Botv1(Bot):
         # print(len(results))
         return results[-1], len(results)
 
-    def minimax_tt(self, game_state: GameState, depth: int, alpha: int, beta: int, maximizing_player: bool) -> tuple[
+    def minimax_tt(self, game_state: GameState, depth: int, alpha: int, beta: int, maximizing_player: bool, first_call: bool = True) -> tuple[
         int, tuple[int, int, int, int]]:
         if game_state.get_winner() is not None:
             return self.evaluate(game_state), game_state.last_move
@@ -193,7 +193,7 @@ class Botv1(Bot):
         transposition_table: dict[int, tuple[int, tuple[int, int, int, int]]] = self.transposition_table
         if (cached := transposition_table.get(state_key)) is not None:
             return cached
-        moves: list[tuple[int, int, int, int]] = game_state.get_moves_no_check()
+        moves: list[tuple[int, int, int, int]] = game_state.get_moves() if first_call else game_state.get_moves_no_check()
         move_fn: Callable[[tuple[int, int, int, int]], GameState] = game_state.move
         eval_fn: Callable[[GameState], int] = self.evaluate
         child_data: list[tuple[tuple[int, int, int, int], GameState, int]] = [
@@ -212,7 +212,7 @@ class Botv1(Bot):
 
         for i, move in enumerate(moves):
             evaluation = scores[i] if depth <= 0 else \
-                recurse(children[i], depth - 1, alpha, beta, not maximizing_player)[0]
+                recurse(children[i], depth - 1, alpha, beta, not maximizing_player, first_call=False)[0]
 
             if maximizing_player:
                 if evaluation > best_eval:
