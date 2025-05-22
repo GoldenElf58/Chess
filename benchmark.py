@@ -36,84 +36,9 @@ def benchmark(condition: bool) -> None:
             if piece_type <= 0: continue  # If piece is 0, blank so skip; if color doesn't match player color skip
             if piece_type == 2:
                 if cond:
-                    if 0 <= (i - color_local) < 8:
-                        dest_square: int = (i - color_local) * 8 + j
-                        if board_local[dest_square] == 0:
-                            if 7 != i - color_local != 0:
-                                moves.append((i, j, i - color_local, j))
-                            else:
-                                for id, promotion_piece in promotion_forward:
-                                    moves.append((id, promotion_piece, i, j))
-                        if 8 > (j + 1) >= 0 > board_local[dest_square + 1] * color_local:
-                            if 7 != i - color_local != 0:
-                                moves.append((i, j, i - color_local, j + 1))
-                            else:  # Promotion
-                                for promotion_piece, direction in promotion_taking:
-                                    moves.append((promotion_piece, direction, i, j))
-                        if 8 > (j - 1) >= 0 > board_local[dest_square - 1] * color_local:
-                            if 7 != i - color_local != 0:
-                                moves.append((i, j, i - color_local, j - 1))
-                            else:  # Promotion
-                                for promotion_piece, direction in promotion_taking:
-                                    moves.append((promotion_piece, direction, i, j))
-                        if color_local == 1:
-                            if i == 6 and board_local[4 * 8 + j] == 0 == board_local[5 * 8 + j]:
-                                moves.append((i, j, 4, j))
-                        elif i == 1 and board_local[3 * 8 + j] == 0 == board_local[2 * 8 + j]:
-                            moves.append((i, j, 3, j))
-                    # En Passant
-                    if (last_move_local is not None and board_local[
-                        last_move_local[2] * 8 + last_move_local[3]] == -color_local and abs(
-                        last_move_local[2] - last_move_local[0]) == 2 and i == last_move_local[2]):
-                        if 7 != j == last_move_local[3] + 1:
-                            moves.append((-2, 1, i, j))
-                        elif 0 != j == last_move_local[3] - 1:
-                            moves.append((-2, -1, i, j))
+                    pass
                 else:
-                    if 0 <= (i - color_local) < 8:
-                        dest_square: int = (i - color_local) * 8 + j  # type: ignore
-                        if board_local[dest_square] == 0:
-                            if 7 != i - color_local != 0:
-                                moves.append((i, j, i - color_local, j))
-                            elif i - color_local == 0:  # Promotion
-                                moves.append((-3, 5, i, j))
-                                moves.append((-3, 4, i, j))
-                                moves.append((-3, 3, i, j))
-                                moves.append((-3, 2, i, j))
-                            else:  # Promotion
-                                moves.append((-3, -5, i, j))
-                                moves.append((-3, -4, i, j))
-                                moves.append((-3, -3, i, j))
-                                moves.append((-3, -2, i, j))
-                        if 8 > (j + 1) >= 0 > board_local[dest_square + 1] * color_local:
-                            if 7 != i - color_local != 0:
-                                moves.append((i, j, i - color_local, j + 1))
-                            else:  # Promotion
-                                moves.append((-7, 1, i, j))
-                                moves.append((-6, 1, i, j))
-                                moves.append((-5, 1, i, j))
-                                moves.append((-4, 1, i, j))
-                        if 8 > (j - 1) >= 0 > board_local[dest_square - 1] * color_local:
-                            if 7 != i - color_local != 0:
-                                moves.append((i, j, i - color_local, j - 1))
-                            else:  # Promotion
-                                moves.append((-7, -1, i, j))
-                                moves.append((-6, -1, i, j))
-                                moves.append((-5, -1, i, j))
-                                moves.append((-4, -1, i, j))
-                        if color_local == 1:
-                            if i == 6 and board_local[4 * 8 + j] == 0 == board_local[5 * 8 + j]:
-                                moves.append((i, j, 4, j))
-                        elif i == 1 and board_local[3 * 8 + j] == 0 == board_local[2 * 8 + j]:
-                            moves.append((i, j, 3, j))
-                    # En Passant
-                    if (last_move_local is not None and board_local[
-                        last_move_local[2] * 8 + last_move_local[3]] == -color_local and abs(
-                        last_move_local[2] - last_move_local[0]) == 2 and i == last_move_local[2]):
-                        if 7 != j == last_move_local[3] + 1:
-                            moves.append((-2, 1, i, j))
-                        elif 0 != j == last_move_local[3] - 1:
-                            moves.append((-2, -1, i, j))
+                    pass
 
 
 def main() -> None:

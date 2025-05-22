@@ -94,17 +94,27 @@ def populate_precomputed_tables() -> None:
 
 populate_precomputed_tables()
 
-start_board: tuple[int, ...] = (
-    -4, -2, -3, -5, -6, -3, -2, -4,
-    -1, -1, -1, -1, -1, -1, -1, -1,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    1, 1, 1, 1, 1, 1, 1, 1,
-    4, 2, 3, 5, 6, 3, 2, 4
-)
+# start_board: tuple[int, ...] = (
+#     -4, -2, -3, -5, -6, -3, -2, -4,
+#     -1, -1, -1, -1, -1, -1, -1, -1,
+#     0, 0, 0, 0, 0, 0, 0, 0,
+#     0, 0, 0, 0, 0, 0, 0, 0,
+#     0, 0, 0, 0, 0, 0, 0, 0,
+#     0, 0, 0, 0, 0, 0, 0, 0,
+#     1, 1, 1, 1, 1, 1, 1, 1,
+#     4, 2, 3, 5, 6, 3, 2, 4
+# )
 
+start_board: tuple[int, ...] = (
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, -6, 0,
+    0, -1, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 6
+)
 
 class GameState:
     __slots__ = ('board', 'color', 'white_queen', 'white_king', 'black_queen', 'black_king', 'last_move', 'turn',
@@ -230,9 +240,8 @@ class GameState:
         tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]], ...] = bishop_diagonals
         for h, piece in enumerate(board_local):
             i, j = coords_local[h]
-            if piece * color_local <= 0:  # If piece is 0, blank so skip; if color doesn't match player color skip
-                continue
             piece_type: int = piece * color_local
+            if piece_type <= 0: continue
             if piece_type == 6:  # King
                 row_base: int = h - j
                 if (((color_local == 1 and white_king) or (color_local == -1 and black_king)) and board_local[
@@ -267,32 +276,31 @@ class GameState:
                 for (idx, target_i, target_j) in knight_targets_local[h]:
                     if board_local[idx] * color_local <= 0:
                         moves.append((i, j, target_i, target_j))
-            elif piece_type == 1:  # Pawn
-                if 0 <= (i - color_local) < 8:
-                    dest_square: int = (i - color_local) * 8 + j
-                    if board_local[dest_square] == 0:
-                        if 7 != i - color_local != 0:
-                            moves.append((i, j, i - color_local, j))
-                        else:
-                            for id, promotion_piece in promotion_forward:
-                                moves.append((id, promotion_piece, i, j))
-                    if 8 > (j + 1) >= 0 > board_local[dest_square + 1] * color_local:
-                        if 7 != i - color_local != 0:
-                            moves.append((i, j, i - color_local, j + 1))
-                        else:  # Promotion
-                            for promotion_piece, direction in promotion_taking:
-                                moves.append((promotion_piece, direction, i, j))
-                    if 8 > (j - 1) >= 0 > board_local[dest_square - 1] * color_local:
-                        if 7 != i - color_local != 0:
-                            moves.append((i, j, i - color_local, j - 1))
-                        else:  # Promotion
-                            for promotion_piece, direction in promotion_taking:
-                                moves.append((promotion_piece, direction, i, j))
-                    if color_local == 1:
-                        if i == 6 and board_local[4 * 8 + j] == 0 == board_local[5 * 8 + j]:
-                            moves.append((i, j, 4, j))
-                    elif i == 1 and board_local[3 * 8 + j] == 0 == board_local[2 * 8 + j]:
-                        moves.append((i, j, 3, j))
+            elif piece_type == 1:
+                dest_square: int = (i - color_local) * 8 + j
+                if board_local[dest_square] == 0:
+                    if 7 != i - color_local != 0:
+                        moves.append((i, j, i - color_local, j))
+                    else:
+                        for move_id, promotion_piece in promotion_forward:
+                            moves.append((move_id, promotion_piece * color_local, i, j))
+                if 8 > (j + 1) and 0 > board_local[dest_square + 1] * color_local:
+                    if 7 != i - color_local != 0:
+                        moves.append((i, j, i - color_local, j + 1))
+                    else:  # Promotion
+                        for promotion_piece, direction in promotion_taking:
+                            moves.append((promotion_piece, direction, i, j))
+                if (j - 1) >= 0 > board_local[dest_square - 1] * color_local:
+                    if 7 != i - color_local != 0:
+                        moves.append((i, j, i - color_local, j - 1))
+                    else:  # Promotion
+                        for promotion_piece, direction in promotion_taking:
+                            moves.append((promotion_piece, -direction, i, j))
+                if color_local == 1:
+                    if i == 6 and board_local[4 * 8 + j] == 0 == board_local[5 * 8 + j]:
+                        moves.append((i, j, 4, j))
+                elif i == 1 and board_local[3 * 8 + j] == 0 == board_local[2 * 8 + j]:
+                    moves.append((i, j, 3, j))
                 # En Passant
                 if (last_move_local is not None and board_local[
                     last_move_local[2] * 8 + last_move_local[3]] == -color_local and abs(
