@@ -108,7 +108,7 @@ start_board: tuple[int, ...] = (
 
 class GameState:
     __slots__ = ('board', 'color', 'white_queen', 'white_king', 'black_queen', 'black_king', 'last_move', 'turn',
-                 'winner', 'previous_position_count', 'moves_since_pawn', 'moves', 'hash_state')
+                 'winner', 'previous_position_count', 'moves_since_pawn', 'moves')
 
     def __init__(self, board: tuple | None = None, white_queen: bool = True, white_king: bool = True,
                  black_queen: bool = True, back_king: bool = True, last_move: tuple[int, int, int, int] | None = None,
@@ -147,17 +147,15 @@ class GameState:
             int, int] = previous_position_count if previous_position_count is not None else {}
         self.moves_since_pawn: int = moves_since_pawn
         self.moves: list[tuple[int, int, int, int]] | None = None
-        self.hash_state: int | None = None
 
     def get_hashable_state(self) -> tuple[tuple[int, ...], int, bool, bool, bool, bool, tuple[int, int, int, int]]:
         """ Convert the game state into a hashable format for caching. """
-        board_tuple: tuple[int, ...] = self.board  # Convert board to tuple
-        return board_tuple, self.color, self.white_queen, self.white_king, self.black_queen, self.black_king, self.last_move
+        return self.board, self.color, self.white_queen, self.white_king, self.black_queen, self.black_king, self.last_move
 
     def get_hashed(self) -> int:
         return hash((self.board, (((self.color == 1) << 4) | (self.white_queen << 3) | (self.white_king << 2) | (
                 self.black_queen << 1) | self.black_king),
-                     self.last_move)) if self.hash_state is None else self.hash_state
+                     self.last_move))
 
     def get_moves(self) -> list[tuple[int, int, int, int]]:
         """
@@ -187,7 +185,7 @@ class GameState:
                                 broke = True
                                 break
                     else:
-                        for idx in range(king_idx - 2, king_idx + 1):
+                        for idx in range(king_idx - 1, king_idx + 1):
                             if state_2.board[idx] * self.color < 0:
                                 broke = True
                                 break
@@ -441,7 +439,6 @@ class GameState:
           previous_position_count={self.previous_position_count},
           moves_since_pawn={self.moves_since_pawn},
           moves={self.moves},
-          hash_state={self.hash_state},
           white_queen={self.white_queen},
           white_king={self.white_king},
           black_queen={self.black_queen},
