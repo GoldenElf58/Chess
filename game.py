@@ -417,19 +417,19 @@ class GameState:
             return 0
         white: bool = False
         black: bool = False
-        empty: int = 0
+        empty: bool = True
         for piece in self.board:
-            if piece == 0:
-                empty += 1
-            elif piece == 6:
+            if piece == 6:
                 white = True
             elif piece == -6:
                 black = True
+            elif piece != 0:
+                empty = False
         if white and not black:
             self.winner = 1
         elif black and not white:
             self.winner = -1
-        elif (not black and not white) or empty == 62:
+        elif empty:
             self.winner = 0
         return self.winner
 
