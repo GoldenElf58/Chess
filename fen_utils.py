@@ -95,7 +95,7 @@ def game_state_from_fen(fen: str) -> GameState:
     )
 
 
-def game_state_from_line(line_number: int, filename: str = "positions.txt") -> GameState:
+def game_state_from_line(line_number: int, filename: str = "fens.txt") -> GameState:
     """
     Read the specified (1-indexed) line from a file of FEN strings and
     return the corresponding GameState.
@@ -109,6 +109,6 @@ def game_state_from_line(line_number: int, filename: str = "positions.txt") -> G
 
 
 if __name__ == '__main__':
-    # Example: Create a GameState from line 1 of positions.txt and print its board.
-    gs = game_state_from_line(1, "positions.txt")
+    # Example: Create a GameState from line 1 of fens.txt and print its board.
+    gs = game_state_from_line(1, "fens.txt")
     print(gs)
