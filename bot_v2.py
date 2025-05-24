@@ -160,71 +160,61 @@ class Botv2(Bot):
                             depth: int = -1) -> tuple[tuple[int, tuple[int, int, int, int]], int]:
         if depth >= 0:
             result: tuple[int, tuple[int, int, int, int]] = (0, game_state.get_moves()[0])
-            for i in range(1, depth + 1):
-                result = self.minimax_tt(game_state, i, -(1 << 40), (1 << 40), maximizing_player)
+            for i in range(min(depth, 2), depth + 1):
+                result = self.minimax(game_state, i, -(1 << 31), (1 << 31), maximizing_player)
             return result, depth
         t0: float = time.time()
         results: list[tuple[int, tuple[int, int, int, int]]] = [(0, game_state.get_moves()[0])]
-        depth = 0
+        depth = 2
         minimax_thread: threading.Thread = threading.Thread(
-            target=lambda: results.append(self.minimax_tt(game_state, depth, -(1 << 40), (1 << 40), maximizing_player)))
+            target=lambda: results.append(self.minimax(game_state, depth, -(1 << 31), (1 << 31), maximizing_player)))
         minimax_thread.start()
         while time.time() - t0 < allotted_time:
             depth += 1
             minimax_thread.join(allotted_time - (time.time() - t0))
             minimax_thread = threading.Thread(
                 target=lambda: results.append(
-                    self.minimax_tt(game_state, depth, -(1 << 40), (1 << 40), maximizing_player, true_move_depth=2)))
+                    self.minimax(game_state, depth, -(1 << 31), (1 << 31), maximizing_player, true_move_depth=2)))
             if time.time() - t0 < allotted_time: minimax_thread.start()
         if minimax_thread.is_alive():
             minimax_thread.join(0)
-        # print(len(results))
-        return results[-1], len(results)
+        return results[-1], (len(results) if len(results) != 1 else 0)
 
-    def minimax_tt(self, game_state: GameState, depth: int, alpha: int, beta: int, maximizing_player: bool,
-                   true_move_depth: int = 0) -> tuple[int, tuple[int, int, int, int]]:
+    def minimax(self, game_state: GameState, depth: int, alpha: int, beta: int, maximizing_player: bool,
+                true_move_depth: int = 0) -> tuple[int, tuple[int, int, int, int]]:
         if game_state.get_winner() is not None:
             return self.evaluate(game_state), game_state.last_move
-        state_key: int = hash((tuple(game_state.board),
-                               ((game_state.color == 1) << 4) | (game_state.white_queen << 3) | (
-                                       game_state.white_king << 2) | (
-                                       game_state.black_queen << 1 | game_state.black_king) | (
-                                       (depth | (maximizing_player << 10)) << 5)))
+        state_key: int = hash((game_state.board, game_state.white_queen, game_state.white_king,
+                               game_state.black_queen, game_state.black_king, depth, maximizing_player))
         transposition_table: dict[int, tuple[int, tuple[int, int, int, int]]] = self.transposition_table
         if (cached := transposition_table.get(state_key)) is not None:
             return cached
-        moves: list[
-            tuple[int, int, int, int]] = game_state.get_moves() if true_move_depth > 0 else game_state.get_moves_no_check()
+        moves: tuple[tuple[int, int, int, int], ...] = tuple(game_state.get_moves() if true_move_depth > 0 else
+                                                        game_state.get_moves_no_check())
         move_fn: Callable[[tuple[int, int, int, int]], GameState] = game_state.move
         eval_fn: Callable[[GameState], int] = self.evaluate
         child_data: list[tuple[tuple[int, int, int, int], GameState, int]] = [
             (move, child_state := move_fn(move), eval_fn(child_state)) for move in moves]  # Cache evaluations
 
-        # Move ordering: Sort moves by evaluation score (best first for maximizing, worst first for minimizing)
         child_data.sort(key=lambda move: move[2], reverse=maximizing_player)
 
-        moves = [m[0] for m in child_data]
-        children: list[GameState] = [m[1] for m in child_data]
-        scores: list[int] = [m[2] for m in child_data]
-
-        best_eval: int = -(1 << 40) if maximizing_player else (1 << 40)  # Large negative/positive integers
+        best_eval: int = -(1 << 31) if maximizing_player else (1 << 31)  # Large negative/positive integers
         best_move: tuple[int, int, int, int] | tuple = ()
-        recurse: Callable = self.minimax_tt
+        recurse: Callable = self.minimax
 
-        for i, move in enumerate(moves):
-            evaluation = scores[i] if depth <= 0 else \
-                recurse(children[i], depth - 1, alpha, beta, not maximizing_player, true_move_depth - 1)[0]
+        for move, child, score in child_data:
+            evaluation = score if depth <= 1 else \
+                recurse(child, depth - 1, alpha, beta, not maximizing_player, true_move_depth - 1)[0]
 
             if maximizing_player:
                 if evaluation > best_eval:
                     best_eval, best_move = evaluation, move
                     alpha = max(alpha, evaluation)
-            else:
-                if evaluation < best_eval:
+            elif evaluation < best_eval:
                     best_eval, best_move = evaluation, move
                     beta = min(beta, evaluation)
 
-            if beta <= alpha:  # Alpha-beta pruning
+            if beta <= alpha:
                 break
 
         transposition_table[state_key] = best_eval, best_move
