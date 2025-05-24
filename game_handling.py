@@ -194,7 +194,7 @@ def game_loop() -> None:
     losses: int = 0
 
     test_mode: bool = False
-    test_depth = 4
+    test_depth = 5
     test_allotted_time = .1
     normal_depth = -1
     normal_allotted_time = .1

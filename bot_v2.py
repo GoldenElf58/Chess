@@ -157,7 +157,7 @@ class Botv2(Bot):
         return evaluation
 
     def iterative_deepening(self, game_state: GameState, maximizing_player: bool, allotted_time: float = 3.0,
-                            depth: int = -1) -> tuple[tuple[int, tuple[int, int, int, int]], int]:
+                            depth: int = -1) -> tuple[tuple[int, tuple[int, int, int, int] | tuple], int]:
         if depth >= 0:
             result: tuple[int, tuple[int, int, int, int]] = (0, game_state.get_moves()[0])
             for i in range(min(depth, 2), depth + 1):
@@ -181,12 +181,12 @@ class Botv2(Bot):
         return results[-1], (len(results) if len(results) != 1 else 0)
 
     def minimax(self, game_state: GameState, depth: int, alpha: int, beta: int, maximizing_player: bool,
-                true_move_depth: int = 0) -> tuple[int, tuple[int, int, int, int]]:
+                true_move_depth: int = 0) -> tuple[int, tuple[int, int, int, int] | tuple]:
         if game_state.get_winner() is not None:
             return self.evaluate(game_state), game_state.last_move
         state_key: int = hash((game_state.board, game_state.white_queen, game_state.white_king,
                                game_state.black_queen, game_state.black_king, depth, maximizing_player))
-        transposition_table: dict[int, tuple[int, tuple[int, int, int, int]]] = self.transposition_table
+        transposition_table: dict[int, tuple[int, tuple[int, int, int, int] | tuple]] = self.transposition_table
         if (cached := transposition_table.get(state_key)) is not None:
             return cached
         moves: tuple[tuple[int, int, int, int], ...] = tuple(game_state.get_moves() if true_move_depth > 0 else
