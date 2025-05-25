@@ -433,7 +433,10 @@ class GameState:
             self.winner = 1
         elif black and not white:
             self.winner = -1
-        elif np.count_nonzero(self.board) > 2:
+        else:
+            for piece in self.board:
+                if -6 != piece != 6:
+                    return self.winner
             self.winner = 0
         return self.winner
 

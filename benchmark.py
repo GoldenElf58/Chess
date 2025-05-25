@@ -17,12 +17,11 @@ def populate_game_states():
 populate_game_states()
 
 def benchmark(condition: bool, game_state) -> None:
+    game_state.winner = None
     if condition:
-        for move in game_state.get_moves():
-            game_state.new_move(move)
+        game_state.get_winner_new()
     else:
-        for move in game_state.get_moves():
-            game_state.move(move)
+        game_state.get_winner()
 
 
 def main() -> None:
