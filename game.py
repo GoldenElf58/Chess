@@ -335,10 +335,7 @@ class GameState:
         black_queen: bool = self.black_queen
         black_king: bool = self.black_king
         new_moves_since_pawn: int = self.moves_since_pawn + 1
-        move_0: int = move[0]
-        move_1: int = move[1]
-        move_2: int = move[2] # No statistical evidence of a difference with or without move_2
-        move_3: int = move[3]
+        move_0, move_1, move_2, move_3 = move
 
         if len(move) == 0:
             return GameState(board_local, turn=self.turn + 1, winner=self.winner)
@@ -420,120 +417,6 @@ class GameState:
             new_previous_position_count[hash_state] = 1
         last_move: tuple[int, int, int, int] | None = move if (
                 piece == 1 and (move_0 == move_2 + self.color * 2)) else None
-        return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king, last_move=last_move,
-                         color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn,
-                         previous_position_count=new_previous_position_count)
-
-    def new_move(self, move: tuple[int, int, int, int]) -> 'GameState':
-        """
-        Make a move on the board.
-
-        Parameters
-        ----------
-        move : tuple[tuple[int, int], tuple[int, int]]
-            The move to make, as a tuple of two tuples. The first tuple is the
-            piece to move, with the first element being the row and the second
-            element being the column. The second tuple is the destination, with
-            the first element being the row and the second element being the
-            column.
-
-        Returns
-        -------
-        GameState
-            A new GameState object, with the move applied.
-        """
-        board_local: tuple[int, ...] = self.board
-        new_board: list[int] = list(board_local)
-        white_queen: bool = self.white_queen
-        white_king: bool = self.white_king
-        black_queen: bool = self.black_queen
-        black_king: bool = self.black_king
-        new_moves_since_pawn: int = self.moves_since_pawn + 1
-        move_0: int = move[0]
-        move_1: int = move[1]
-        move_2: int = move[2] # No statistical evidence of a difference with or without move_2
-        move_3: int = move[3]
-
-        if len(move) == 0:
-            return GameState(board_local, turn=self.turn + 1, winner=self.winner)
-
-        second_idx: int = move_2 * 8 + move_3
-        if move_0 == -1:  # Castle
-            if move_2 == 7:
-                white_queen = False
-                white_king = False
-            else:
-                black_queen = False
-                black_king = False
-
-            new_board[second_idx] = 0
-            new_board[move_2 * 8 + (0 if move_1 == -1 else 7)] = 0
-            new_board[move_2 * 8 + 4 + move_1 * 2] = board_local[second_idx]
-            new_board[move_2 * 8 + 4 + move_1] = board_local[move_2 * 8 + (0 if move_1 == -1 else 7)]
-            return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king,
-                             color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn)
-
-        if move_0 == -2:  # En Passant
-            new_board[second_idx] = 0
-            new_board[(move_2 - self.color) * 8 + move_3 + move_1] = self.color
-            new_board[second_idx + move_1] = 0
-            return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king,
-                             color=-self.color, turn=self.turn + 1, moves_since_pawn=0)
-
-        if move_0 == -3:  # Promotion
-            new_board[second_idx] = 0
-            new_board[(move_2 - self.color) * 8 + move_3] = move_1
-            return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king, color=-self.color,
-                             turn=self.turn + 1, moves_since_pawn=0)
-
-        if move_0 <= -4:  # Promotion while taking
-            new_board[second_idx] = 0
-            new_board[(move_2 - self.color) * 8 + (move_3 + move_1)] = (move_0 + 2) * -self.color
-
-            return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king,
-                             color=-self.color, turn=self.turn + 1, moves_since_pawn=0)
-
-        first_idx: int = move_0 * 8 + move_1
-        if (piece := abs(new_board[first_idx])) in {4, 6}:
-            if move_2 == 7 and move_3 == 0:
-                white_queen = False
-            if move_2 == 7 and move_3 == 7:
-                white_king = False
-            if move_2 == 0 and move_3 == 0:
-                black_queen = False
-            if move_2 == 0 and move_3 == 7:
-                black_king = False
-            if move_2 == 0 and move_3 == 4:
-                black_queen = False
-                black_king = False
-            if move_2 == 7 and move_3 == 4:
-                white_queen = False
-                white_king = False
-        elif new_board[second_idx] in {-4, 4}:
-            if move_2 == 7 and move_3 == 0:
-                white_queen = False
-            if move_2 == 7 and move_3 == 7:
-                white_king = False
-            if move_2 == 0 and move_3 == 0:
-                black_queen = False
-            if move_2 == 0 and move_3 == 7:
-                black_king = False
-
-
-        if piece == 1:
-            new_moves_since_pawn = 0
-
-        new_board[second_idx] = new_board[first_idx]
-        new_board[first_idx] = 0
-        new_previous_position_count = copy(self.previous_position_count)
-        if (hash_state := hash(board_local)) in new_previous_position_count:
-            new_previous_position_count[hash_state] += 1
-            if new_previous_position_count[hash_state] >= 3:
-                return GameState(tuple(new_board), winner=0)
-        else:
-            new_previous_position_count[hash_state] = 1
-        last_move: tuple[int, int, int, int] | None = move if (
-                piece == 1 and (move_0 == move_2 - self.color * 2)) else None
         return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king, last_move=last_move,
                          color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn,
                          previous_position_count=new_previous_position_count)

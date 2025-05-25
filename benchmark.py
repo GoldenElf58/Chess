@@ -18,11 +18,11 @@ populate_game_states()
 
 def benchmark(condition: bool, game_state) -> None:
     if condition:
-        game_state.get_moves_new()
+        for move in game_state.get_moves():
+            game_state.new_move(move)
     else:
-        game_state.get_moves()
-        # bot = Botv1()
-        # bot.minimax(game_state, 3, -(1 << 40), (1 << 40), game_state.color == 1)
+        for move in game_state.get_moves():
+            game_state.move(move)
 
 
 def main() -> None:
@@ -31,14 +31,14 @@ def main() -> None:
     t3 = []
     for _ in range(50_000_000): pass
     print('Warmup complete')
-    for i in range(5000):
+    for i in range(100):
         game_state = game_states[i % 500]
         # t1.append(mean([benchmark(True, game_state)[1] for i in range(3)]))
         # t2.append(mean([benchmark(False, game_state)[1] for i in range(3)]))
-        t1.append(timeit(lambda: benchmark(True, game_state), number=30_000) * 1_000)
-        t2.append(timeit(lambda: benchmark(False, game_state), number=30_000) * 1_000)
+        t1.append(timeit(lambda: benchmark(True, game_state), number=300) * 1_000)
+        t2.append(timeit(lambda: benchmark(False, game_state), number=300) * 1_000)
         t3.append(t1[-1] - t2[-1])
-        if i > 0 and i % 500 == 0:
+        if i > 0 and i % 5 == 0:
             t, p = stats.ttest_1samp(t3, 0, alternative='less')
             # t, p = stats.ttest_ind(t1, t2, equal_var=False, alternative='less')
             print(f'{i}:\nNew: {mean(t1)}, {stdev(t1)}')
