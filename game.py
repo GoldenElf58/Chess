@@ -200,47 +200,6 @@ class GameState:
         self.moves = moves
         return moves
 
-    def get_moves_new(self) -> list[tuple[int, int, int, int]]:
-        """
-        Get all the possible moves for the current player.
-
-        Returns
-        -------
-        list[tuple[int, int, int, int]]
-            A list of tuples, each representing a move in the format (start_row, start_col, end_row, end_col).
-        """
-        if self.moves is not None: return self.moves
-        moves: list[tuple[int, int, int, int]] = self.get_moves_no_check()
-        moves_len: int = len(moves)
-        winner: int | None = 0
-        for i, move_0 in enumerate(reversed(moves)):
-            state: GameState = self.move(move_0)
-            for move_1 in state.get_moves_no_check():
-                if (winner := (state_2 := state.move(move_1)).get_winner()) == -1 or winner == 1:
-                    moves.pop(moves_len - i - 1)
-                    break
-                elif move_0[0] == -1:
-                    king_idx: int = move_0[2] * 8 + move_0[3]
-                    if move_0[1] == 1:
-                        for idx in range(king_idx, king_idx + 2):
-                            if state_2.board[idx] * self.color < 0:
-                                break
-                        else:
-                            continue
-                    else:
-                        for idx in range(king_idx - 1, king_idx + 1):
-                            if state_2.board[idx] * self.color < 0:
-                                break
-                        else:
-                            continue
-                    break
-        if len(moves) == 0 and moves_len > 0:
-            self.winner = winner
-        elif self.moves_since_pawn >= 50:
-            self.winner = 0
-        self.moves = moves
-        return moves
-
     def get_moves_no_check(self) -> list[tuple[int, int, int, int]]:
         hash_state: tuple[
             tuple[int, ...], int, bool, bool, bool, bool, tuple[int, int, int, int]] = self.get_hashable_state()
