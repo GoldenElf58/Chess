@@ -4,6 +4,8 @@ from collections import Counter
 from itertools import count
 from typing import Callable
 
+import numpy as np
+
 from game import GameState
 from utils import mirror, negate
 from bot import Bot
@@ -104,12 +106,12 @@ KingStart_flat: tuple[int, ...] = (
 
 KingEnd_flat: tuple[int, ...] = (
     -20, -10, -10, -10, -10, -10, -10, -20,
-    -5,   0,   5,   5,   5,   5,   0,  -5,
-    -10, -5,   20,  30,  30,  20,  -5, -10,
-    -15, -10,  35,  45,  45,  35, -10, -15,
-    -20, -15,  30,  40,  40,  30, -15, -20,
-    -25, -20,  20,  25,  25,  20, -20, -25,
-    -30, -25,   0,   0,   0,   0, -25, -30,
+    -5, 0, 5, 5, 5, 5, 0, -5,
+    -10, -5, 20, 30, 30, 20, -5, -10,
+    -15, -10, 35, 45, 45, 35, -10, -15,
+    -20, -15, 30, 40, 40, 30, -15, -20,
+    -25, -20, 20, 25, 25, 20, -20, -25,
+    -30, -25, 0, 0, 0, 0, -25, -30,
     -50, -30, -30, -30, -30, -30, -30, -50
 )
 
@@ -189,17 +191,12 @@ class Botv3(Bot):
         if game_state.winner is not None:
             return game_state.winner * 9999999
         hash_state: int = game_state.get_hashed()
-        eval_cache: dict[int, int] = self.eval_lookup
-        if hash_state in eval_cache:
-            return eval_cache[hash_state]
-        evaluation: int = 0
+        if (cached_eval := self.eval_lookup.get(hash_state)) is not None:
+            return cached_eval
         board: tuple[int, ...] = game_state.board
-        piece_totals: Counter = Counter(board)
-        endgame: bool = sum([piece_totals[piece] + piece_totals[-piece] for piece in range(2,6)]) < 5
-        combined: list[tuple[int, ...]] = combined_tables_end if endgame else combined_tables_start
-        for i, piece in enumerate(board):
-            if piece != 0: evaluation += combined[piece + 6][i]
-        eval_cache[hash_state] = evaluation
+        combined: list[tuple[int, ...]] = combined_tables_end if np.count_nonzero(
+            board not in [0, -1, 1, -6, 6]) < 5 else combined_tables_start
+        self.eval_lookup[hash_state] = (evaluation := sum([combined[piece + 6][i] for (i, piece) in enumerate(board) if piece]))
         return evaluation
 
     def iterative_deepening(self, game_state: GameState, maximizing_player: bool, allotted_time: float = 3.0,
@@ -236,7 +233,7 @@ class Botv3(Bot):
         if (cached := transposition_table.get(state_key)) is not None:
             return cached
         moves: tuple[tuple[int, int, int, int], ...] = tuple(game_state.get_moves() if true_move_depth > 0 else
-                                                        game_state.get_moves_no_check())
+                                                             game_state.get_moves_no_check())
         move_fn: Callable[[tuple[int, int, int, int]], GameState] = game_state.move
         eval_fn: Callable[[GameState], int] = self.evaluate
         child_data: list[tuple[tuple[int, int, int, int], GameState, int]] = [
@@ -257,8 +254,8 @@ class Botv3(Bot):
                     best_eval, best_move = evaluation, move
                     alpha = max(alpha, evaluation)
             elif evaluation < best_eval:
-                    best_eval, best_move = evaluation, move
-                    beta = min(beta, evaluation)
+                best_eval, best_move = evaluation, move
+                beta = min(beta, evaluation)
 
             if beta <= alpha:
                 break

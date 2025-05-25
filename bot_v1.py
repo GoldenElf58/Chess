@@ -157,15 +157,11 @@ class Botv1(Bot):
         if game_state.winner is not None:
             return game_state.winner * 9999999
         hash_state: int = game_state.get_hashed()
-        eval_cache: dict[int, int] = self.eval_lookup
-        if hash_state in eval_cache:
-            return eval_cache[hash_state]
-        combined: list[tuple[int, ...]] = combined_tables
+        if (cached_eval := self.eval_lookup.get(hash_state)) is not None:
+            return cached_eval
         board: tuple[int, ...] = game_state.board
-        evaluation: int = 0
-        for i, piece in enumerate(board): # type: int, int
-            if piece: evaluation += combined[piece + 6][i]
-        eval_cache[hash_state] = evaluation
+        combined: list[tuple[int, ...]] = combined_tables
+        self.eval_lookup[hash_state] = (evaluation := sum([combined[piece + 6][i] for (i, piece) in enumerate(board) if piece]))
         return evaluation
 
     def iterative_deepening(self, game_state: GameState, maximizing_player: bool, allotted_time: float = 3.0,

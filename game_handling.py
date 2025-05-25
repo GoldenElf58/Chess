@@ -8,7 +8,8 @@ import threading
 import time
 from scipy.stats import binomtest  # type: ignore
 
-from bot_v1 import Botv1
+# from bot_v1 import Botv1
+from bot_v2 import Botv2
 from bot_v3 import Botv3
 from bot import Bot
 from fen_utils import game_state_from_line
@@ -210,7 +211,7 @@ def game_loop() -> None:
     line: int = 1
     num_lines: int = 500
     reverse: bool = False
-    bots: tuple[Bot, Bot] = (Botv1(), Botv1())
+    bots: tuple[Bot, Bot] = (Botv3(), Botv2())
     wins: int = 0
     draws: int = 0
     losses: int = 0
