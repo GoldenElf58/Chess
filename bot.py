@@ -8,3 +8,7 @@ class Bot(ABC):
     @abstractmethod
     def clear_cache(self) -> None:
         ...
+
+    @classmethod
+    def get_version(cls):
+        return cls.__name__

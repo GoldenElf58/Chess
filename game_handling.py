@@ -6,9 +6,10 @@ from enum import Enum, auto
 import sys
 import threading
 import time
+from scipy.stats import binomtest  # type: ignore
 
 from bot_v1 import Botv1
-from bot_v2 import Botv2
+from bot_v3 import Botv3
 from bot import Bot
 from fen_utils import game_state_from_line
 from game import GameState
@@ -44,7 +45,7 @@ def display_board(screen, board, selected_square=(), offset=0):
 
 
 def display_info(screen: Surface, game_state: GameState, last_eval, font: Font, t0, game_mode, wins, draws, losses,
-                 depths=None):
+                 bots, depths=None):
     info_x = 667
     info_rect = pygame.Rect(info_x, 0, screen.get_width() - info_x, screen.get_height())
 
@@ -66,20 +67,41 @@ def display_info(screen: Surface, game_state: GameState, last_eval, font: Font, 
         screen.blit(depths_surf, (info_rect.x + 10, 100))
 
     if game_mode == GameMode.DEEP_TEST:
+        # --- two‑sided binomial test for wins vs. losses ---
+        n_games = wins + losses
+        p_value = 1.0 if n_games == 0 else binomtest(wins, n_games, 0.5, alternative="two-sided").pvalue
+
         wins_text = f"Wins: {wins}"
         draws_text = f"Draws: {draws}"
         losses_text = f"Losses: {losses}"
-        wins__surf = font.render(wins_text, True, "white")
+        p_value_text = f"P-Value: {p_value:.4f}"
+
+        bot1_version = bots[0].get_version()
+        bot2_version = bots[1].get_version()
+        bot1_text = f"Bot1: {bot1_version}"
+        bot2_text = f"Bot2: {bot2_version}"
+
+        bot1_surf = font.render(bot1_text, True, "white")
+        bot2_surf = font.render(bot2_text, True, "white")
+
+
+        wins_surf = font.render(wins_text, True, "white")
         draws_surf = font.render(draws_text, True, "white")
         losses_surf = font.render(losses_text, True, "white")
-        screen.blit(wins__surf, (info_rect.x + 10, 130))
+        p_value_surf = font.render(p_value_text, True, "white")
+
+        screen.blit(wins_surf, (info_rect.x + 10, 130))
         screen.blit(draws_surf, (info_rect.x + 10, 160))
         screen.blit(losses_surf, (info_rect.x + 10, 190))
+        screen.blit(p_value_surf, (info_rect.x + 10, 220))
+
+        screen.blit(bot1_surf, (info_rect.x + 10, 250))
+        screen.blit(bot2_surf, (info_rect.x + 10, 280))
 
 
 # Define a simple Button class.
 class Button:
-    def __init__(self, rect, text, color="gray", hover_color="lightgray", text_color=(0,0,0)):
+    def __init__(self, rect, text, color="gray", hover_color="lightgray", text_color=(0, 0, 0)):
         self.rect = pygame.Rect(rect)
         self.text = text
         self.color = color
@@ -188,7 +210,7 @@ def game_loop() -> None:
     line: int = 1
     num_lines: int = 500
     reverse: bool = False
-    bots: tuple[Bot, Bot] = (Botv1(), Botv2())
+    bots: tuple[Bot, Bot] = (Botv1(), Botv1())
     wins: int = 0
     draws: int = 0
     losses: int = 0
@@ -247,9 +269,10 @@ def game_loop() -> None:
                 selected_piece = game_state.board[row * 8 + col]
                 color = game_state.color
                 can_select: bool = ((game_mode == GameMode.HUMAN and ((selected_piece > 0 and color == 1) or (
-                            selected_piece < 0 and color == -1))) or (selected_piece > 0 and color == 1 and
-                            game_mode == GameMode.PLAY_WHITE) or (selected_piece < 0 and color == -1 and
-                            game_mode == GameMode.PLAY_BLACK))
+                        selected_piece < 0 and color == -1))) or (selected_piece > 0 and color == 1 and
+                                                                  game_mode == GameMode.PLAY_WHITE) or (
+                                                selected_piece < 0 and color == -1 and
+                                                game_mode == GameMode.PLAY_BLACK))
                 # Store selected square as (col, row)
                 if selected_square is None:
                     # Only select a piece if it belongs to the human.
@@ -322,7 +345,7 @@ def game_loop() -> None:
         if game_mode == GameMode.MENU:
             for btn in buttons: btn.draw(screen, font)
         else:
-            display_info(screen, game_state, last_eval, font, t0, game_mode, wins, draws, losses, depths=depths)
+            display_info(screen, game_state, last_eval, font, t0, game_mode, wins, draws, losses, bots, depths=depths)
 
         pygame.display.flip()
 

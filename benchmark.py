@@ -1,12 +1,10 @@
 from timeit import timeit
-from game import GameState
-from bot_v1 import Botv1
-from random import randint
+
 from fen_utils import game_state_from_line
 from statistics import mean, stdev
 from scipy import stats  # type: ignore
 
-game_states: list[GameState] = []
+game_states: list = []
 
 def populate_game_states():
     global game_states
@@ -18,13 +16,12 @@ def populate_game_states():
 
 populate_game_states()
 
-def benchmark(condition: bool, game_state: GameState) -> None:
-    # bot = Botv1()
+def benchmark(condition: bool, game_state) -> None:
     if condition:
-        pass
-        # bot.minimax_tt_new(game_state, 3, -(1 << 40), (1 << 40), game_state.color==1)
+        game_state.get_moves_new()
     else:
-        pass
+        game_state.get_moves()
+        # bot = Botv1()
         # bot.minimax(game_state, 3, -(1 << 40), (1 << 40), game_state.color == 1)
 
 
@@ -34,14 +31,14 @@ def main() -> None:
     t3 = []
     for _ in range(50_000_000): pass
     print('Warmup complete')
-    for i in range(500):
-        game_state = game_states[randint(0,499)]
+    for i in range(5000):
+        game_state = game_states[i % 500]
         # t1.append(mean([benchmark(True, game_state)[1] for i in range(3)]))
         # t2.append(mean([benchmark(False, game_state)[1] for i in range(3)]))
-        t1.append(timeit(lambda: benchmark(True, game_state), number=3) * 1_000)
-        t2.append(timeit(lambda: benchmark(False, game_state), number=3) * 1_000)
+        t1.append(timeit(lambda: benchmark(True, game_state), number=30_000) * 1_000)
+        t2.append(timeit(lambda: benchmark(False, game_state), number=30_000) * 1_000)
         t3.append(t1[-1] - t2[-1])
-        if i > 0 and i % 25 == 0:
+        if i > 0 and i % 500 == 0:
             t, p = stats.ttest_1samp(t3, 0, alternative='less')
             # t, p = stats.ttest_ind(t1, t2, equal_var=False, alternative='less')
             print(f'{i}:\nNew: {mean(t1)}, {stdev(t1)}')

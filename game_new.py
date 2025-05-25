@@ -1,5 +1,4 @@
 import copy
-from collections import Counter, defaultdict
 
 from utils import split_table
 

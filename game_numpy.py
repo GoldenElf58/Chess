@@ -1,6 +1,8 @@
 from copy import copy
 
 import numpy as np
+from numpy.typing import NDArray
+from numpy import int8
 
 from utils import split_table
 
@@ -96,7 +98,7 @@ def populate_precomputed_tables() -> None:
 
 populate_precomputed_tables()
 
-start_board: tuple[int, ...] = (
+start_board: NDArray[int8] = np.array((
     -4, -2, -3, -5, -6, -3, -2, -4,
     -1, -1, -1, -1, -1, -1, -1, -1,
     0, 0, 0, 0, 0, 0, 0, 0,
@@ -104,15 +106,17 @@ start_board: tuple[int, ...] = (
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     1, 1, 1, 1, 1, 1, 1, 1,
-    4, 2, 3, 5, 6, 3, 2, 4
+    4, 2, 3, 5, 6, 3, 2, 4),
+    int8
 )
+start_board.setflags(write=False)
 
 
 class GameState:
     __slots__ = ('board', 'color', 'white_queen', 'white_king', 'black_queen', 'black_king', 'last_move', 'turn',
                  'winner', 'previous_position_count', 'moves_since_pawn', 'moves')
 
-    def __init__(self, board: tuple | None = None, white_queen: bool = True, white_king: bool = True,
+    def __init__(self, board: NDArray[int8] | None = None, white_queen: bool = True, white_king: bool = True,
                  black_queen: bool = True, back_king: bool = True, last_move: tuple[int, int, int, int] | None = None,
                  color: int = 1, turn: int = 0, winner: int | None = None,
                  previous_position_count: dict[int, int] | None = None, moves_since_pawn: int = 0) -> None:
@@ -136,7 +140,8 @@ class GameState:
         color : int, optional
             The color of the current player (1 for white, -1 for black). Defaults to 1.
         """
-        self.board: tuple[int, ...] = start_board if board is None else board
+        self.board: NDArray[int8] = start_board if board is None else board
+        self.board.setflags(write=False)
         self.color: int = color
         self.white_queen: bool = white_queen
         self.white_king: bool = white_king
@@ -150,12 +155,12 @@ class GameState:
         self.moves_since_pawn: int = moves_since_pawn
         self.moves: list[tuple[int, int, int, int]] | None = None
 
-    def get_hashable_state(self) -> tuple[tuple[int, ...], int, bool, bool, bool, bool, tuple[int, int, int, int]]:
+    def get_hashable_state(self) -> tuple[NDArray[int8], int, bool, bool, bool, bool, tuple[int, int, int, int]]:
         """ Convert the game state into a hashable format for caching. """
         return self.board, self.color, self.white_queen, self.white_king, self.black_queen, self.black_king, self.last_move
 
     def get_hashed(self) -> int:
-        return hash((self.board, (((self.color == 1) << 4) | (self.white_queen << 3) | (self.white_king << 2) | (
+        return hash((tuple(self.board), (((self.color == 1) << 4) | (self.white_queen << 3) | (self.white_king << 2) | (
                 self.black_queen << 1) | self.black_king),
                      self.last_move))
 
@@ -180,60 +185,20 @@ class GameState:
                     break
                 elif move_0[0] == -1:
                     king_idx: int = move_0[2] * 8 + move_0[3]
+                    broke: bool = False
                     if move_0[1] == 1:
                         for idx in range(king_idx, king_idx + 2):
                             if state_2.board[idx] * self.color < 0:
+                                broke = True
                                 break
-                        else:
-                            continue
                     else:
                         for idx in range(king_idx - 1, king_idx + 1):
                             if state_2.board[idx] * self.color < 0:
+                                broke = True
                                 break
-                        else:
-                            continue
-                    break
-        if len(moves) == 0 and moves_len > 0:
-            self.winner = winner
-        elif self.moves_since_pawn >= 50:
-            self.winner = 0
-        self.moves = moves
-        return moves
-
-    def get_moves_new(self) -> list[tuple[int, int, int, int]]:
-        """
-        Get all the possible moves for the current player.
-
-        Returns
-        -------
-        list[tuple[int, int, int, int]]
-            A list of tuples, each representing a move in the format (start_row, start_col, end_row, end_col).
-        """
-        if self.moves is not None: return self.moves
-        moves: list[tuple[int, int, int, int]] = self.get_moves_no_check()
-        moves_len: int = len(moves)
-        winner: int | None = 0
-        for i, move_0 in enumerate(reversed(moves)):
-            state: GameState = self.move(move_0)
-            for move_1 in state.get_moves_no_check():
-                if (winner := (state_2 := state.move(move_1)).get_winner()) == -1 or winner == 1:
-                    moves.pop(moves_len - i - 1)
-                    break
-                elif move_0[0] == -1:
-                    king_idx: int = move_0[2] * 8 + move_0[3]
-                    if move_0[1] == 1:
-                        for idx in range(king_idx, king_idx + 2):
-                            if state_2.board[idx] * self.color < 0:
-                                break
-                        else:
-                            continue
-                    else:
-                        for idx in range(king_idx - 1, king_idx + 1):
-                            if state_2.board[idx] * self.color < 0:
-                                break
-                        else:
-                            continue
-                    break
+                    if broke:
+                        moves.pop(moves_len - i - 1)
+                        break
         if len(moves) == 0 and moves_len > 0:
             self.winner = winner
         elif self.moves_since_pawn >= 50:
@@ -243,12 +208,12 @@ class GameState:
 
     def get_moves_no_check(self) -> list[tuple[int, int, int, int]]:
         hash_state: tuple[
-            tuple[int, ...], int, bool, bool, bool, bool, tuple[int, int, int, int]] = self.get_hashable_state()
+            NDArray[int8], int, bool, bool, bool, bool, tuple[int, int, int, int]] = self.get_hashable_state()
         return self.get_moves_no_check_static(*hash_state)
 
     @staticmethod
     def get_moves_no_check_static(
-            board: tuple[int, ...],
+            board: NDArray[int8],
             color: int,
             white_queen: bool,
             white_king: bool,
@@ -259,7 +224,7 @@ class GameState:
         moves: list[tuple[int, int, int, int]] = []
         # Local binds for speed
         color_local: int = color
-        board_local: tuple[int, ...] = board
+        board_local: NDArray[int8] = board
         last_move_local: tuple[int, int, int, int] | None = last_move
         coords_local: list[tuple[int, int]] = index_to_coord
         knight_targets_local: tuple[tuple[tuple[int, int, int], ...], ...] = knight_targets
@@ -270,7 +235,7 @@ class GameState:
         tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]], ...] = bishop_diagonals
         for h, piece in enumerate(board_local):
             i, j = coords_local[h]
-            piece_type: int = piece * color_local
+            piece_type: int8 = piece * color_local
             if piece_type <= 0: continue
             if piece_type == 6:  # King
                 row_base: int = h - j
@@ -343,11 +308,11 @@ class GameState:
 
     def are_captures(self) -> bool:
         moves: list[tuple[int, int, int, int]] = self.get_moves()
-        board_local: tuple[int, ...] = self.board
-        empty_count: int = board_local.count(0)
+        board_local: NDArray[int8] = self.board
+        empty_count: int = np.count_nonzero(board_local == 0)
         for move in moves:
-            new_board: tuple[int, ...] = self.move(move).board
-            if new_board.count(0) != empty_count:
+            new_board: NDArray[int8] = self.move(move).board
+            if np.count_nonzero(new_board == 0) - empty_count - self.moves_since_pawn != empty_count:
                 return True
         return False
 
@@ -369,8 +334,8 @@ class GameState:
         GameState
             A new GameState object, with the move applied.
         """
-        board_local: tuple[int, ...] = self.board
-        new_board: list[int] = list(board_local)
+        board_local: NDArray[int8] = self.board
+        new_board: NDArray[int8] = board_local.copy()
         white_queen: bool = self.white_queen
         white_king: bool = self.white_king
         black_queen: bool = self.black_queen
@@ -397,27 +362,27 @@ class GameState:
             new_board[move_2 * 8 + (0 if move_1 == -1 else 7)] = 0
             new_board[move_2 * 8 + 4 + move_1 * 2] = board_local[second_idx]
             new_board[move_2 * 8 + 4 + move_1] = board_local[move_2 * 8 + (0 if move_1 == -1 else 7)]
-            return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king,
+            return GameState(new_board, white_queen, white_king, black_queen, black_king,
                              color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn)
 
         if move_0 == -2:  # En Passant
             new_board[second_idx] = 0
             new_board[(move_2 - self.color) * 8 + move_3 + move_1] = self.color
             new_board[second_idx + move_1] = 0
-            return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king,
+            return GameState(new_board, white_queen, white_king, black_queen, black_king,
                              color=-self.color, turn=self.turn + 1, moves_since_pawn=0)
 
         if move_0 == -3:  # Promotion
             new_board[second_idx] = 0
             new_board[(move_2 - self.color) * 8 + move_3] = move_1
-            return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king, color=-self.color,
+            return GameState(new_board, white_queen, white_king, black_queen, black_king, color=-self.color,
                              turn=self.turn + 1, moves_since_pawn=0)
 
         if move_0 <= -4:  # Promotion while taking
             new_board[second_idx] = 0
             new_board[(move_2 - self.color) * 8 + (move_3 + move_1)] = (move_0 + 2) * -self.color
 
-            return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king,
+            return GameState(new_board, white_queen, white_king, black_queen, black_king,
                              color=-self.color, turn=self.turn + 1, moves_since_pawn=0)
 
         first_idx: int = move_0 * 8 + move_1
@@ -453,129 +418,15 @@ class GameState:
         new_board[second_idx] = new_board[first_idx]
         new_board[first_idx] = 0
         new_previous_position_count = copy(self.previous_position_count)
-        if (hash_state := hash(board_local)) in new_previous_position_count:
+        if (hash_state := hash(tuple(board_local))) in new_previous_position_count:
             new_previous_position_count[hash_state] += 1
             if new_previous_position_count[hash_state] >= 3:
-                return GameState(tuple(new_board), winner=0)
+                return GameState(new_board, winner=0)
         else:
             new_previous_position_count[hash_state] = 1
         last_move: tuple[int, int, int, int] | None = move if (
                 piece == 1 and (move_0 == move_2 + self.color * 2)) else None
-        return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king, last_move=last_move,
-                         color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn,
-                         previous_position_count=new_previous_position_count)
-
-    def new_move(self, move: tuple[int, int, int, int]) -> 'GameState':
-        """
-        Make a move on the board.
-
-        Parameters
-        ----------
-        move : tuple[tuple[int, int], tuple[int, int]]
-            The move to make, as a tuple of two tuples. The first tuple is the
-            piece to move, with the first element being the row and the second
-            element being the column. The second tuple is the destination, with
-            the first element being the row and the second element being the
-            column.
-
-        Returns
-        -------
-        GameState
-            A new GameState object, with the move applied.
-        """
-        board_local: tuple[int, ...] = self.board
-        new_board: list[int] = list(board_local)
-        white_queen: bool = self.white_queen
-        white_king: bool = self.white_king
-        black_queen: bool = self.black_queen
-        black_king: bool = self.black_king
-        new_moves_since_pawn: int = self.moves_since_pawn + 1
-        move_0: int = move[0]
-        move_1: int = move[1]
-        move_2: int = move[2] # No statistical evidence of a difference with or without move_2
-        move_3: int = move[3]
-
-        if len(move) == 0:
-            return GameState(board_local, turn=self.turn + 1, winner=self.winner)
-
-        second_idx: int = move_2 * 8 + move_3
-        if move_0 == -1:  # Castle
-            if move_2 == 7:
-                white_queen = False
-                white_king = False
-            else:
-                black_queen = False
-                black_king = False
-
-            new_board[second_idx] = 0
-            new_board[move_2 * 8 + (0 if move_1 == -1 else 7)] = 0
-            new_board[move_2 * 8 + 4 + move_1 * 2] = board_local[second_idx]
-            new_board[move_2 * 8 + 4 + move_1] = board_local[move_2 * 8 + (0 if move_1 == -1 else 7)]
-            return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king,
-                             color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn)
-
-        if move_0 == -2:  # En Passant
-            new_board[second_idx] = 0
-            new_board[(move_2 - self.color) * 8 + move_3 + move_1] = self.color
-            new_board[second_idx + move_1] = 0
-            return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king,
-                             color=-self.color, turn=self.turn + 1, moves_since_pawn=0)
-
-        if move_0 == -3:  # Promotion
-            new_board[second_idx] = 0
-            new_board[(move_2 - self.color) * 8 + move_3] = move_1
-            return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king, color=-self.color,
-                             turn=self.turn + 1, moves_since_pawn=0)
-
-        if move_0 <= -4:  # Promotion while taking
-            new_board[second_idx] = 0
-            new_board[(move_2 - self.color) * 8 + (move_3 + move_1)] = (move_0 + 2) * -self.color
-
-            return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king,
-                             color=-self.color, turn=self.turn + 1, moves_since_pawn=0)
-
-        first_idx: int = move_0 * 8 + move_1
-        if (piece := abs(new_board[first_idx])) in {4, 6}:
-            if move_2 == 7 and move_3 == 0:
-                white_queen = False
-            if move_2 == 7 and move_3 == 7:
-                white_king = False
-            if move_2 == 0 and move_3 == 0:
-                black_queen = False
-            if move_2 == 0 and move_3 == 7:
-                black_king = False
-            if move_2 == 0 and move_3 == 4:
-                black_queen = False
-                black_king = False
-            if move_2 == 7 and move_3 == 4:
-                white_queen = False
-                white_king = False
-        elif new_board[second_idx] in {-4, 4}:
-            if move_2 == 7 and move_3 == 0:
-                white_queen = False
-            if move_2 == 7 and move_3 == 7:
-                white_king = False
-            if move_2 == 0 and move_3 == 0:
-                black_queen = False
-            if move_2 == 0 and move_3 == 7:
-                black_king = False
-
-
-        if piece == 1:
-            new_moves_since_pawn = 0
-
-        new_board[second_idx] = new_board[first_idx]
-        new_board[first_idx] = 0
-        new_previous_position_count = copy(self.previous_position_count)
-        if (hash_state := hash(board_local)) in new_previous_position_count:
-            new_previous_position_count[hash_state] += 1
-            if new_previous_position_count[hash_state] >= 3:
-                return GameState(tuple(new_board), winner=0)
-        else:
-            new_previous_position_count[hash_state] = 1
-        last_move: tuple[int, int, int, int] | None = move if (
-                piece == 1 and (move_0 == move_2 - self.color * 2)) else None
-        return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king, last_move=last_move,
+        return GameState(new_board, white_queen, white_king, black_queen, black_king, last_move=last_move,
                          color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn,
                          previous_position_count=new_previous_position_count)
 
@@ -637,35 +488,25 @@ class GameState:
         :return: A string representation of the board.
         """
         result: str = "_________________________________\n"
-        for row in split_table(self.board):
+        piece_to_string: dict[int, str] = {
+            6: "K",
+            5: "Q",
+            4: "R",
+            3: "B",
+            2: "N",
+            1: "P",
+            0: " ",
+            -6: "k",
+            -5: "q",
+            -4: "r",
+            -3: "b",
+            -2: "n",
+            -1: "p",
+        }
+        for row in split_table(self.board.tolist()): # type: tuple[int, ...]
             result += "| "
-            for piece in row:
-                if piece == 6:
-                    result += "K"
-                elif piece == 5:
-                    result += "Q"
-                elif piece == 4:
-                    result += "R"
-                elif piece == 3:
-                    result += "B"
-                elif piece == 2:
-                    result += "N"
-                elif piece == 1:
-                    result += "P"
-                elif piece == 0:
-                    result += " "
-                elif piece == -6:
-                    result += "k"
-                elif piece == -5:
-                    result += "q"
-                elif piece == -4:
-                    result += "r"
-                elif piece == -3:
-                    result += "b"
-                elif piece == -2:
-                    result += "n"
-                elif piece == -1:
-                    result += "p"
+            for piece in row: # type: int
+                result += piece_to_string[piece]
                 result += " | "
             result += "\n|___|___|___|___|___|___|___|___|\n"
 
