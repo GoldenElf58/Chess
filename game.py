@@ -436,7 +436,7 @@ class GameState:
         else:
             for piece in self.board:
                 if -6 != piece != 6:
-                    return self.winner
+                    return None
             self.winner = 0
         return self.winner
 
