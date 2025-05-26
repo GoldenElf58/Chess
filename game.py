@@ -192,6 +192,7 @@ class GameState:
                                 break
                         else:
                             continue
+                    moves.pop(moves_len - i - 1)
                     break
         if len(moves) == 0 and moves_len > 0:
             self.winner = winner

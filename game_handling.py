@@ -208,7 +208,7 @@ def game_loop() -> None:
     num_lines: int = 500
     line: int = random.randint(1, num_lines)
     reverse: bool = False
-    bots: tuple[Bot, Bot] = (Botv3_7(), Botv3_6())
+    bots: tuple[Bot, Bot] = (Botv1(), Botv1())
     wins: int = 0
     draws: int = 0
     losses: int = 0
