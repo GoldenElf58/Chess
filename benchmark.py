@@ -1,6 +1,7 @@
 from timeit import timeit
 
 from bot_v3 import Botv3
+from bot_v2 import Botv2
 from fen_utils import game_state_from_line
 from statistics import mean, stdev
 from scipy import stats  # type: ignore
@@ -18,11 +19,12 @@ def populate_game_states():
 populate_game_states()
 
 def benchmark(condition: bool, game_state) -> None:
-    bot = Botv3()
     if condition:
-        bot.evaluate(game_state)
+        for move in game_state.moves:
+            game_state.new_move(move)
     else:
-        bot.evaluate(game_state)
+        for move in game_state.moves:
+            game_state.move(move)
 
 
 def main() -> None:
@@ -35,10 +37,10 @@ def main() -> None:
         game_state = game_states[i % 500]
         # t1.append(mean([benchmark(True, game_state)[1] for i in range(3)]))
         # t2.append(mean([benchmark(False, game_state)[1] for i in range(3)]))
-        t1.append(timeit(lambda: benchmark(True, game_state), number=3000) * 1_000)
-        t2.append(timeit(lambda: benchmark(False, game_state), number=3000) * 1_000)
+        t1.append(timeit(lambda: benchmark(True, game_state), number=300) * 1_000)
+        t2.append(timeit(lambda: benchmark(False, game_state), number=300) * 1_000)
         t3.append(t1[-1] - t2[-1])
-        if i > 0 and i % 50 == 0:
+        if i > 0 and i % 25 == 0:
             t, p = stats.ttest_1samp(t3, 0, alternative='less')
             # t, p = stats.ttest_ind(t1, t2, equal_var=False, alternative='less')
             print(f'{i}:\nNew: {mean(t1)}, {stdev(t1)}')

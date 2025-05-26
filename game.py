@@ -337,7 +337,7 @@ class GameState:
         new_moves_since_pawn: int = self.moves_since_pawn + 1
         move_0, move_1, move_2, move_3 = move
 
-        if len(move) == 0:
+        if not len(move):
             return GameState(board_local, turn=self.turn + 1, winner=self.winner)
 
         second_idx: int = move_2 * 8 + move_3
@@ -378,28 +378,28 @@ class GameState:
 
         first_idx: int = move_0 * 8 + move_1
         if (piece := abs(new_board[first_idx])) in {4, 6}:
-            if move_2 == 7 and move_3 == 0:
+            if move_2 == 7 and not move_3:
                 white_queen = False
             if move_2 == 7 and move_3 == 7:
                 white_king = False
-            if move_2 == 0 and move_3 == 0:
+            if not (move_2 or move_3):
                 black_queen = False
-            if move_2 == 0 and move_3 == 7:
+            if not move_2 and move_3 == 7:
                 black_king = False
-            if move_2 == 0 and move_3 == 4:
+            if not move_2 and move_3 == 4:
                 black_queen = False
                 black_king = False
             if move_2 == 7 and move_3 == 4:
                 white_queen = False
                 white_king = False
         elif new_board[second_idx] in {-4, 4}:
-            if move_2 == 7 and move_3 == 0:
+            if move_2 == 7 and not move_3:
                 white_queen = False
             if move_2 == 7 and move_3 == 7:
                 white_king = False
-            if move_2 == 0 and move_3 == 0:
+            if not (move_2 or move_3):
                 black_queen = False
-            if move_2 == 0 and move_3 == 7:
+            if not move_2 and move_3 == 7:
                 black_king = False
 
 

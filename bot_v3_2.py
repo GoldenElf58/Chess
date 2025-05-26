@@ -173,7 +173,7 @@ def populate_combined_tables():
 populate_combined_tables()
 
 
-class Botv3(Bot):
+class Botv3_2(Bot):
     def __init__(self, transposition_table: dict | None = None, eval_lookup: dict | None = None) -> None:
         self.transposition_table: dict[
             int, tuple[int, tuple[int, int, int, int]]] = transposition_table if transposition_table is not None else {}
@@ -195,7 +195,7 @@ class Botv3(Bot):
             return cached_eval
         board: tuple[int, ...] = game_state.board
         combined: list[tuple[int, ...]] = combined_tables_end if np.count_nonzero(
-            board not in [0, -1, 1, -6, 6]) < 5 else combined_tables_start
+            board not in [0, -1, 1, -6, 6]) < 4 else combined_tables_start
         self.eval_lookup[hash_state] = (evaluation := sum([combined[piece + 6][i] for (i, piece) in enumerate(board) if piece]))
         return evaluation
 

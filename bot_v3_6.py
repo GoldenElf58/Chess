@@ -156,9 +156,11 @@ position_values_end: dict[int, tuple[int, ...]] = {
 # Precompute combined piece and position tables for faster evaluation
 combined_tables_start: list[tuple[int, ...]] = [() for _ in range(13)]
 combined_tables_end: list[tuple[int, ...]] = [() for _ in range(13)]
+combined_tables_transition: list[list[tuple[int, ...]]] = [[() for _ in range(13)] for _ in range(30)]
 
 
-def populate_combined_tables():
+def populate_combined_tables() -> None:
+    global combined_tables_transition
     global combined_tables_start
     global combined_tables_end
     for piece, base_val in piece_values.items():
@@ -168,12 +170,17 @@ def populate_combined_tables():
         combined_tables_start[piece + 6] = tuple(base_val + pos_vals[i] for i in range(len(pos_vals)))
         pos_vals = position_values_end[piece]
         combined_tables_end[piece + 6] = tuple(base_val + pos_vals[i] for i in range(len(pos_vals)))
+    for i in range(30):
+        for j in range(13):
+            if j - 6 == 0: continue
+            combined_tables_transition[i][j] = tuple(int(combined_tables_start[j][idx] * min(i, 3.5) / 3.5 +
+                                                 combined_tables_end[j][idx] * max(3.5- i, 0) / 3.5) for idx in range(64))
 
 
 populate_combined_tables()
 
 
-class Botv3(Bot):
+class Botv3_6(Bot):
     def __init__(self, transposition_table: dict | None = None, eval_lookup: dict | None = None) -> None:
         self.transposition_table: dict[
             int, tuple[int, tuple[int, int, int, int]]] = transposition_table if transposition_table is not None else {}
@@ -194,9 +201,9 @@ class Botv3(Bot):
         if (cached_eval := self.eval_lookup.get(hash_state)) is not None:
             return cached_eval
         board: tuple[int, ...] = game_state.board
-        combined: list[tuple[int, ...]] = combined_tables_end if np.count_nonzero(
-            board not in [0, -1, 1, -6, 6]) < 5 else combined_tables_start
-        self.eval_lookup[hash_state] = (evaluation := sum([combined[piece + 6][i] for (i, piece) in enumerate(board) if piece]))
+        combined: list[tuple[int, ...]] = combined_tables_transition[np.count_nonzero(board not in [0, -1, 1, -6, 6])]
+        self.eval_lookup[hash_state] = (
+            evaluation := sum([combined[piece + 6][i] for (i, piece) in enumerate(board) if piece]))
         return evaluation
 
     def iterative_deepening(self, game_state: GameState, maximizing_player: bool, allotted_time: float = 3.0,

@@ -1,3 +1,5 @@
+import random
+
 import pygame
 from pygame import Surface
 from pygame.font import Font
@@ -8,10 +10,17 @@ import threading
 import time
 from scipy.stats import binomtest  # type: ignore
 
-# from bot_v1 import Botv1
+from bot_v1 import Botv1
 from bot_v2 import Botv2
 from bot_v3 import Botv3
+
 from bot import Bot
+from bot_v3_2 import Botv3_2
+from bot_v3_3 import Botv3_3
+from bot_v3_4 import Botv3_4
+from bot_v3_5 import Botv3_5
+from bot_v3_6 import Botv3_6
+from bot_v3_7 import Botv3_7
 from fen_utils import game_state_from_line
 from game import GameState
 
@@ -45,8 +54,8 @@ def display_board(screen, board, selected_square=(), offset=0):
                 screen.blit(images[board[i * 8 + j] + 6], (j * 60 + offset, i * 60))
 
 
-def display_info(screen: Surface, game_state: GameState, last_eval, font: Font, t0, game_mode, wins, draws, losses,
-                 bots, depths=None):
+def display_info(screen: Surface, game_state: GameState, last_eval: int, font: Font, t0: float, game_mode, wins: int,
+                 draws: int, losses: int, bots: tuple[Bot, Bot], depths=None):
     info_x = 667
     info_rect = pygame.Rect(info_x, 0, screen.get_width() - info_x, screen.get_height())
 
@@ -72,19 +81,10 @@ def display_info(screen: Surface, game_state: GameState, last_eval, font: Font, 
         n_games = wins + losses
         p_value = 1.0 if n_games == 0 else binomtest(wins, n_games, 0.5, alternative="two-sided").pvalue
 
-        wins_text = f"Wins: {wins}"
+        wins_text = f"{bots[0].get_version()}: {wins}"
         draws_text = f"Draws: {draws}"
-        losses_text = f"Losses: {losses}"
+        losses_text = f"{bots[1].get_version()}: {losses}"
         p_value_text = f"P-Value: {p_value:.4f}"
-
-        bot1_version = bots[0].get_version()
-        bot2_version = bots[1].get_version()
-        bot1_text = f"Bot1: {bot1_version}"
-        bot2_text = f"Bot2: {bot2_version}"
-
-        bot1_surf = font.render(bot1_text, True, "white")
-        bot2_surf = font.render(bot2_text, True, "white")
-
 
         wins_surf = font.render(wins_text, True, "white")
         draws_surf = font.render(draws_text, True, "white")
@@ -95,9 +95,6 @@ def display_info(screen: Surface, game_state: GameState, last_eval, font: Font, 
         screen.blit(draws_surf, (info_rect.x + 10, 160))
         screen.blit(losses_surf, (info_rect.x + 10, 190))
         screen.blit(p_value_surf, (info_rect.x + 10, 220))
-
-        screen.blit(bot1_surf, (info_rect.x + 10, 250))
-        screen.blit(bot2_surf, (info_rect.x + 10, 280))
 
 
 # Define a simple Button class.
@@ -208,10 +205,10 @@ def game_loop() -> None:
     depths: list[int] = []
     t0: float = time.time()
 
-    line: int = 1
     num_lines: int = 500
+    line: int = random.randint(1, num_lines)
     reverse: bool = False
-    bots: tuple[Bot, Bot] = (Botv3(), Botv2())
+    bots: tuple[Bot, Bot] = (Botv3_7(), Botv3_6())
     wins: int = 0
     draws: int = 0
     losses: int = 0
@@ -337,7 +334,12 @@ def game_loop() -> None:
                     reverse = not reverse
                     if line > num_lines:
                         line = 1
+                    if wins + draws + losses == num_lines:
                         game_mode = GameMode.MENU
+                        print(f"{bots[0].get_version()}: {wins}")
+                        print(f"Draws: {draws}")
+                        print(f"{bots[1].get_version()}: {losses}")
+                        print(f"P-Value: {binomtest(wins, wins + losses, 0.5, alternative="two-sided")}")
                     print(wins, draws, losses)
                 game_state = game_state_from_line(line, "fens.txt")
                 bots[0].clear_cache()
