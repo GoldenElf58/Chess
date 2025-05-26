@@ -96,17 +96,27 @@ def populate_precomputed_tables() -> None:
 
 populate_precomputed_tables()
 
-start_board: tuple[int, ...] = (
-    -4, -2, -3, -5, -6, -3, -2, -4,
-    -1, -1, -1, -1, -1, -1, -1, -1,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    1, 1, 1, 1, 1, 1, 1, 1,
-    4, 2, 3, 5, 6, 3, 2, 4
-)
+# start_board: tuple[int, ...] = (
+#     -4, -2, -3, -5, -6, -3, -2, -4,
+#     -1, -1, -1, -1, -1, -1, -1, -1,
+#     0, 0, 0, 0, 0, 0, 0, 0,
+#     0, 0, 0, 0, 0, 0, 0, 0,
+#     0, 0, 0, 0, 0, 0, 0, 0,
+#     0, 0, 0, 0, 0, 0, 0, 0,
+#     1, 1, 1, 1, 1, 1, 1, 1,
+#     4, 2, 3, 5, 6, 3, 2, 4
+# )
 
+start_board: tuple[int, ...] = (
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 4, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    -1, -6, 2, 0, 0, 0, 0, 0,
+    0, -1, 0, 3, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 4, 0, 0,
+    0, 1, -3, 0, 0, 0, 1, 1,
+    0, 0, 0, 0, 0, 0, 6, 0
+)
 
 class GameState:
     __slots__ = ('board', 'color', 'white_queen', 'white_king', 'black_queen', 'black_king', 'last_move', 'turn',
@@ -195,6 +205,14 @@ class GameState:
                     moves.pop(moves_len - i - 1)
                     break
         if len(moves) == 0 and moves_len > 0:
+            game_state: GameState = GameState(self.board, self.white_queen, self.white_king, self.black_queen,
+                                             self.black_king, None, -self.color, self.turn, self.winner)
+            for move in game_state.get_moves_no_check():
+                if (winner := game_state.move(move).get_winner()) == -1 or winner == 1:
+                    break
+            else:
+                self.winner = 0
+                return moves
             self.winner = winner
         elif self.moves_since_pawn >= 50:
             self.winner = 0
