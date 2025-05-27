@@ -204,7 +204,7 @@ def game_loop() -> None:
     pygame.init()
     screen: Surface = pygame.display.set_mode((854, 480))
     offset: int = 187
-    game_state: GameStateBitboards = GameStateBitboards()
+    game_state: GameStateBase = GameState()
     selected_square: tuple[int, int] | None = None  # For human move selection (as (col, row))
     game_mode: GameMode = GameMode.MENU  # Will be set when a button is clicked
     font: Font = Font(None, 24)
@@ -251,31 +251,31 @@ def game_loop() -> None:
                 t0 = time.time()
                 if buttons[0].check_hover(pos):
                     game_mode = GameMode.PLAY_WHITE
-                    game_state = GameStateBitboards()
+                    game_state = GameState()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
                 elif buttons[1].check_hover(pos):
                     reverse = False
                     game_mode = GameMode.PLAY_BLACK
-                    game_state = GameStateBitboards()
+                    game_state = GameState()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
                 elif buttons[2].check_hover(pos):
                     reverse = False
                     game_mode = GameMode.AI_VS_AI
-                    game_state = GameStateBitboards()
+                    game_state = GameState()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
                 elif buttons[3].check_hover(pos):
                     game_mode = GameMode.DEEP_TEST
                     line = 1
                     reverse = False
-                    game_state = game_state_from_line(line, "fens.txt").to_bitboards()
+                    game_state = game_state_from_line(line, "fens.txt")
                     bots[0].clear_cache()
                     bots[1].clear_cache()
                 elif buttons[4].check_hover(pos):
                     game_mode = GameMode.HUMAN
-                    game_state = GameStateBitboards()
+                    game_state = GameState()
                 elif buttons[5].check_hover(pos):
                     test_mode = not test_mode
                     buttons[5].text = "Test" if test_mode else "Normal"
@@ -284,18 +284,21 @@ def game_loop() -> None:
                     event.type == pygame.MOUSEBUTTONDOWN):
                 x, y = event.pos
                 col, row = (x - offset) // 60, y // 60
-                # selected_piece = game_state.board[row * 8 + col]
-                selected_piece_mask = 1 << (63 - (row * 8 + col))
                 color = game_state.color
-                can_select: int = (((game_mode == GameMode.HUMAN or game_mode == GameMode.PLAY_WHITE) and
-                                     ((selected_piece_mask & game_state.white_pieces) and color == 1) or (
-                                             (game_mode == GameMode.PLAY_BLACK or game_mode == GameMode.HUMAN) and
-                                     (selected_piece_mask & game_state.black_pieces) and color == -1)))
-                # can_select: bool = ((game_mode == GameMode.HUMAN and ((selected_piece > 0 and color == 1) or (
-                #         selected_piece < 0 and color == -1))) or (selected_piece > 0 and color == 1 and
-                #                                                   game_mode == GameMode.PLAY_WHITE) or (
-                #                                 selected_piece < 0 and color == -1 and
-                #                                 game_mode == GameMode.PLAY_BLACK))
+                can_select: bool = False
+                if isinstance(game_state, GameStateBitboards):
+                    selected_piece_mask = 1 << (63 - (row * 8 + col))
+                    can_select = (((game_mode == GameMode.HUMAN or game_mode == GameMode.PLAY_WHITE) and
+                                         ((selected_piece_mask & game_state.white_pieces) and color == 1) or (
+                                                 (game_mode == GameMode.PLAY_BLACK or game_mode == GameMode.HUMAN) and
+                                         (selected_piece_mask & game_state.black_pieces) and color == -1)))
+                elif isinstance(game_state, GameState):
+                    selected_piece = game_state.board[row * 8 + col]
+                    can_select = ((game_mode == GameMode.HUMAN and ((selected_piece > 0 and color == 1) or (
+                            selected_piece < 0 and color == -1))) or (selected_piece > 0 and color == 1 and
+                                                                      game_mode == GameMode.PLAY_WHITE) or (
+                                                    selected_piece < 0 and color == -1 and
+                                                    game_mode == GameMode.PLAY_BLACK))
                 # Store selected square as (col, row)
                 if selected_square is None:
                     # Only select a piece if it belongs to the human.
@@ -366,7 +369,7 @@ def game_loop() -> None:
                         print(f"{bots[1].get_version()}: {losses}")
                         print(f"P-Value: {binomtest(wins, wins + losses, 0.5, alternative="two-sided")}")
                     print(wins, draws, losses)
-                game_state = game_state_from_line(line, "fens.txt").to_bitboards()
+                game_state = game_state_from_line(line, "fens.txt")
                 bots[0].clear_cache()
                 bots[1].clear_cache()
 
