@@ -1,7 +1,6 @@
 from copy import copy
 
-import numpy as np
-
+from game_base import GameStateBase
 from utils import split_table
 
 # Precompute index-to-coordinate mapping for faster lookups
@@ -107,7 +106,7 @@ start_board: tuple[int, ...] = (
     4, 2, 3, 5, 6, 3, 2, 4
 )
 
-class GameState:
+class GameState(GameStateBase):
     __slots__ = ('board', 'color', 'white_queen', 'white_king', 'black_queen', 'black_king', 'last_move', 'turn',
                  'winner', 'previous_position_count', 'moves_since_pawn', 'moves')
 
