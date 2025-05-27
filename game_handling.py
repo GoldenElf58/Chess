@@ -12,15 +12,12 @@ from scipy.stats import binomtest  # type: ignore
 
 from bot_v1 import Botv1
 from bot_v2 import Botv2
-from bot_v3 import Botv3
+from bot_v3_5 import Botv3_5
+from bot_v4 import Botv4
+from bot_v4_2 import Botv4_2
+from bot_v4_3 import Botv4_3
 
 from bot import Bot
-from bot_v3_2 import Botv3_2
-from bot_v3_3 import Botv3_3
-from bot_v3_4 import Botv3_4
-from bot_v3_5 import Botv3_5
-from bot_v3_6 import Botv3_6
-from bot_v3_7 import Botv3_7
 from fen_utils import game_state_from_line
 from game import GameState
 
@@ -208,7 +205,7 @@ def game_loop() -> None:
     num_lines: int = 500
     line: int = random.randint(1, num_lines)
     reverse: bool = False
-    bots: tuple[Bot, Bot] = (Botv1(), Botv1())
+    bots: tuple[Bot, Bot] = (Botv4_3(), Botv1())
     wins: int = 0
     draws: int = 0
     losses: int = 0

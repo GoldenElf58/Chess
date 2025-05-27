@@ -1,7 +1,5 @@
 from timeit import timeit
 
-from bot_v3 import Botv3
-from bot_v2 import Botv2
 from fen_utils import game_state_from_line
 from statistics import mean, stdev
 from scipy import stats  # type: ignore
