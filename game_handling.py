@@ -20,6 +20,8 @@ from bot_v4_3 import Botv4_3
 from bot import Bot
 from fen_utils import game_state_from_line
 from game import GameState
+from game_base import GameStateBase
+from game_bitboards import GameStateBitboards
 
 images = [
     pygame.image.load("piece_images/-6.png"),
@@ -38,7 +40,7 @@ images = [
 ]
 
 
-def display_board(screen, board, selected_square=(), offset=0):
+def display_board(screen, game_state: GameStateBase, selected_square=(), offset=0):
     for i in range(8):
         for j in range(8):
             if selected_square == (j, i):
@@ -47,11 +49,32 @@ def display_board(screen, board, selected_square=(), offset=0):
             else:
                 pygame.draw.rect(screen, (240, 217, 181) if (i + j) % 2 == 0 else (181, 136, 99),
                                  (j * 60 + offset, i * 60, 60, 60 + offset))
-            if board[i * 8 + j] != 0:
-                screen.blit(images[board[i * 8 + j] + 6], (j * 60 + offset, i * 60))
+            if isinstance(game_state, GameState):
+                if game_state.board[i * 8 + j] != 0:
+                    screen.blit(images[game_state.board[i * 8 + j] + 6], (j * 60 + offset, i * 60))
+            elif isinstance(game_state, GameStateBitboards):
+                piece = 0
+                piece_mask = 1 << (63 - (i * 8 + j))
+                if not piece_mask & (game_state.white_pieces | game_state.black_pieces):
+                    continue
+                if piece_mask & game_state.pawns:
+                    piece = 1
+                elif piece_mask & game_state.knights:
+                    piece = 2
+                elif piece_mask & game_state.bishops:
+                    piece = 3
+                elif piece_mask & game_state.rooks:
+                    piece = 4
+                elif piece_mask & game_state.kings:
+                    piece = 6
+                elif piece_mask & game_state.queens:
+                    piece = 5
+                if piece_mask & game_state.black_pieces:
+                    piece *= -1
+                screen.blit(images[piece + 6], (j * 60 + offset, i * 60))
 
 
-def display_info(screen: Surface, game_state: GameState, last_eval: int, font: Font, t0: float, game_mode, wins: int,
+def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, font: Font, t0: float, game_mode, wins: int,
                  draws: int, losses: int, bots: tuple[Bot, Bot], depths=None):
     info_x = 667
     info_rect = pygame.Rect(info_x, 0, screen.get_width() - info_x, screen.get_height())
@@ -181,7 +204,7 @@ def game_loop() -> None:
     pygame.init()
     screen: Surface = pygame.display.set_mode((854, 480))
     offset: int = 187
-    game_state: GameState = GameState()
+    game_state: GameStateBitboards = GameStateBitboards()
     selected_square: tuple[int, int] | None = None  # For human move selection (as (col, row))
     game_mode: GameMode = GameMode.MENU  # Will be set when a button is clicked
     font: Font = Font(None, 24)
@@ -228,31 +251,31 @@ def game_loop() -> None:
                 t0 = time.time()
                 if buttons[0].check_hover(pos):
                     game_mode = GameMode.PLAY_WHITE
-                    game_state = GameState()
+                    game_state = GameStateBitboards()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
                 elif buttons[1].check_hover(pos):
                     reverse = False
                     game_mode = GameMode.PLAY_BLACK
-                    game_state = GameState()
+                    game_state = GameStateBitboards()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
                 elif buttons[2].check_hover(pos):
                     reverse = False
                     game_mode = GameMode.AI_VS_AI
-                    game_state = GameState()
+                    game_state = GameStateBitboards()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
                 elif buttons[3].check_hover(pos):
                     game_mode = GameMode.DEEP_TEST
                     line = 1
                     reverse = False
-                    game_state = game_state_from_line(line, "fens.txt")
+                    game_state = game_state_from_line(line, "fens.txt").to_bitboards()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
                 elif buttons[4].check_hover(pos):
                     game_mode = GameMode.HUMAN
-                    game_state = GameState()
+                    game_state = GameStateBitboards()
                 elif buttons[5].check_hover(pos):
                     test_mode = not test_mode
                     buttons[5].text = "Test" if test_mode else "Normal"
@@ -261,13 +284,18 @@ def game_loop() -> None:
                     event.type == pygame.MOUSEBUTTONDOWN):
                 x, y = event.pos
                 col, row = (x - offset) // 60, y // 60
-                selected_piece = game_state.board[row * 8 + col]
+                # selected_piece = game_state.board[row * 8 + col]
+                selected_piece_mask = 1 << (63 - (row * 8 + col))
                 color = game_state.color
-                can_select: bool = ((game_mode == GameMode.HUMAN and ((selected_piece > 0 and color == 1) or (
-                        selected_piece < 0 and color == -1))) or (selected_piece > 0 and color == 1 and
-                                                                  game_mode == GameMode.PLAY_WHITE) or (
-                                                selected_piece < 0 and color == -1 and
-                                                game_mode == GameMode.PLAY_BLACK))
+                can_select: int = (((game_mode == GameMode.HUMAN or game_mode == GameMode.PLAY_WHITE) and
+                                     ((selected_piece_mask & game_state.white_pieces) and color == 1) or (
+                                             (game_mode == GameMode.PLAY_BLACK or game_mode == GameMode.HUMAN) and
+                                     (selected_piece_mask & game_state.black_pieces) and color == -1)))
+                # can_select: bool = ((game_mode == GameMode.HUMAN and ((selected_piece > 0 and color == 1) or (
+                #         selected_piece < 0 and color == -1))) or (selected_piece > 0 and color == 1 and
+                #                                                   game_mode == GameMode.PLAY_WHITE) or (
+                #                                 selected_piece < 0 and color == -1 and
+                #                                 game_mode == GameMode.PLAY_BLACK))
                 # Store selected square as (col, row)
                 if selected_square is None:
                     # Only select a piece if it belongs to the human.
@@ -307,7 +335,7 @@ def game_loop() -> None:
                 computer_thread = None
 
         screen.fill(0)
-        display_board(screen, game_state.board, selected_square, offset)
+        display_board(screen, game_state, selected_square, offset)
 
         game_state.get_moves()
         if (winner := game_state.get_winner()) is not None and game_mode != GameMode.MENU:
@@ -338,7 +366,7 @@ def game_loop() -> None:
                         print(f"{bots[1].get_version()}: {losses}")
                         print(f"P-Value: {binomtest(wins, wins + losses, 0.5, alternative="two-sided")}")
                     print(wins, draws, losses)
-                game_state = game_state_from_line(line, "fens.txt")
+                game_state = game_state_from_line(line, "fens.txt").to_bitboards()
                 bots[0].clear_cache()
                 bots[1].clear_cache()
 

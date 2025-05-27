@@ -1,6 +1,7 @@
 from copy import copy
 
 from game_base import GameStateBase
+from game_bitboards import GameStateBitboards
 from utils import split_table
 
 # Precompute index-to-coordinate mapping for faster lookups
@@ -111,7 +112,7 @@ class GameState(GameStateBase):
                  'winner', 'previous_position_count', 'moves_since_pawn', 'moves')
 
     def __init__(self, board: tuple | None = None, white_queen: bool = True, white_king: bool = True,
-                 black_queen: bool = True, back_king: bool = True, last_move: tuple[int, int, int, int] | None = None,
+                 black_queen: bool = True, black_king: bool = True, last_move: tuple[int, int, int, int] | None = None,
                  color: int = 1, turn: int = 0, winner: int | None = None,
                  previous_position_count: dict[int, int] | None = None, moves_since_pawn: int = 0) -> None:
         """
@@ -135,18 +136,8 @@ class GameState(GameStateBase):
             The color of the current player (1 for white, -1 for black). Defaults to 1.
         """
         self.board: tuple[int, ...] = start_board if board is None else board
-        self.color: int = color
-        self.white_queen: bool = white_queen
-        self.white_king: bool = white_king
-        self.black_queen: bool = black_queen
-        self.black_king: bool = back_king
-        self.last_move: tuple[int, int, int, int] = last_move if last_move is not None else (0, 0, 0, 0)
-        self.turn: int = turn
-        self.winner: int | None = winner
-        self.previous_position_count: dict[
-            int, int] = previous_position_count if previous_position_count is not None else {}
-        self.moves_since_pawn: int = moves_since_pawn
-        self.moves: list[tuple[int, int, int, int]] | None = None
+        super().__init__(white_queen, white_king, black_queen, black_king, last_move, color, turn, winner,
+                         previous_position_count, moves_since_pawn)
 
     def get_hashable_state(self) -> tuple[tuple[int, ...], int, bool, bool, bool, bool, tuple[int, int, int, int]]:
         """ Convert the game state into a hashable format for caching. """
@@ -445,6 +436,41 @@ class GameState(GameStateBase):
                     return None
             self.winner = 0
         return self.winner
+
+    def to_bitboards(self) -> GameStateBitboards:
+        pawns: int = 0
+        knights: int = 0
+        bishops: int = 0
+        rooks: int = 0
+        queens: int = 0
+        kings: int = 0
+        white: int = 0
+        black: int = 0
+        for i, piece in enumerate(self.board):
+            if not piece:
+                continue
+            piece_mask = 1 << (64 - i)
+            if piece > 0:
+                white |= piece_mask
+            else:
+                black |= piece_mask
+            piece_type = abs(piece)
+            if piece_type == 1:
+                pawns |= piece_mask
+            elif piece_type == 2:
+                knights |= piece_mask
+            elif piece_type == 3:
+                bishops |= piece_mask
+            elif piece_type == 4:
+                rooks |= piece_mask
+            elif piece_type == 5:
+                queens |= piece_mask
+            elif piece_type == 6:
+                kings |= piece_mask
+        return GameStateBitboards(white, black, pawns, knights, bishops, rooks, queens, kings, self.white_queen,
+                                  self.white_king, self.black_queen, self.black_king, self.last_move,
+                                  self.color, self.turn, self.winner, self.previous_position_count,
+                                  self.moves_since_pawn)
 
     def __repr__(self) -> str:
         return f"""GameState(board={self.board}

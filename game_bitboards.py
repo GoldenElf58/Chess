@@ -25,6 +25,7 @@ def populate_precomputed_tables() -> None:
     tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]]] = []
     temp_bishop: list[tuple[tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...],
     tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]]] = []
+    a8 = 1 << 63
     for h in range(64):
         i, j = index_to_coord[h]
 
@@ -32,34 +33,34 @@ def populate_precomputed_tables() -> None:
         for k in range(-2, 3, 4):
             for l in range(-1, 2, 2):
                 if 8 > i + k >= 0 <= j + l < 8:
-                    curr.append(((1 << 64 - ((i + k) * 8 + j + l)), i + k, j + l))
+                    curr.append(((a8 >> ((i + k) * 8 + j + l)), i + k, j + l))
                 if 8 > i + l >= 0 <= j + k < 8:
-                    curr.append(((1 << 64 - ((i + l) * 8 + j + k)), i + l, j + k))
+                    curr.append(((a8 >> ((i + l) * 8 + j + k)), i + l, j + k))
         temp_knight.append(tuple(curr))
 
         curr = []
         for k in range(-1, 2):
             for l in range(-1, 2):
                 if 0 <= i + k < 8 and 0 <= j + l < 8:
-                    curr.append(((1 << 64 - ((i + k) * 8 + j + l)), i + k, j + l))
+                    curr.append(((a8 >> ((i + k) * 8 + j + l)), i + k, j + l))
         temp_king.append(tuple(curr))
 
         curr = []
         curr2: list = []
         for k in range(j + 1, 8):
-            curr2.append((1 << 64 - (h - j + k), i, k))
+            curr2.append((a8 >> (h - j + k), i, k))
         curr.append(tuple(curr2))
         curr2 = []
         for k in range(j - 1, -1, -1):
-            curr2.append((1 << 64 - (h - j + k), i, k))
+            curr2.append((a8 >> (h - j + k), i, k))
         curr.append(tuple(curr2))
         curr2 = []
         for k in range(i + 1, 8):
-            curr2.append((1 << 64 - (k * 8 + j), k, j))
+            curr2.append((a8 >> (k * 8 + j), k, j))
         curr.append(tuple(curr2))
         curr2 = []
         for k in range(i - 1, -1, -1):
-            curr2.append((1 << 64 - (k * 8 + j), k, j))
+            curr2.append((a8 >> (k * 8 + j), k, j))
         curr.append(tuple(curr2))
         temp_rook.append(tuple(curr))
 
@@ -67,22 +68,22 @@ def populate_precomputed_tables() -> None:
         curr2 = []
         for k in range(1, 8):
             if i + k > 7 or j + k > 7: break
-            curr2.append((1 << 64 - ((i + k) * 8 + (j + k)), i + k, j + k))
+            curr2.append((a8 >> ((i + k) * 8 + (j + k)), i + k, j + k))
         curr.append(tuple(curr2))
         curr2 = []
         for k in range(1, 8):
             if i - k < 0 or j + k > 7: break
-            curr2.append((1 << 64 - ((i - k) * 8 + (j + k)), i - k, j + k))
+            curr2.append((a8 >> ((i - k) * 8 + (j + k)), i - k, j + k))
         curr.append(tuple(curr2))
         curr2 = []
         for k in range(1, 8):
             if i + k > 7 or j - k < 0: break
-            curr2.append((1 << 64 - ((i + k) * 8 + (j - k)), i + k, j - k))
+            curr2.append((a8 >> ((i + k) * 8 + (j - k)), i + k, j - k))
         curr.append(tuple(curr2))
         curr2 = []
         for k in range(1, 8):
             if i - k < 0 or j - k < 0: break
-            curr2.append((1 << 64 - ((i - k) * 8 + (j - k)), i - k, j - k))
+            curr2.append((a8 >> ((i - k) * 8 + (j - k)), i - k, j - k))
         curr.append(tuple(curr2))
         temp_bishop.append(tuple(curr))
 
@@ -104,7 +105,7 @@ start_knights = 0b01000010_00000000_00000000_00000000_00000000_00000000_00000000
 start_pawns = 0b00000000_11111111_00000000_00000000_00000000_00000000_11111111_00000000
 
 
-class GameState(GameStateBase):
+class GameStateBitboards(GameStateBase):
     __slots__ = ('white_pieces', 'black_pieces', 'kings', 'queens', 'rooks', 'bishops', 'knights', 'pawns',
                  'color', 'white_queen', 'white_king', 'black_queen', 'black_king', 'last_move', 'turn',
                  'winner', 'previous_position_count', 'moves_since_pawn', 'moves', 'hash_state')
@@ -112,11 +113,11 @@ class GameState(GameStateBase):
     def __init__(self, white_pieces: int | None = None, black_pieces: int | None = None, kings: int | None = None,
                  queens: int | None = None, rooks: int | None = None, bishops: int | None = None,
                  knights: int | None = None, pawns: int | None = None, white_queen: bool = True,
-                 white_king: bool = True, black_queen: bool = True, back_king: bool = True,
+                 white_king: bool = True, black_queen: bool = True, black_king: bool = True,
                  last_move: tuple[int, int, int, int] | None = None, color=1, turn=0, winner: int | None = None,
                  previous_position_count: dict[int, int] | None = None, moves_since_pawn: int = 0) -> None:
         """
-        Initialize a GameState object.
+        Initialize a GameStateBitboards object.
 
         Parameters
         ----------
@@ -142,7 +143,7 @@ class GameState(GameStateBase):
             Whether the white king is still on the board. Defaults to True.
         black_queen : bool, optional
             Whether the black queen is still on the board. Defaults to True.
-        back_king : bool, optional
+        black_king : bool, optional
             Whether the black king is still on the board. Defaults to True.
         last_move : tuple[tuple[int, int], tuple[int, int]], optional
             The last move made, as a tuple of two tuples. Defaults to None.
@@ -157,19 +158,8 @@ class GameState(GameStateBase):
         self.bishops: int = start_bishops if bishops is None else bishops
         self.knights: int = start_knights if knights is None else knights
         self.pawns: int = start_pawns if pawns is None else pawns
-        self.color: int = color
-        self.white_queen: bool = white_queen
-        self.white_king: bool = white_king
-        self.black_queen: bool = black_queen
-        self.black_king: bool = back_king
-        self.last_move: tuple[int, int, int, int] = last_move if last_move is not None else (0, 0, 0, 0)
-        self.turn: int = turn
-        self.winner: int | None = winner
-        self.previous_position_count: dict[
-            int, int] = previous_position_count if previous_position_count is not None else {}
-        self.moves_since_pawn: int = moves_since_pawn
-        self.moves: list[tuple[int, int, int, int]] | None = None
-        self.hash_state: int | None = None
+        super().__init__(white_queen, white_king, black_queen, black_king, last_move, color, turn, winner,
+                         previous_position_count, moves_since_pawn)
 
     def get_hashable_state(self) -> tuple[int, int, int, int, int, int, int, int, int, bool, bool, bool, bool,
     tuple[int, int, int, int]]:
@@ -182,7 +172,7 @@ class GameState(GameStateBase):
         return hash((self.white_pieces, self.black_pieces, self.kings, self.queens, self.rooks, self.bishops,
                      self.knights, self.pawns, (((self.color == 1) << 4) | (self.white_queen << 3) | (
                     self.white_king << 2) | (self.black_queen << 1) | self.black_king),
-                     self.last_move)) if self.hash_state is None else self.hash_state
+                     self.last_move))
 
     def get_moves(self) -> list[tuple[int, int, int, int]]:
         """
@@ -197,13 +187,13 @@ class GameState(GameStateBase):
         moves: list[tuple[int, int, int, int]] = self.get_moves_no_check()
         moves_len: int = len(moves)
         for i, move_0 in enumerate(reversed(moves)):
-            state: GameState = self.move(move_0)
+            state: GameStateBitboards = self.move(move_0)
             for move_1 in state.get_moves_no_check():
                 if (winner := (state_2 := state.move(move_1)).get_winner()) == -1 or winner == 1:
                     moves.pop(moves_len - i - 1)
                     break
                 elif move_0[0] == -1:
-                    king_mask: int = 1 << (64 - (move_0[2] * 8 + move_0[3]))
+                    king_mask: int = 1 << (63 - (move_0[2] * 8 + move_0[3]))
                     opponent_pieces: int = state_2.black_pieces if self.color == 1 else state_2.white_pieces
                     if move_0[1] == 1:
                         for shift in range(0, 2):
@@ -218,7 +208,7 @@ class GameState(GameStateBase):
                     moves.pop(moves_len - i - 1)
                     break
         if len(moves) == 0 and moves_len > 0:
-            game_state: GameState = GameState(self.white_pieces, self.black_pieces, self.kings, self.queens, self.rooks,
+            game_state: GameStateBitboards = GameStateBitboards(self.white_pieces, self.black_pieces, self.kings, self.queens, self.rooks,
                                               self.bishops, self.knights, self.pawns,
                                               self.white_queen, self.white_king, self.black_queen,
                                              self.black_king, color=-self.color, winner=self.winner)
@@ -270,71 +260,73 @@ class GameState(GameStateBase):
         color_mask: int = white_pieces if color == 1 else black_pieces
         opponent_mask: int = black_pieces if color == 1 else white_pieces
         pieces: int = white_pieces | black_pieces
+        a8: int = 1 << 63
         for h in range(64):
             i, j = coords_local[h]
-            piece_mask = 1 << 64 - h
+            piece_mask = a8 >> h
             if color_mask & piece_mask == 0:
                 continue
-            if kings & color_mask & piece_mask != 0:  # King
+            if kings & color_mask & piece_mask:  # King
                 if (((color_local == 1 and white_king) or (color_local == -1 and black_king)) and rooks & color_mask &
-                        (piece_mask >> 3) != 0 == pieces & ((piece_mask >> 1) | (piece_mask >> 2))):
+                        (piece_mask >> 3) == pieces & ((piece_mask >> 1) | (piece_mask >> 2))):
                     moves.append((-1, 1, i, j))
                 if (((color_local == 1 and white_queen) or (color_local == -1 and black_queen)) and rooks & color_mask &
-                        (piece_mask << 4) != 0 == pieces & ((piece_mask << 1) | (piece_mask << 2))):
+                        (piece_mask << 4) and 0 == pieces & ((piece_mask << 1) | (piece_mask << 2))):
                     moves.append((-1, -1, i, j))
                 for (target_mask, target_i, target_j) in king_targets_local[h]:
                     if target_mask & color_mask == 0:
                         moves.append((i, j, target_i, target_j))
-            elif (rooks | queens) & color_mask & piece_mask != 0:  # Rook and Queen
+            elif (rooks | queens) & color_mask & piece_mask:  # Rook and Queen
                 for ray in rook_rays_local[h]:
                     for (target_mask, ray_i, ray_j) in ray:
-                        if target_mask & color_mask == 0:
+                        if not target_mask & pieces:
                             moves.append((i, j, ray_i, ray_j))
-                        if target_mask & opponent_mask == 0:
                             continue
+                        if target_mask & opponent_mask:
+                            moves.append((i, j, ray_i, ray_j))
                         break
-            if (bishops | queens) & color_mask & piece_mask != 0:  # Bishop and Queen
+            if (bishops | queens) & color_mask & piece_mask:  # Bishop and Queen
                 for diagonal in bishop_diagonals_local[h]:
                     for (target_mask, diagonal_i, diagonal_j) in diagonal:
-                        if target_mask & pieces == 0:
+                        if not target_mask & pieces:
                             moves.append((i, j, diagonal_i, diagonal_j))
                             continue
-                        if target_mask & opponent_mask == 0:
+                        if target_mask & opponent_mask:
                             moves.append((i, j, diagonal_i, diagonal_j))
                         break
-            elif knights & color_mask & piece_mask != 0:  # Knight
+            elif knights & color_mask & piece_mask:  # Knight
                 for (target_mask, target_i, target_j) in knight_targets_local[h]:
                     if target_mask & color_mask == 0:
                         moves.append((i, j, target_i, target_j))
-            elif pawns & color_mask & piece_mask != 0:  # Pawn
-                dest_square_mask: int = 1 << 64 - ((i - color_local) * 8 + j)
+            elif pawns & color_mask & piece_mask:  # Pawn
+                dest_square_mask: int = a8 >> ((i - color_local) * 8 + j)
                 if pieces & dest_square_mask == 0:
                     if 7 != i - color_local != 0:
                         moves.append((i, j, i - color_local, j))
                     else:
                         for move_id, promotion_piece in promotion_forward:
                             moves.append((move_id, promotion_piece * color_local, i, j))
-                if 8 > (j + 1) and 0 != opponent_mask & (dest_square_mask >> 1):
+                if 8 > (j + 1) and opponent_mask & (dest_square_mask >> 1):
                     if 7 != i - color_local != 0:
                         moves.append((i, j, i - color_local, j + 1))
                     else:  # Promotion
                         for promotion_piece, direction in promotion_taking:
                             moves.append((promotion_piece, direction, i, j))
-                if (j - 1) >= 0 != opponent_mask & (dest_square_mask << 1):
+                if (j - 1) >= 0 and opponent_mask & (dest_square_mask << 1):
                     if 7 != i - color_local != 0:
                         moves.append((i, j, i - color_local, j - 1))
                     else:  # Promotion
                         for promotion_piece, direction in promotion_taking:
                             moves.append((promotion_piece, -direction, i, j))
                 if color_local == 1:
-                    if i == 6 and pieces & (1 << 32 - j) == 0 == (1 << 24 - j):
+                    if i == 6 and not (pieces & (dest_square_mask | dest_square_mask << 8)):
                         moves.append((i, j, 4, j))
-                elif i == 1 and pieces & (1 << 40 - j) == 0 == (1 << 48 - j):
+                elif i == 1 and not (pieces & (dest_square_mask | dest_square_mask >> 8)):
                     moves.append((i, j, 3, j))
                 # En Passant
                 if (last_move_local is not None and (
-                        1 << 64 - last_move_local[2] * 8 - last_move_local[3]) & opponent_mask
-                        & pawns != 0 and abs(last_move_local[2] - last_move_local[0]) == 2 and i == last_move_local[2]):
+                        a8 >> last_move_local[2] * 8 - last_move_local[3]) & opponent_mask
+                        & pawns and abs(last_move_local[2] - last_move_local[0]) == 2 and i == last_move_local[2]):
                     if 7 != j == last_move_local[3] + 1:
                         moves.append((-2, -1, i, j))
                     elif 0 != j == last_move_local[3] - 1:
@@ -359,7 +351,7 @@ class GameState(GameStateBase):
         # zeros = 64 total bits minus the ones
         return 64 - ones
 
-    def move(self, move: tuple[int, int, int, int]) -> 'GameState':
+    def move(self, move: tuple[int, int, int, int]) -> 'GameStateBitboards':
         """
         Make a move on the board.
 
@@ -374,8 +366,8 @@ class GameState(GameStateBase):
 
         Returns
         -------
-        GameState
-            A new GameState object, with the move applied.
+        GameStateBitboards
+            A new GameStateBitboards object, with the move applied.
         """
         new_white_pieces: int = self.white_pieces
         new_black_pieces: int = self.black_pieces
@@ -391,13 +383,14 @@ class GameState(GameStateBase):
         black_king: bool = self.black_king
         new_moves_since_pawn: int = self.moves_since_pawn + 1
         color_local: int = self.color
-        move_0, move_1, move_2, move_3 = move
+        move_0, move_1, move_2, move_3 = move # type: int, int, int, int
 
         if len(move) == 0:
-            return GameState(new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks, new_bishops,
+            return GameStateBitboards(new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks, new_bishops,
                              new_knights, new_pawns, color=-color_local, turn=self.turn + 1, winner=0)
 
-        second_idx_mask = (1 << 64 - (move_2 * 8 + move_3))
+        a8: int = 1 << 63
+        second_idx_mask: int = (a8 >> (move_2 * 8 + move_3))
         if move_0 == -1:  # Castle
             if color_local == 1:
                 white_queen = False
@@ -426,53 +419,54 @@ class GameState(GameStateBase):
                                  0b0000_0100_00000000_00000000_00000000_00000000_00000000_00000000)
                 new_kings = ((new_kings & ~0b0000_1000_00000000_00000000_00000000_00000000_00000000_00000000) |
                              0b0010_0000_00000000_00000000_00000000_00000000_00000000_00000000)
-            return GameState(new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks, new_bishops,
+            return GameStateBitboards(new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks, new_bishops,
                              new_knights, new_pawns, white_queen, white_king, black_queen, black_king,
                              color=-color_local, turn=self.turn + 1, winner=self.winner)
 
         if move_0 == -2:  # En Passant
             if color_local == 1:
                 new_white_pieces = (new_white_pieces & ~second_idx_mask) | (
-                        1 << 64 - ((move_2 - color_local) * 8 + move_3 + move_1))
-                new_black_pieces &= ~(1 << 64 - (move_2 * 8 + move_3 + move_1))
+                        a8 >> ((move_2 - color_local) * 8 + move_3 + move_1))
+                new_black_pieces &= ~(a8 >> (move_2 * 8 + move_3 + move_1))
             else:
                 new_black_pieces = (new_black_pieces & ~second_idx_mask) | (
-                        1 << 64 - ((move_2 - color_local) * 8 + move_3 + move_1))
-                new_white_pieces &= ~(1 << 64 - (move_2 * 8 + move_3 + move_1))
+                        a8 >> ((move_2 - color_local) * 8 + move_3 + move_1))
+                new_white_pieces &= ~(a8 >> (move_2 * 8 + move_3 + move_1))
             new_pawns = (new_pawns & ~second_idx_mask & ~(
-                    1 << 64 - (move_2 * 8 + move_3 + move_1))) | (
-                                1 << 64 - ((move_2 - color_local) * 8 + move_3 + move_1))
-            return GameState(new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks, new_bishops,
+                    a8 >> (move_2 * 8 + move_3 + move_1))) | (
+                                a8 >> ((move_2 - color_local) * 8 + move_3 + move_1))
+            return GameStateBitboards(new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks, new_bishops,
                              new_knights, new_pawns, white_queen, white_king, black_queen, black_king,
                              color=-color_local, turn=self.turn + 1, winner=self.winner)
 
         if move_0 == -3:  # Promotion
             if color_local == 1:
                 new_white_pieces = ((new_white_pieces & ~second_idx_mask) |
-                                    (1 << 64 - ((move_2 - color_local) * 8 + move_3)))
+                                    (a8 >> ((move_2 - color_local) * 8 + move_3)))
             else:
                 new_black_pieces = ((new_black_pieces & ~second_idx_mask) |
-                                    (1 << 64 - ((move_2 - color_local) * 8 + move_3)))
+                                    (a8 >> ((move_2 - color_local) * 8 + move_3)))
             new_pawns &= ~second_idx_mask
-            if abs(move_1) == 2:
-                new_knights |= 1 << 64 - ((move_2 - color_local) * 8 + move_3)
-            elif abs(move_1) == 3:
-                new_bishops |= 1 << 64 - ((move_2 - color_local) * 8 + move_3)
-            elif abs(move_1) == 4:
-                new_rooks |= 1 << 64 - ((move_2 - color_local) * 8 + move_3)
-            elif abs(move_1) == 5:
-                new_queens |= 1 << 64 - ((move_2 - color_local) * 8 + move_3)
+            promotion_piece_type: int = abs(move_1)
+            if promotion_piece_type == 2:
+                new_knights |= a8 >> ((move_2 - color_local) * 8 + move_3)
+            elif promotion_piece_type == 3:
+                new_bishops |= a8 >> ((move_2 - color_local) * 8 + move_3)
+            elif promotion_piece_type == 4:
+                new_rooks |= a8 >> ((move_2 - color_local) * 8 + move_3)
+            elif promotion_piece_type == 5:
+                new_queens |= a8 >> ((move_2 - color_local) * 8 + move_3)
 
-            return GameState(new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks, new_bishops,
+            return GameStateBitboards(new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks, new_bishops,
                              new_knights, new_pawns, white_queen, white_king, black_queen, black_king,
                              color=-color_local, turn=self.turn + 1, winner=self.winner)
             # new_board[move_2 * 8 + move_3] = 0
             # new_board[(move_2 - self.color) * 8 + move_3] = move_1
-            # return GameState(tuple(new_board), white_queen, white_king, black_queen, black_king, color=-self.color,
+            # return GameStateBitboards(tuple(new_board), white_queen, white_king, black_queen, black_king, color=-self.color,
             #                  turn=self.turn + 1, moves_since_pawn=0)
 
         if move_0 <= -4:  # Promotion while taking
-            new_piece_mask: int = 1 << 64 - ((move_2 - color_local) * 8 + (move_3 + move_1))
+            new_piece_mask: int = a8 >> ((move_2 - color_local) * 8 + (move_3 + move_1))
             remove_piece_mask: int = ~second_idx_mask
             if color_local == 1:
                 new_white_pieces = (new_white_pieces & remove_piece_mask) | new_piece_mask
@@ -481,22 +475,21 @@ class GameState(GameStateBase):
                 new_black_pieces = (new_black_pieces & remove_piece_mask) | new_piece_mask
                 new_white_pieces &= ~new_piece_mask
             new_pawns &= remove_piece_mask
-            promotion_piece_type: int = abs(move_1)
-            if promotion_piece_type == 2:
-                new_knights |= new_piece_mask
-            elif promotion_piece_type == 3:
-                new_bishops |= new_piece_mask
-            elif promotion_piece_type == 4:
-                new_rooks |= new_piece_mask
-            elif promotion_piece_type == 5:
+            if move_0 == -7:
                 new_queens |= new_piece_mask
+            elif move_0 == -4:
+                new_knights |= new_piece_mask
+            elif move_0 == -5:
+                new_bishops |= new_piece_mask
+            elif move_0 == -6:
+                new_rooks |= new_piece_mask
 
-            return GameState(new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks, new_bishops,
+            return GameStateBitboards(new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks, new_bishops,
                              new_knights, new_pawns, white_queen, white_king, black_queen, black_king,
                              color=-color_local, turn=self.turn + 1, winner=self.winner)
 
-        first_idx_mask: int = (1 << 64 - (move_0 * 8 + move_1))
-        condition2: bool = ((new_kings | new_rooks) & first_idx_mask) != 0
+        first_idx_mask: int = (a8 >> (move_0 * 8 + move_1))
+        condition2: int = (new_kings | new_rooks) & first_idx_mask
         if (new_rooks | first_idx_mask) or condition2:
             if move_2 == 7 and not move_3:
                 white_queen = False
@@ -517,7 +510,7 @@ class GameState(GameStateBase):
         if self.pawns & first_idx_mask:
             new_moves_since_pawn = 0
 
-        new_winner = self.winner
+        new_winner: int | None = self.winner
         if color_local == 1:
             new_white_pieces = (new_white_pieces & ~first_idx_mask) | second_idx_mask
             new_black_pieces &= ~second_idx_mask
@@ -578,14 +571,14 @@ class GameState(GameStateBase):
                                 new_knights, new_pawns))) in new_previous_position_count:
             new_previous_position_count[hash_state] += 1
             if new_previous_position_count[hash_state] >= 3:
-                return GameState(new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks, new_bishops,
+                return GameStateBitboards(new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks, new_bishops,
                                  new_knights, new_pawns, white_queen, white_king, black_queen, black_king,
                                  color=-self.color, turn=self.turn + 1, winner=new_winner)
         else:
             new_previous_position_count[hash_state] = 1
         last_move: tuple[int, int, int, int] | None = move if (
-                self.pawns & first_idx_mask and (move_0 == move_2 - self.color * 2)) else None
-        return GameState(new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks, new_bishops,
+                self.pawns & first_idx_mask and (move_0 == move_2 + self.color * 2)) else None
+        return GameStateBitboards(new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks, new_bishops,
                                  new_knights, new_pawns, white_queen, white_king, black_queen, black_king,
                          last_move=last_move, color=-self.color, turn=self.turn + 1, winner=new_winner,
                          moves_since_pawn=new_moves_since_pawn, previous_position_count=new_previous_position_count)
@@ -596,9 +589,9 @@ class GameState(GameStateBase):
         if self.moves_since_pawn >= 50:
             self.winner = 0
             return 0
-        white: bool = self.kings & self.white_pieces != 0
-        black: bool = self.kings & self.black_pieces != 0
-        empty: bool = (self.white_pieces | self.black_pieces) & ~self.kings != 0
+        white: int = self.kings & self.white_pieces
+        black: int = self.kings & self.black_pieces
+        empty: bool = not (self.white_pieces | self.black_pieces) & ~self.kings
         if white and not black:
             self.winner = 1
         elif black and not white:
@@ -608,8 +601,7 @@ class GameState(GameStateBase):
         return self.winner
 
     def __repr__(self) -> str:
-        return f"""GameState(white_pieces={self.white_pieces},
-          white_pieces={self.white_pieces},
+        return f"""GameStateBitboards(white_pieces={self.white_pieces},
           black_pieces={self.black_pieces},
           kings={self.kings},
           queens={self.queens},
@@ -627,7 +619,6 @@ class GameState(GameStateBase):
           winner={self.winner},
           previous_position_count={self.previous_position_count},
           moves={self.moves},
-          hash_state={self.hash_state},
           moves_since_pawn={self.moves_since_pawn})"""
 
     def __str__(self) -> str:
@@ -660,7 +651,7 @@ class GameState(GameStateBase):
         for row in range(8):
             result += "| "
             for column in range(8):
-                piece_idx_mask = 1 << (64 - (row * 8 + column))
+                piece_idx_mask = 1 << (63 - (row * 8 + column))
                 if piece_idx_mask & self.white_pieces:
                     if piece_idx_mask & self.kings:
                         result += "K"

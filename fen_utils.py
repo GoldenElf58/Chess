@@ -88,7 +88,7 @@ def game_state_from_fen(fen: str) -> GameState:
         white_queen=white_queen,
         white_king=white_king,
         black_queen=black_queen,
-        back_king=black_king,
+        black_king=black_king,
         last_move=last_move,
         color=color,
         turn=turn,
