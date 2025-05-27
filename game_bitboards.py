@@ -196,7 +196,6 @@ class GameState(GameStateBase):
         if self.moves is not None: return self.moves
         moves: list[tuple[int, int, int, int]] = self.get_moves_no_check()
         moves_len: int = len(moves)
-        winner: int | None = 0
         for i, move_0 in enumerate(reversed(moves)):
             state: GameState = self.move(move_0)
             for move_1 in state.get_moves_no_check():
@@ -205,22 +204,30 @@ class GameState(GameStateBase):
                     break
                 elif move_0[0] == -1:
                     king_mask: int = 1 << (64 - (move_0[2] * 8 + move_0[3]))
-                    broke: bool = False
                     opponent_pieces: int = state_2.black_pieces if self.color == 1 else state_2.white_pieces
                     if move_0[1] == 1:
                         for shift in range(0, 2):
                             if opponent_pieces & (king_mask >> shift) != 0:  # state_2.board[idx] * self.color < 0:
-                                broke = True
                                 break
+                        else:
+                            continue
                     else:
                         for shift in range(0, 2):
                             if opponent_pieces & (king_mask << shift) != 0:  # state_2.board[idx] * self.color < 0:
-                                broke = True
                                 break
-                    if broke:
-                        moves.pop(moves_len - i - 1)
-                        break
+                    moves.pop(moves_len - i - 1)
+                    break
         if len(moves) == 0 and moves_len > 0:
+            game_state: GameState = GameState(self.white_pieces, self.black_pieces, self.kings, self.queens, self.rooks,
+                                              self.bishops, self.knights, self.pawns,
+                                              self.white_queen, self.white_king, self.black_queen,
+                                             self.black_king, color=-self.color, winner=self.winner)
+            for move in game_state.get_moves_no_check():
+                if (winner := game_state.move(move).get_winner()) == -1 or winner == 1:
+                    break
+            else:
+                self.winner = 0
+                return moves
             self.winner = winner
         elif self.moves_since_pawn >= 50:
             self.winner = 0
@@ -329,9 +336,9 @@ class GameState(GameStateBase):
                         1 << 64 - last_move_local[2] * 8 - last_move_local[3]) & opponent_mask
                         & pawns != 0 and abs(last_move_local[2] - last_move_local[0]) == 2 and i == last_move_local[2]):
                     if 7 != j == last_move_local[3] + 1:
-                        moves.append((-2, 1, i, j))
-                    elif 0 != j == last_move_local[3] - 1:
                         moves.append((-2, -1, i, j))
+                    elif 0 != j == last_move_local[3] - 1:
+                        moves.append((-2, 1, i, j))
         return moves
 
     def are_captures(self) -> bool:

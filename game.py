@@ -169,7 +169,6 @@ class GameState(GameStateBase):
         if self.moves is not None: return self.moves
         moves: list[tuple[int, int, int, int]] = self.get_moves_no_check()
         moves_len: int = len(moves)
-        winner: int | None = 0
         for i, move_0 in enumerate(reversed(moves)):
             state: GameState = self.move(move_0)
             for move_1 in state.get_moves_no_check():
