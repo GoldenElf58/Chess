@@ -1,14 +1,12 @@
 import threading
 import time
-from collections import Counter
-from itertools import count
 from typing import Callable
 
 import numpy as np
 
 from game import GameState
 from utils import mirror, negate
-from bot import Bot
+from bots.bot import Bot
 
 piece_values: dict[int, int] = {-6: -9999999,
                                 -5: -900,
@@ -174,13 +172,14 @@ def populate_combined_tables() -> None:
         for j in range(13):
             if j - 6 == 0: continue
             combined_tables_transition[i][j] = tuple(int(combined_tables_start[j][idx] * min(i, 4.5) / 4.5 +
-                                                 combined_tables_end[j][idx] * max(4.5 - i, 0) / 4.5) for idx in range(64))
+                                                         combined_tables_end[j][idx] * max(4.5 - i, 0) / 4.5) for idx in
+                                                     range(64))
 
 
 populate_combined_tables()
 
 
-class Botv3_7(Bot):
+class BotV3p7(Bot):
     def __init__(self, transposition_table: dict | None = None, eval_lookup: dict | None = None) -> None:
         self.transposition_table: dict[
             int, tuple[int, tuple[int, int, int, int]]] = transposition_table if transposition_table is not None else {}
@@ -233,7 +232,8 @@ class Botv3_7(Bot):
     def minimax(self, game_state: GameState, depth: int, alpha: int, beta: int, maximizing_player: bool,
                 first_call: bool = True) -> tuple[int, tuple[int, int, int, int]]:
         if game_state.get_winner() is not None:
-            return self.evaluate(game_state), game_state.last_move
+            return self.evaluate(game_state), (
+                game_state.last_move if game_state.last_move is not None else (0, 0, 0, 0))
         state_key: int = hash((game_state.board, game_state.white_queen, game_state.white_king,
                                game_state.black_queen, game_state.black_king, depth, maximizing_player))
         transposition_table: dict[int, tuple[int, tuple[int, int, int, int]]] = self.transposition_table
@@ -261,8 +261,8 @@ class Botv3_7(Bot):
                     best_eval, best_move = evaluation, move
                     alpha = max(alpha, evaluation)
             elif evaluation < best_eval:
-                    best_eval, best_move = evaluation, move
-                    beta = min(beta, evaluation)
+                best_eval, best_move = evaluation, move
+                beta = min(beta, evaluation)
 
             if beta <= alpha:
                 break

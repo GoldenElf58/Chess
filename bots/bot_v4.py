@@ -36,17 +36,6 @@ Pawns_flat: tuple[int, ...] = (
     0, 0, 0, 0, 0, 0, 0, 0
 )
 
-PawnsEnd_flat: tuple[int, ...] = (
-    0, 0, 0, 0, 0, 0, 0, 0,
-    80, 80, 80, 80, 80, 80, 80, 80,
-    50, 50, 50, 50, 50, 50, 50, 50,
-    30, 30, 30, 30, 30, 30, 30, 30,
-    20, 20, 20, 20, 20, 20, 20, 20,
-    10, 10, 10, 10, 10, 10, 10, 10,
-    10, 10, 10, 10, 10, 10, 10, 10,
-    0, 0, 0, 0, 0, 0, 0, 0
-)
-
 Rooks_flat: tuple[int, ...] = (
     0, 0, 0, 0, 0, 0, 0, 0,
     5, 10, 10, 10, 10, 10, 10, 5,
@@ -102,22 +91,11 @@ KingStart_flat: tuple[int, ...] = (
     20, 30, 10, 0, 0, 10, 30, 20
 )
 
-KingEnd_flat: tuple[int, ...] = (
-    -20, -10, -10, -10, -10, -10, -10, -20,
-    -5, 0, 5, 5, 5, 5, 0, -5,
-    -10, -5, 20, 30, 30, 20, -5, -10,
-    -15, -10, 35, 45, 45, 35, -10, -15,
-    -20, -15, 30, 40, 40, 30, -15, -20,
-    -25, -20, 20, 25, 25, 20, -20, -25,
-    -30, -25, 0, 0, 0, 0, -25, -30,
-    -50, -30, -30, -30, -30, -30, -30, -50
-)
-
 # Map piece type to its piece-square table.
 # (Assuming that in your piece_values dictionary:
 #   Pawn   -> ±1, Knight -> ±2, Bishop -> ±3,
 #   Rook   -> ±4, Queen  -> ±5, King   -> ±6)
-position_values_start: dict[int, tuple[int, ...]] = {
+position_values: dict[int, tuple[int, ...]] = {
     # White pieces (positive values)
     1: Pawns_flat,
     2: Knights_flat,
@@ -134,51 +112,34 @@ position_values_start: dict[int, tuple[int, ...]] = {
     -6: negate(mirror(KingStart_flat))
 }
 
-position_values_end: dict[int, tuple[int, ...]] = {
-    # White pieces (positive values)
-    1: PawnsEnd_flat,
-    2: Knights_flat,
-    3: Bishops_flat,
-    4: Rooks_flat,
-    5: Queens_flat,
-    6: KingEnd_flat,
-    # Black pieces (negative values) use the mirrored tables
-    -1: negate(mirror(PawnsEnd_flat)),
-    -2: negate(mirror(Knights_flat)),
-    -3: negate(mirror(Bishops_flat)),
-    -4: negate(mirror(Rooks_flat)),
-    -5: negate(mirror(Queens_flat)),
-    -6: negate(mirror(KingEnd_flat))
-}
-
 # Precompute combined piece and position tables for faster evaluation
-combined_tables_start: list[tuple[int, ...]] = [() for _ in range(13)]
-combined_tables_end: list[tuple[int, ...]] = [() for _ in range(13)]
-combined_tables_transition: list[list[tuple[int, ...]]] = [[() for _ in range(13)] for _ in range(30)]
+combined_tables: list[tuple[int, ...]] = [() for _ in range(13)]
+combined_np: np.ndarray  # shape (13, 64), filled in populate_combined_tables()
 
 
-def populate_combined_tables() -> None:
-    global combined_tables_transition
-    global combined_tables_start
-    global combined_tables_end
+def populate_combined_tables():
+    global combined_np
+    combined_np = np.zeros((13, 64), dtype=np.int32)
+
+    # piece runs from -6..-1, 1..6 (0 is empty square)
     for piece, base_val in piece_values.items():
         if piece == 0:
             continue
-        pos_vals = position_values_start[piece]
-        combined_tables_start[piece + 6] = tuple(base_val + pos_vals[i] for i in range(len(pos_vals)))
-        pos_vals = position_values_end[piece]
-        combined_tables_end[piece + 6] = tuple(base_val + pos_vals[i] for i in range(len(pos_vals)))
-    for i in range(30):
-        for j in range(13):
-            if j - 6 == 0: continue
-            combined_tables_transition[i][j] = tuple(int(combined_tables_start[j][idx] * min(i, 5) / 5 +
-                                                 combined_tables_end[j][idx] * max(5 - i, 0) / 5) for idx in range(64))
+        pos_vals = position_values[piece]
+        row = tuple(base_val + pos_vals[i] for i in range(64))
+        combined_tables[piece + 6] = row
+        combined_np[piece + 6] = row  # numpy version for vectorised look‑ups
+
+    # Ensure the empty-square row (index 6) is all zeros so vectorised
+    # indexing with (board + 6) is safe.
+    if len(combined_tables[6]) == 0:
+        combined_tables[6] = tuple(0 for _ in range(64))
 
 
 populate_combined_tables()
 
 
-class Botv3_4(Bot):
+class BotV4(Bot):
     def __init__(self, transposition_table: dict | None = None, eval_lookup: dict | None = None) -> None:
         self.transposition_table: dict[
             int, tuple[int, tuple[int, int, int, int]]] = transposition_table if transposition_table is not None else {}
@@ -199,9 +160,8 @@ class Botv3_4(Bot):
         if (cached_eval := self.eval_lookup.get(hash_state)) is not None:
             return cached_eval
         board: tuple[int, ...] = game_state.board
-        combined: list[tuple[int, ...]] = combined_tables_transition[np.count_nonzero(board not in [0, -1, 1, -6, 6])]
-        self.eval_lookup[hash_state] = (
-            evaluation := sum([combined[piece + 6][i] for (i, piece) in enumerate(board) if piece]))
+        combined: list[tuple[int, ...]] = combined_tables
+        self.eval_lookup[hash_state] = (evaluation := sum([combined[piece + 6][i] for (i, piece) in enumerate(board) if piece]))
         return evaluation
 
     def iterative_deepening(self, game_state: GameState, maximizing_player: bool, allotted_time: float = 3.0,
@@ -231,7 +191,7 @@ class Botv3_4(Bot):
     def minimax(self, game_state: GameState, depth: int, alpha: int, beta: int, maximizing_player: bool,
                 first_call: bool = True) -> tuple[int, tuple[int, int, int, int]]:
         if game_state.get_winner() is not None:
-            return self.evaluate(game_state), game_state.last_move
+            return self.evaluate(game_state) + depth, (game_state.last_move if game_state.last_move is not None else (0, 0, 0, 0))
         state_key: int = hash((game_state.board, game_state.white_queen, game_state.white_king,
                                game_state.black_queen, game_state.black_king, depth, maximizing_player))
         transposition_table: dict[int, tuple[int, tuple[int, int, int, int]]] = self.transposition_table

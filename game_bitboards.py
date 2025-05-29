@@ -158,11 +158,13 @@ class GameStateBitboards(GameStateBase):
         self.bishops: int = start_bishops if bishops is None else bishops
         self.knights: int = start_knights if knights is None else knights
         self.pawns: int = start_pawns if pawns is None else pawns
-        super().__init__(white_queen, white_king, black_queen, black_king, last_move, color, turn, winner,
+        self.last_move: tuple[int, int, int, int] | None = last_move
+        self.moves: list[tuple[int, int, int, int]] | None = None
+        super().__init__(white_queen, white_king, black_queen, black_king, color, turn, winner,
                          previous_position_count, moves_since_pawn)
 
     def get_hashable_state(self) -> tuple[int, int, int, int, int, int, int, int, int, bool, bool, bool, bool,
-    tuple[int, int, int, int]]:
+    tuple[int, int, int, int] | None]:
         """ Convert the game state into a hashable format for caching. """
         return (self.white_pieces, self.black_pieces, self.kings, self.queens, self.rooks, self.bishops, self.knights,
                 self.pawns, self.color, self.white_queen, self.white_king, self.black_queen, self.black_king,
@@ -226,7 +228,7 @@ class GameStateBitboards(GameStateBase):
 
     def get_moves_no_check(self) -> list[tuple[int, int, int, int]]:
         hash_state: tuple[int, int, int, int, int, int, int, int, int, bool, bool, bool, bool,
-        tuple[int, int, int, int]] = self.get_hashable_state()
+        tuple[int, int, int, int] | None] = self.get_hashable_state()
         return self.get_moves_no_check_static(*hash_state)
 
     @staticmethod
@@ -488,6 +490,9 @@ class GameStateBitboards(GameStateBase):
                              new_knights, new_pawns, white_queen, white_king, black_queen, black_king,
                              color=-color_local, turn=self.turn + 1, winner=self.winner)
 
+        # ========================================================================
+        # This is wierd below. Double check when revisiting
+        # ========================================================================
         first_idx_mask: int = (a8 >> (move_0 * 8 + move_1))
         condition2: int = (new_kings | new_rooks) & first_idx_mask
         if (new_rooks | first_idx_mask) or condition2:

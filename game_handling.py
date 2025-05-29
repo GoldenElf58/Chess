@@ -1,4 +1,5 @@
 import random
+from typing import Callable
 
 import pygame
 from pygame import Surface
@@ -10,18 +11,15 @@ import threading
 import time
 from scipy.stats import binomtest  # type: ignore
 
-from bot_v1 import Botv1
-from bot_v2 import Botv2
-from bot_v3_5 import Botv3_5
-from bot_v4 import Botv4
-from bot_v4_2 import Botv4_2
-from bot_v4_3 import Botv4_3
+from bots import BotV1
+from bots import BotV1p2
 
-from bot import Bot
+from bots.bot import Bot
 from fen_utils import game_state_from_line
 from game import GameState
 from game_base import GameStateBase
 from game_bitboards import GameStateBitboards
+from game_v2 import GameStatev2
 
 images = [
     pygame.image.load("piece_images/-6.png"),
@@ -49,7 +47,7 @@ def display_board(screen, game_state: GameStateBase, selected_square=(), offset=
             else:
                 pygame.draw.rect(screen, (240, 217, 181) if (i + j) % 2 == 0 else (181, 136, 99),
                                  (j * 60 + offset, i * 60, 60, 60 + offset))
-            if isinstance(game_state, GameState):
+            if isinstance(game_state, GameState) or isinstance(game_state, GameStatev2):
                 if game_state.board[i * 8 + j] != 0:
                     screen.blit(images[game_state.board[i * 8 + j] + 6], (j * 60 + offset, i * 60))
             elif isinstance(game_state, GameStateBitboards):
@@ -73,9 +71,16 @@ def display_board(screen, game_state: GameStateBase, selected_square=(), offset=
                     piece *= -1
                 screen.blit(images[piece + 6], (j * 60 + offset, i * 60))
 
+class GameMode(Enum):
+    MENU = auto()
+    HUMAN = auto()
+    PLAY_WHITE = auto()
+    PLAY_BLACK = auto()
+    AI_VS_AI = auto()
+    DEEP_TEST = auto()
 
-def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, font: Font, t0: float, game_mode, wins: int,
-                 draws: int, losses: int, bots: tuple[Bot, Bot], depths=None):
+def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, font: Font, t0: float, game_mode: GameMode,
+                 wins: int, draws: int, losses: int, bots: tuple[Bot, Bot], depths=None):
     info_x = 667
     info_rect = pygame.Rect(info_x, 0, screen.get_width() - info_x, screen.get_height())
 
@@ -137,13 +142,6 @@ class Button:
         return self.rect.collidepoint(pos)
 
 
-class GameMode(Enum):
-    MENU = auto()
-    HUMAN = auto()
-    PLAY_WHITE = auto()
-    PLAY_BLACK = auto()
-    AI_VS_AI = auto()
-    DEEP_TEST = auto()
 
 
 def find_move(user_src: tuple[int, int], user_dest: tuple[int, int], legal_moves: list[tuple[int, int, int, int]],
@@ -204,7 +202,8 @@ def game_loop() -> None:
     pygame.init()
     screen: Surface = pygame.display.set_mode((854, 480))
     offset: int = 187
-    game_state: GameStateBase = GameState()
+    game_state_type: Callable[[], GameStateBase] = GameState
+    game_state: GameStateBase = game_state_type()
     selected_square: tuple[int, int] | None = None  # For human move selection (as (col, row))
     game_mode: GameMode = GameMode.MENU  # Will be set when a button is clicked
     font: Font = Font(None, 24)
@@ -228,7 +227,7 @@ def game_loop() -> None:
     num_lines: int = 500
     line: int = random.randint(1, num_lines)
     reverse: bool = False
-    bots: tuple[Bot, Bot] = (Botv4_3(), Botv1())
+    bots: tuple[Bot, Bot] = (BotV1(), BotV1())
     wins: int = 0
     draws: int = 0
     losses: int = 0
@@ -237,7 +236,7 @@ def game_loop() -> None:
     test_depth = 5
     test_allotted_time = .1
     normal_depth = -1
-    normal_allotted_time = .1
+    normal_allotted_time = .03
 
     running: bool = True
     while running:
@@ -251,19 +250,19 @@ def game_loop() -> None:
                 t0 = time.time()
                 if buttons[0].check_hover(pos):
                     game_mode = GameMode.PLAY_WHITE
-                    game_state = GameState()
+                    game_state = game_state_type()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
                 elif buttons[1].check_hover(pos):
                     reverse = False
                     game_mode = GameMode.PLAY_BLACK
-                    game_state = GameState()
+                    game_state = game_state_type()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
                 elif buttons[2].check_hover(pos):
                     reverse = False
                     game_mode = GameMode.AI_VS_AI
-                    game_state = GameState()
+                    game_state = game_state_type()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
                 elif buttons[3].check_hover(pos):
@@ -275,7 +274,7 @@ def game_loop() -> None:
                     bots[1].clear_cache()
                 elif buttons[4].check_hover(pos):
                     game_mode = GameMode.HUMAN
-                    game_state = GameState()
+                    game_state = game_state_type()
                 elif buttons[5].check_hover(pos):
                     test_mode = not test_mode
                     buttons[5].text = "Test" if test_mode else "Normal"
@@ -292,7 +291,7 @@ def game_loop() -> None:
                                          ((selected_piece_mask & game_state.white_pieces) and color == 1) or (
                                                  (game_mode == GameMode.PLAY_BLACK or game_mode == GameMode.HUMAN) and
                                          (selected_piece_mask & game_state.black_pieces) and color == -1)))
-                elif isinstance(game_state, GameState):
+                elif isinstance(game_state, GameState) or isinstance(game_state, GameStatev2):
                     selected_piece = game_state.board[row * 8 + col]
                     can_select = ((game_mode == GameMode.HUMAN and ((selected_piece > 0 and color == 1) or (
                             selected_piece < 0 and color == -1))) or (selected_piece > 0 and color == 1 and

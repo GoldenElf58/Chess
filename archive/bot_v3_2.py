@@ -1,14 +1,12 @@
 import threading
 import time
-from collections import Counter
-from itertools import count
 from typing import Callable
 
 import numpy as np
 
 from game import GameState
 from utils import mirror, negate
-from bot import Bot
+from bots.bot import Bot
 
 piece_values: dict[int, int] = {-6: -9999999,
                                 -5: -900,

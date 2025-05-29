@@ -6,7 +6,7 @@ import numpy as np
 
 from game import GameState
 from utils import mirror, negate
-from bot import Bot
+from bots.bot import Bot
 
 piece_values: dict[int, int] = {-6: -9999999,
                                 -5: -900,
@@ -139,7 +139,7 @@ def populate_combined_tables():
 populate_combined_tables()
 
 
-class Botv1(Bot):
+class BotV4p2(Bot):
     def __init__(self, transposition_table: dict | None = None, eval_lookup: dict | None = None) -> None:
         self.transposition_table: dict[
             int, tuple[int, tuple[int, int, int, int]]] = transposition_table if transposition_table is not None else {}
@@ -161,7 +161,8 @@ class Botv1(Bot):
             return cached_eval
         board: tuple[int, ...] = game_state.board
         combined: list[tuple[int, ...]] = combined_tables
-        self.eval_lookup[hash_state] = (evaluation := sum([combined[piece + 6][i] for (i, piece) in enumerate(board) if piece]))
+        self.eval_lookup[hash_state] = (
+            evaluation := sum([combined[piece + 6][i] for (i, piece) in enumerate(board) if piece]))
         return evaluation
 
     def iterative_deepening(self, game_state: GameState, maximizing_player: bool, allotted_time: float = 3.0,
@@ -191,7 +192,9 @@ class Botv1(Bot):
     def minimax(self, game_state: GameState, depth: int, alpha: int, beta: int, maximizing_player: bool,
                 first_call: bool = True) -> tuple[int, tuple[int, int, int, int]]:
         if game_state.get_winner() is not None:
-            return self.evaluate(game_state), game_state.last_move
+            winner = game_state.get_winner()
+            return (winner if winner is not None else 0) * 9999999 * min(depth, 1), (
+                game_state.last_move if game_state.last_move is not None else (0, 0, 0, 0))
         state_key: int = hash((game_state.board, game_state.white_queen, game_state.white_king,
                                game_state.black_queen, game_state.black_king, depth, maximizing_player))
         transposition_table: dict[int, tuple[int, tuple[int, int, int, int]]] = self.transposition_table
@@ -219,8 +222,8 @@ class Botv1(Bot):
                     best_eval, best_move = evaluation, move
                     alpha = max(alpha, evaluation)
             elif evaluation < best_eval:
-                    best_eval, best_move = evaluation, move
-                    beta = min(beta, evaluation)
+                best_eval, best_move = evaluation, move
+                beta = min(beta, evaluation)
 
             if beta <= alpha:
                 break

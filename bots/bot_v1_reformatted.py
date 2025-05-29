@@ -6,7 +6,7 @@ import numpy as np
 
 from game import GameState
 from utils import mirror, negate
-from bot import Bot
+from bots.bot import Bot
 
 piece_values: dict[int, int] = {-6: -9999999,
                                 -5: -900,
@@ -139,7 +139,7 @@ def populate_combined_tables():
 populate_combined_tables()
 
 
-class Botv4_3(Bot):
+class BotV1Reformatted(Bot):
     def __init__(self, transposition_table: dict | None = None, eval_lookup: dict | None = None) -> None:
         self.transposition_table: dict[
             int, tuple[int, tuple[int, int, int, int]]] = transposition_table if transposition_table is not None else {}
@@ -147,7 +147,9 @@ class Botv4_3(Bot):
 
     def generate_move(self, game_state: GameState, allotted_time: float = 3.0, depth: int = -1) -> tuple[
         tuple[int, tuple[int, int, int, int]], int]:
-        return self.iterative_deepening(game_state, game_state.color == 1, allotted_time=allotted_time, depth=depth)
+        if depth >= 0:
+            return self.search_depth(game_state, game_state.color == 1, depth)
+        return self.iterative_deepening(game_state, game_state.color == 1, allotted_time=allotted_time)
 
     def clear_cache(self) -> None:
         self.transposition_table = {}
@@ -161,38 +163,39 @@ class Botv4_3(Bot):
             return cached_eval
         board: tuple[int, ...] = game_state.board
         combined: list[tuple[int, ...]] = combined_tables
-        self.eval_lookup[hash_state] = (evaluation := sum([combined[piece + 6][i] for (i, piece) in enumerate(board) if piece]))
+        self.eval_lookup[hash_state] = (
+            evaluation := sum([combined[piece + 6][i] for (i, piece) in enumerate(board) if piece]))
         return evaluation
 
-    def iterative_deepening(self, game_state: GameState, maximizing_player: bool, allotted_time: float = 3.0,
-                            depth: int = -1) -> tuple[tuple[int, tuple[int, int, int, int]], int]:
-        if depth >= 0:
-            result: tuple[int, tuple[int, int, int, int]] = (0, game_state.get_moves()[0])
-            for i in range(min(depth, 2), depth + 1):
-                result = self.minimax(game_state, i, -(1 << 31), (1 << 31), maximizing_player)
-            return result, depth
+    def search_depth(self, game_state: GameState, maximizing_player: bool, depth: int
+                     ) -> tuple[tuple[int, tuple[int, int, int, int]], int]:
+        result: tuple[int, tuple[int, int, int, int]] = (0, game_state.get_moves()[0])
+        for i in range(min(depth, 2), depth + 1):
+            result = self.minimax(game_state, i, -(1 << 31), (1 << 31), maximizing_player)
+        return result, depth
+
+    def iterative_deepening(self, game_state: GameState, maximizing_player: bool, allotted_time: float = 3.0
+                            ) -> tuple[tuple[int, tuple[int, int, int, int]], int]:
         t0: float = time.time()
         results: list[tuple[int, tuple[int, int, int, int]]] = [(0, game_state.get_moves()[0])]
         depth = 2
-        minimax_thread: threading.Thread = threading.Thread(
-            target=lambda: results.append(self.minimax(game_state, depth, -(1 << 31), (1 << 31), maximizing_player)))
-        minimax_thread.start()
+        minimax_thread: threading.Thread = threading.Thread()
         while time.time() - t0 < allotted_time:
-            depth += 1
-            minimax_thread.join(allotted_time - (time.time() - t0))
             minimax_thread = threading.Thread(
                 target=lambda: results.append(
                     self.minimax(game_state, depth, -(1 << 31), (1 << 31), maximizing_player)))
             if time.time() - t0 < allotted_time: minimax_thread.start()
+            minimax_thread.join(allotted_time - (time.time() - t0))
+            depth += 1
         if minimax_thread.is_alive():
             minimax_thread.join(0)
         return results[-1], (len(results) if len(results) != 1 else 0)
 
     def minimax(self, game_state: GameState, depth: int, alpha: int, beta: int, maximizing_player: bool,
                 first_call: bool = True) -> tuple[int, tuple[int, int, int, int]]:
-        game_state.get_winner()
-        if game_state.winner is not None:
-            return game_state.winner * (9999999 + depth), game_state.last_move
+        if game_state.get_winner() is not None:
+            return self.evaluate(game_state), (
+                game_state.last_move if game_state.last_move is not None else (0, 0, 0, 0))
         state_key: int = hash((game_state.board, game_state.white_queen, game_state.white_king,
                                game_state.black_queen, game_state.black_king, depth, maximizing_player))
         transposition_table: dict[int, tuple[int, tuple[int, int, int, int]]] = self.transposition_table
@@ -220,8 +223,8 @@ class Botv4_3(Bot):
                     best_eval, best_move = evaluation, move
                     alpha = max(alpha, evaluation)
             elif evaluation < best_eval:
-                    best_eval, best_move = evaluation, move
-                    beta = min(beta, evaluation)
+                best_eval, best_move = evaluation, move
+                beta = min(beta, evaluation)
 
             if beta <= alpha:
                 break
