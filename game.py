@@ -231,9 +231,9 @@ class GameState(GameStateBase):
         bishop_diagonals_local: tuple[tuple[tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...],
         tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]], ...] = bishop_diagonals
         for h, piece in enumerate(board_local):
-            i, j = coords_local[h]
             piece_type: int = piece * color_local
             if piece_type <= 0: continue
+            i, j = coords_local[h]
             if piece_type == 6:  # King
                 row_base: int = h - j
                 if (((color_local == 1 and white_king) or (color_local == -1 and black_king)) and board_local[
@@ -250,10 +250,11 @@ class GameState(GameStateBase):
             elif piece_type == 4 or piece_type == 5:  # Rook and Queen
                 for ray in rook_rays_local[h]:
                     for (idx, ray_i, ray_j) in ray:
-                        if board_local[idx] * color_local <= 0:
-                            moves.append((i, j, ray_i, ray_j))
                         if board_local[idx] == 0:
+                            moves.append((i, j, ray_i, ray_j))
                             continue
+                        if board_local[idx] * color_local < 0:
+                            moves.append((i, j, ray_i, ray_j))
                         break
             if piece_type == 3 or piece_type == 5:  # Bishop and Queen
                 for diagonal in bishop_diagonals_local[h]:
@@ -270,7 +271,7 @@ class GameState(GameStateBase):
                         moves.append((i, j, target_i, target_j))
             elif piece_type == 1:
                 dest_square: int = (i - color_local) * 8 + j
-                if board_local[dest_square] == 0:
+                if not board_local[dest_square]:
                     if 7 != i - color_local != 0:
                         moves.append((i, j, i - color_local, j))
                     else:
@@ -380,7 +381,7 @@ class GameState(GameStateBase):
                              color=-self.color, turn=self.turn + 1, moves_since_pawn=0)
 
         first_idx: int = move_0 * 8 + move_1
-        if (piece := abs(new_board[first_idx])) in [4, 6]:
+        if (piece := abs(new_board[first_idx])) in (4, 6):
             if move_2 == 7 and not move_3:
                 white_queen = False
             if move_2 == 7 and move_3 == 7:
@@ -395,7 +396,7 @@ class GameState(GameStateBase):
             if move_2 == 7 and move_3 == 4:
                 white_queen = False
                 white_king = False
-        if new_board[second_idx] in [-4, 4]:
+        if new_board[second_idx] in (-4, 4):
             if move_2 == 7 and not move_3:
                 white_queen = False
             if move_2 == 7 and move_3 == 7:
@@ -481,6 +482,11 @@ class GameState(GameStateBase):
         return GameStatev2(self.board, self.white_queen, self.white_king, self.black_queen, self.black_king,
                            None, self.color, self.turn, self.winner, copy(self.previous_position_count),
                            self.moves_since_pawn)
+
+    def copy(self) -> 'GameState':
+        return GameState(self.board, self.white_queen, self.white_king, self.black_queen, self.black_king,
+                         self.last_move, self.color, self.turn, self.winner, copy(self.previous_position_count),
+                         self.moves_since_pawn)
 
     def __repr__(self) -> str:
         return f"""GameState(board={self.board}

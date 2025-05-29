@@ -202,7 +202,7 @@ def game_loop() -> None:
     pygame.init()
     screen: Surface = pygame.display.set_mode((854, 480))
     offset: int = 187
-    game_state_type: Callable[[], GameStateBase] = GameState
+    game_state_type: Callable[[], GameStateBase] = GameStateBitboards
     game_state: GameStateBase = game_state_type()
     selected_square: tuple[int, int] | None = None  # For human move selection (as (col, row))
     game_mode: GameMode = GameMode.MENU  # Will be set when a button is clicked
@@ -287,7 +287,7 @@ def game_loop() -> None:
                 can_select: bool = False
                 if isinstance(game_state, GameStateBitboards):
                     selected_piece_mask = 1 << (63 - (row * 8 + col))
-                    can_select = (((game_mode == GameMode.HUMAN or game_mode == GameMode.PLAY_WHITE) and
+                    can_select = bool(((game_mode == GameMode.HUMAN or game_mode == GameMode.PLAY_WHITE) and
                                          ((selected_piece_mask & game_state.white_pieces) and color == 1) or (
                                                  (game_mode == GameMode.PLAY_BLACK or game_mode == GameMode.HUMAN) and
                                          (selected_piece_mask & game_state.black_pieces) and color == -1)))
