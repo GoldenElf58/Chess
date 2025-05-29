@@ -6,7 +6,7 @@ from fen_utils import game_state_from_line
 from statistics import mean, stdev
 from scipy import stats  # type: ignore
 from game import GameState
-from game_v2 import GameStatev2
+from game_bitboards import GameStateBitboards
 
 game_states: list = []
 coord_to_index: list[list[int]] = [[0 for _ in range(8)] for _ in range(8)]
@@ -33,18 +33,13 @@ def benchmark(condition: bool, game_state: GameState) -> None:
     # game_state_v2.get_moves()
     # game_state_local.get_moves()
     move: Any
-    if condition:
-        game_state.get_moves()
-        assert game_state.moves is not None
-        for move in game_state.moves:
-            game_state.move(move)
-        game_state.get_winner()
-    else:
-        game_state.get_moves()
-        assert game_state.moves is not None
-        for move in game_state.moves:
-            game_state.move(move)
-        game_state.get_winner()
+    # game_state.moves = None
+    # game_state.previous_position_count = {}
+    # game_state.get_moves()
+    assert game_state.moves is not None
+    # for move in game_state.moves:
+    #     game_state.move(move)
+    game_state.get_winner()
 
 
 def main() -> None:
@@ -53,13 +48,15 @@ def main() -> None:
     t3 = []
     for _ in range(50_000_000): pass
     print('Warmup complete')
-    for i in range(5000):
+    for i in range(500):
         game_state = deepcopy(game_states[i % 500])
-        game_state_v2 = game_state.to_v2()
+        game_state_bitboards = game_state.to_bitboards()
+        game_state.get_moves()
+        game_state_bitboards.get_moves()
         # t1.append(mean([benchmark(True, game_state)[1] for i in range(3)]))
         # t2.append(mean([benchmark(False, game_state)[1] for i in range(3)]))
-        t1.append(timeit(lambda: benchmark(True, game_state_v2), number=1) * 1_000)
-        t2.append(timeit(lambda: benchmark(False, game_state), number=1) * 1_000)
+        t1.append(timeit(lambda: benchmark(True, game_state_bitboards), number=20) * 1_000)
+        t2.append(timeit(lambda: benchmark(False, game_state), number=20) * 1_000)
         t3.append(t1[-1] - t2[-1])
         if i > 0 and i % 100 == 0:
             t, p = stats.ttest_1samp(t3, 0, alternative='less')
