@@ -210,6 +210,8 @@ class GameStateBitboards(GameStateBase):
                         for shift in range(0, 2):
                             if opponent_pieces & (king_mask << shift):
                                 break
+                        else:
+                            continue
                     moves.pop(moves_len - i - 1)
                     break
         if len(moves) == 0 and moves_len > 0:
@@ -269,13 +271,13 @@ class GameStateBitboards(GameStateBase):
         kings_local: int = kings
         colored_rooks: int = rooks & color_mask
         pieces: int = (color_mask | opponent_mask)
-        mask: int = 1 << 63
+        mask: int = 1 << 64
         for h in range(64):
             mask >>= 1
             if not color_mask & mask:
                 continue
             i, j = coords_local[h]
-            if mask & pawns:  # Pawn
+            if mask & pawns:
                 dest_square_mask = masks_local[h - 8 * color_local]
                 # Forward
                 if not pieces & dest_square_mask:
@@ -312,17 +314,17 @@ class GameStateBitboards(GameStateBase):
                         moves.append((-2, -1, i, j))
                     elif 0 != j == last_move_local[3] - 1:
                         moves.append((-2, 1, i, j))
-            elif kings_local & mask:  # King
+            elif kings_local & mask:
                 if (((color_local == 1 and white_king) or (color_local == -1 and black_king)) and colored_rooks &
                         (mask >> 3) and not (pieces & ((mask >> 1) | (mask >> 2)))):
                     moves.append((-1, 1, i, j))
                 if (((color_local == 1 and white_queen) or (color_local == -1 and black_queen)) and colored_rooks &
-                        (mask << 4) and not (pieces & ((mask << 1) | (mask << 2)))):
+                        (mask << 4) and not (pieces & ((mask << 1) | (mask << 2) | (mask << 3)))):
                     moves.append((-1, -1, i, j))
                 for (target_mask, target_i, target_j) in king_targets_local[h]:
                     if not target_mask & color_mask:
                         moves.append((i, j, target_i, target_j))
-            elif mask & (rooks | queens):  # Rook and Queen
+            elif mask & (rooks | queens):
                 for ray in rook_rays_local[h]:
                     for (target_mask, ray_i, ray_j) in ray:
                         if not target_mask & pieces:
@@ -331,7 +333,7 @@ class GameStateBitboards(GameStateBase):
                         if target_mask & opponent_mask:
                             moves.append((i, j, ray_i, ray_j))
                         break
-            if mask & (bishops | queens):  # Bishop and Queen
+            if mask & (bishops | queens):
                 for diagonal in bishop_diagonals_local[h]:
                     for (target_mask, diagonal_i, diagonal_j) in diagonal:
                         if not target_mask & pieces:
@@ -340,7 +342,7 @@ class GameStateBitboards(GameStateBase):
                         if target_mask & opponent_mask:
                             moves.append((i, j, diagonal_i, diagonal_j))
                         break
-            elif mask & knights:  # Knight
+            elif mask & knights:
                 for (target_mask, target_i, target_j) in knight_targets_local[h]:
                     if not target_mask & color_mask:
                         moves.append((i, j, target_i, target_j))
@@ -406,27 +408,30 @@ class GameStateBitboards(GameStateBase):
                 if move_1 == -1:
                     new_white_pieces = (new_white_pieces & ~0b1000_1000) | 0b0011_0000
                     new_rooks = (new_rooks & ~0b1000_0000) | 0b0001_0000
+                    new_kings = (new_kings & ~0b0000_1000) | 0b0010_0000
                 else:
                     new_white_pieces = (new_white_pieces & ~0b0000_1001) | 0b0000_0110
                     new_rooks = (new_rooks & ~0b0000_0001) | 0b0000_0100
-                new_kings = (new_kings & ~0b0000_1000) | 0b0010_0000
+                    new_kings = (new_kings & ~0b0000_1000) | 0b0000_0010
             else:
                 black_queen = False
                 black_king = False
                 if move_1 == -1:
                     new_black_pieces = ((new_black_pieces &
-                                         ~0b1000_1000_00000000_00000000_00000000_00000000_00000000_00000000) |
-                                        0b0011_0000_00000000_00000000_00000000_00000000_00000000_00000000)
-                    new_rooks = ((new_rooks & ~0b1000_0000_00000000_00000000_00000000_00000000_00000000_00000000) |
-                                 0b0001_0000_00000000_00000000_00000000_00000000_00000000_00000000)
+                                         ~0b1000_1000_00000000_00000000_00000000_00000000_00000000_00000000_00000000) |
+                                        0b0011_0000_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
+                    new_rooks = ((new_rooks & ~0b1000_0000_00000000_00000000_00000000_00000000_00000000_00000000_00000000) |
+                                 0b0001_0000_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
+                    new_kings = ((new_kings & ~0b0000_1000_00000000_00000000_00000000_00000000_00000000_00000000_00000000) |
+                                 0b0010_0000_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
                 else:
                     new_black_pieces = ((new_black_pieces &
-                                         ~0b0000_1001_00000000_00000000_00000000_00000000_00000000_00000000) |
-                                        0b0000_0110_00000000_00000000_00000000_00000000_00000000_00000000)
-                    new_rooks = ((new_rooks & ~0b0000_0001_00000000_00000000_00000000_00000000_00000000_00000000) |
-                                 0b0000_0100_00000000_00000000_00000000_00000000_00000000_00000000)
-                new_kings = ((new_kings & ~0b0000_1000_00000000_00000000_00000000_00000000_00000000_00000000) |
-                             0b0010_0000_00000000_00000000_00000000_00000000_00000000_00000000)
+                                         ~0b0000_1001_00000000_00000000_00000000_00000000_00000000_00000000_00000000) |
+                                        0b0000_0110_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
+                    new_rooks = ((new_rooks & ~0b0000_0001_00000000_00000000_00000000_00000000_00000000_00000000_00000000) |
+                                 0b0000_0100_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
+                new_kings = ((new_kings & ~0b0000_1000_00000000_00000000_00000000_00000000_00000000_00000000_00000000) |
+                             0b0000_0010_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
             return GameStateBitboards(new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks, new_bishops,
                                       new_knights, new_pawns, white_queen, white_king, black_queen, black_king,
                                       color=-color_local, turn=self.turn + 1, winner=self.winner)

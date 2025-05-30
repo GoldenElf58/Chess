@@ -8,7 +8,8 @@ from typing import Any
 from scipy import stats  # type: ignore
 
 from fen_utils import game_state_from_line
-from game import GameState
+from game import GameStateV2
+from game_base import GameStateBase
 from game_bitboards import GameStateBitboards
 
 game_states: list = []
@@ -28,7 +29,7 @@ def populate_game_states():
 
 populate_game_states()
 
-def benchmark(condition: bool, game_state: GameState) -> None:
+def benchmark(condition: bool, game_state: GameStateBase) -> None:
     # game_state.moves = None
     # game_state.previous_position_count = {}
     # game_state.are_captures()
@@ -38,6 +39,7 @@ def benchmark(condition: bool, game_state: GameState) -> None:
     # else:
     #     game_state.get_moves_no_check()
     game_state.get_moves_no_check()
+    # game_state.move(random.choice(moves))
     # for move in game_state.get_moves_no_check():
     #     game_state.move(move)
     # game_state.get_winner()
@@ -49,21 +51,23 @@ def main() -> None:
     t3 = []
     for _ in range(50_000_000): pass
     print('Warmup complete')
-    N = 500
+    N = 10_000
+    n = 100
     for i in range(N):
-        game_state = game_states[i % 500].copy()
-        game_state_a = game_state.to_bitboards()
-        game_state_b = game_state#.to_bitboards()
+        game_state = game_states[i % 500]#.copy()
 
         # timeit(lambda: benchmark(True, game_state_a), number=500) * 1_000
         # game_state_a.get_moves()
         # game_state_b.get_moves()
         # t1.append(mean([benchmark(True, game_state)[1] for i in range(3)]))
         # t2.append(mean([benchmark(False, game_state)[1] for i in range(3)]))
-        t1.append(timeit(lambda: benchmark(True, game_state_a), number=100) * 1_000)
-        t2.append(timeit(lambda: benchmark(False, game_state_b), number=100) * 1_000)
+        # timeit(lambda: benchmark(True, game_state_a), number=20)
+        game_state_a = game_state.to_bitboards()
+        t1.append(timeit(lambda: benchmark(True, game_state_a), number=n) * 1_000_000 / n)
+        game_state_b = game_state
+        t2.append(timeit(lambda: benchmark(False, game_state_b), number=n) * 1_000_000 / n)
         t3.append(t1[-1] - t2[-1])
-        if i > 0 and i % 100 == 0:
+        if i > 0 and i % 1000 == 0:
             t, p = stats.ttest_1samp(t3, 0, alternative='less')
             # t, p = stats.ttest_ind(t1, t2, equal_var=False, alternative='less')
             print(f'{i}:\nNew: {mean(t1)}, {stdev(t1)}')

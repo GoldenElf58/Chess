@@ -40,7 +40,7 @@ images = [
 def display_board(screen, game_state: GameStateBase, selected_square=(), offset=0):
     for i in range(8):
         for j in range(8):
-            if selected_square == (j, i):
+            if selected_square == (i, j):
                 pygame.draw.rect(screen, (245, 157, 131) if (i + j) % 2 == 0 else (211, 116, 79),
                                  (j * 60 + offset, i * 60, 60, 60 + offset))
             else:
@@ -245,7 +245,7 @@ def game_loop() -> None:
     pygame.init()
     screen: Surface = pygame.display.set_mode((854, 480))
     offset: int = 187
-    game_state_type: Callable[[], GameStateBase] = GameStateV2
+    game_state_type: Callable[[], GameStateBase] = GameStateBitboards
     game_state: GameStateBase = game_state_type()
     selected_square: tuple[int, int] | None = None
     """For human move selection, represented as (col, row)"""
@@ -303,7 +303,6 @@ def game_loop() -> None:
 
     running: bool = True
     while running:
-        # clock.tick(60)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -361,13 +360,10 @@ def game_loop() -> None:
                 row, col = get_square(event.pos[0], event.pos[1], offset)  # type: int, int
                 can_select: bool = can_select_square(row, col, game_state, game_mode)
 
-                # Store selected square as (col, row)
                 if selected_square is None:
-                    # Only select a piece if it belongs to the human.
-                    if can_select: selected_square = (col, row)
+                    if can_select: selected_square = (row, col)
                 else:
-                    # Convert selected_square (col, row) to (row, col)
-                    user_src: tuple[int, int] = (selected_square[1], selected_square[0])
+                    user_src: tuple[int, int] = selected_square
                     user_dest: tuple[int, int] = (row, col)
                     chosen_move: tuple[int, int, int, int] | tuple[int, int, int] | None = find_move(
                         user_src, user_dest, game_state)
@@ -375,9 +371,7 @@ def game_loop() -> None:
                         game_state = game_state.move(chosen_move)
                         game_state.get_moves()
                     selected_square = None
-                    if can_select: selected_square = user_dest[1], user_dest[0]
-
-
+                    if can_select: selected_square = user_dest
 
         if not game_mode & GameMode.MENU:
             if computer_thread is None:
@@ -404,7 +398,6 @@ def game_loop() -> None:
         screen.fill(0)
         display_board(screen, game_state, selected_square, offset)
 
-        game_state.get_moves()
         if not game_mode & GameMode.MENU and (winner := game_state.get_winner()) is not None:
             if not game_mode & GameMode.DEEP_TEST:
                 print(winner, game_state.turn, time.time() - t0)
