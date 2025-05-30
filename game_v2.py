@@ -234,8 +234,7 @@ class GameStateV2(GameStateBase):
         tuple[int, ...], tuple[int, ...]], ...] = rook_rays
         bishop_diagonals_local: tuple[tuple[tuple[int, ...], tuple[int, ...],
         tuple[int, ...], tuple[int, ...]], ...] = bishop_diagonals
-        for h, piece in enumerate(board_local):
-            i, j = coords_local[h]
+        for h, (piece, (i, j)) in enumerate(zip(board_local, coords_local)):
             piece_type: int = piece * color_local
             if piece_type <= 0: continue
             if piece_type == 6:  # King
