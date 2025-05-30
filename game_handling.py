@@ -1,11 +1,11 @@
 import random
-from typing import Callable, cast
+from typing import Callable
 
 import pygame
 from pygame import Surface
 from pygame.font import Font
 
-from enum import Enum, auto
+from enum import IntFlag, auto
 import sys
 import threading
 import time
@@ -71,17 +71,20 @@ def display_board(screen, game_state: GameStateBase, selected_square=(), offset=
                 screen.blit(images[piece + 6], (j * 60 + offset, i * 60))
 
 
-class GameMode(Enum):
+class GameMode(IntFlag):
     MENU = auto()
     HUMAN = auto()
     PLAY_WHITE = auto()
     PLAY_BLACK = auto()
     AI_VS_AI = auto()
     DEEP_TEST = auto()
-
+    MAIN = auto()
+    OPTIONS = auto()
+    MAIN_MENU = MAIN | MENU
+    OPTIONS_MENU = OPTIONS | MENU
 
 def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, font: Font, t0: float, game_mode: GameMode,
-                 wins: int, draws: int, losses: int, bots: tuple[Bot, Bot], depths=None):
+                 wins: int, draws: int, losses: int, bots: list[Bot], depths=None):
     info_x = 667
     info_rect = pygame.Rect(info_x, 0, screen.get_width() - info_x, screen.get_height())
 
@@ -102,7 +105,7 @@ def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, fon
         depths_surf = font.render(depths_text, True, "white")
         screen.blit(depths_surf, (info_rect.x + 10, 100))
 
-    if game_mode == GameMode.DEEP_TEST:
+    if game_mode & GameMode.DEEP_TEST:
         # --- two‑sided binomial test for wins vs. losses ---
         n_games = wins + losses
         p_value = 1.0 if n_games == 0 else binomtest(wins, n_games, 0.5, alternative="two-sided").pvalue
@@ -123,7 +126,6 @@ def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, fon
         screen.blit(p_value_surf, (info_rect.x + 10, 220))
 
 
-# Define a simple Button class.
 class Button:
     def __init__(self, rect, text, color="gray", hover_color="lightgray", text_color=(0, 0, 0)):
         self.rect = pygame.Rect(rect)
@@ -168,17 +170,17 @@ def can_select_square(row: int, col: int, game_state: GameStateBase, game_mode: 
     color = game_state.color
     if isinstance(game_state, GameStateBitboards):
         selected_piece_mask = 1 << (63 - (row * 8 + col))
-        return bool(((game_mode == GameMode.HUMAN or game_mode == GameMode.PLAY_WHITE) and
+        return bool(((game_mode & (GameMode.HUMAN | GameMode.PLAY_WHITE)) and
                      ((selected_piece_mask & game_state.white_pieces) and color == 1) or (
-                             (game_mode == GameMode.PLAY_BLACK or game_mode == GameMode.HUMAN) and
+                             (game_mode & (GameMode.PLAY_BLACK | GameMode.HUMAN)) and
                              (selected_piece_mask & game_state.black_pieces) and color == -1)))
     elif isinstance(game_state, GameState) or isinstance(game_state, GameStateV2):
         selected_piece = game_state.board[row * 8 + col]
-        return ((game_mode == GameMode.HUMAN and ((selected_piece > 0 and color == 1) or (
+        return bool((game_mode & GameMode.HUMAN and ((selected_piece > 0 and color == 1) or (
                 selected_piece < 0 and color == -1))) or (selected_piece > 0 and color == 1 and
-                                                          game_mode == GameMode.PLAY_WHITE) or (
+                                                          game_mode & GameMode.PLAY_WHITE) or (
                         selected_piece < 0 and color == -1 and
-                        game_mode == GameMode.PLAY_BLACK))
+                        game_mode & GameMode.PLAY_BLACK))
     return False
 
 
@@ -248,7 +250,7 @@ def game_loop() -> None:
     selected_square: tuple[int, int] | None = None
     """For human move selection, represented as (col, row)"""
 
-    game_mode: GameMode = GameMode.MENU
+    game_mode: GameMode = GameMode.MAIN_MENU
     font: Font = Font(None, 24)
 
     computer_thread: threading.Thread | None = None
@@ -277,15 +279,20 @@ def game_loop() -> None:
     bot_idxs: list[int] = [0, 0]
     bots: list[Bot] = [BotV1(), BotV1()]
 
-    buttons: list[Button] = [
-        Button((43, 245, 100, 20), "Play White"),
-        Button((43, 285, 100, 20), "Play Black"),
-        Button((43, 325, 100, 20), "AI vs AI"),
-        Button((43, 365, 100, 20), "Deep Test"),
-        Button((43, 205, 100, 20), "Human"),
-        Button((43, 165, 100, 20), "Normal"),
-        Button((43, 85, 100, 20), bots[0].get_version()),
-        Button((43, 125, 100, 20), bots[1].get_version()),
+    main_buttons: list[Button] = [
+        Button((43, 190, 100, 20), "Play White"),
+        Button((43, 230, 100, 20), "Play Black"),
+        Button((43, 270, 100, 20), "AI vs AI"),
+        Button((43, 310, 100, 20), "Deep Test"),
+        Button((43, 150, 100, 20), "Human"),
+        Button((43, 110, 100, 20), "Options"),
+    ]
+
+    options_buttons: list[Button] = [
+        Button((43, 110, 100, 20), "Main Menu"),
+        Button((43, 230, 100, 20), "Normal"),
+        Button((43, 150, 100, 20), bots[0].get_version()),
+        Button((43, 190, 100, 20), bots[1].get_version()),
     ]
 
     test_mode: bool = False
@@ -301,49 +308,55 @@ def game_loop() -> None:
             if event.type == pygame.QUIT:
                 running = False
 
-            if game_mode == GameMode.MENU and event.type == pygame.MOUSEBUTTONDOWN:
+            if game_mode == GameMode.MAIN_MENU and event.type == pygame.MOUSEBUTTONDOWN:
                 pos = event.pos
                 t0 = time.time()
-                if buttons[0].check_hover(pos):
+                if main_buttons[0].check_hover(pos):
                     game_mode = GameMode.PLAY_WHITE
                     game_state = game_state_type()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
-                elif buttons[1].check_hover(pos):
+                elif main_buttons[1].check_hover(pos):
                     reverse = False
                     game_mode = GameMode.PLAY_BLACK
                     game_state = game_state_type()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
-                elif buttons[2].check_hover(pos):
+                elif main_buttons[2].check_hover(pos):
                     reverse = False
                     game_mode = GameMode.AI_VS_AI
                     game_state = game_state_type()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
-                elif buttons[3].check_hover(pos):
+                elif main_buttons[3].check_hover(pos):
                     game_mode = GameMode.DEEP_TEST
                     line = 1
                     reverse = False
                     game_state = game_state_from_line(line, "fens.txt")
                     bots[0].clear_cache()
                     bots[1].clear_cache()
-                elif buttons[4].check_hover(pos):
+                elif main_buttons[4].check_hover(pos):
                     game_mode = GameMode.HUMAN
                     game_state = game_state_type()
-                elif buttons[5].check_hover(pos):
+                elif main_buttons[5].check_hover(pos):
+                    game_mode = GameMode.OPTIONS_MENU
+            elif game_mode == GameMode.OPTIONS_MENU and event.type == pygame.MOUSEBUTTONDOWN:
+                pos = event.pos
+                if options_buttons[0].check_hover(pos):
+                    game_mode = GameMode.MAIN_MENU
+                elif options_buttons[1].check_hover(pos):
                     test_mode = not test_mode
-                    buttons[5].text = "Test" if test_mode else "Normal"
-                elif buttons[6].check_hover(pos):
+                    options_buttons[1].text = "Test" if test_mode else "Normal"
+                elif options_buttons[2].check_hover(pos):
                     bot_idxs[0] = (bot_idxs[0] + 1) % len(bot_options)
                     bots[0] = bot_options[bot_idxs[0]]()
-                    buttons[6].text = bots[0].get_version()
-                elif buttons[7].check_hover(pos):
+                    options_buttons[2].text = bots[0].get_version()
+                elif options_buttons[3].check_hover(pos):
                     bot_idxs[1] = (bot_idxs[1] + 1) % len(bot_options)
                     bots[1] = bot_options[bot_idxs[1]]()
-                    buttons[7].text = bots[1].get_version()
+                    options_buttons[3].text = bots[1].get_version()
 
-            if game_mode in (GameMode.PLAY_WHITE, GameMode.PLAY_BLACK, GameMode.HUMAN) and (
+            if game_mode & (GameMode.PLAY_WHITE | GameMode.PLAY_BLACK | GameMode.HUMAN) and (
                     event.type == pygame.MOUSEBUTTONDOWN):
                 row, col = get_square(event.pos[0], event.pos[1], offset)  # type: int, int
                 can_select: bool = can_select_square(row, col, game_state, game_mode)
@@ -364,11 +377,13 @@ def game_loop() -> None:
                     selected_square = None
                     if can_select: selected_square = user_dest[1], user_dest[0]
 
-        if game_mode != GameMode.MENU:
+
+
+        if not game_mode & GameMode.MENU:
             if computer_thread is None:
-                if game_mode in (GameMode.AI_VS_AI, GameMode.DEEP_TEST) or (
-                        game_mode == GameMode.PLAY_WHITE and game_state.color == -1) or (
-                        game_mode == GameMode.PLAY_BLACK and game_state.color == 1):
+                if game_mode & (GameMode.AI_VS_AI | GameMode.DEEP_TEST) or (
+                        game_mode & GameMode.PLAY_WHITE and game_state.color == -1) or (
+                        game_mode & GameMode.PLAY_BLACK and game_state.color == 1):
                     computer_move_result.clear()
                     computer_thread = threading.Thread(target=lambda: computer_move_result.append(
                         bots[0 if (game_state.color == 1) != reverse else 1]
@@ -381,19 +396,19 @@ def game_loop() -> None:
                     (last_eval, best_move), depth = computer_move_result.pop(0)
                     depths.append(depth)
                     game_state = game_state.move(best_move)
-                    if game_state.turn % 10 == 0 and game_mode == GameMode.AI_VS_AI and test_mode:
+                    if game_state.turn % 10 == 0 and game_mode & GameMode.AI_VS_AI and test_mode:
                         print(time.time() - t0)
-                        game_mode = GameMode.MENU
+                        game_mode = GameMode.MAIN_MENU
                 computer_thread = None
 
         screen.fill(0)
         display_board(screen, game_state, selected_square, offset)
 
         game_state.get_moves()
-        if (winner := game_state.get_winner()) is not None and game_mode != GameMode.MENU:
-            if game_mode != GameMode.DEEP_TEST:
+        if not game_mode & GameMode.MENU and (winner := game_state.get_winner()) is not None:
+            if not game_mode & GameMode.DEEP_TEST:
                 print(winner, game_state.turn, time.time() - t0)
-                game_mode = GameMode.MENU
+                game_mode = GameMode.MAIN_MENU
                 depths.clear()
             else:
                 computer_move_result.clear()
@@ -409,8 +424,8 @@ def game_loop() -> None:
                 reverse = not reverse
                 if line > num_lines:
                     line = 1
-                if wins + draws + losses == num_lines:
-                    game_mode = GameMode.MENU
+                if wins + draws + losses == num_lines * 2:
+                    game_mode = GameMode.MAIN_MENU
                     print(f"{bots[0].get_version()}: {wins}")
                     print(f"Draws: {draws}")
                     print(f"{bots[1].get_version()}: {losses}")
@@ -421,8 +436,11 @@ def game_loop() -> None:
                 bots[0].clear_cache()
                 bots[1].clear_cache()
 
-        if game_mode == GameMode.MENU:
-            for btn in buttons: btn.draw(screen, font)
+        if game_mode & GameMode.MENU:
+            if game_mode & GameMode.MAIN:
+                for btn in main_buttons: btn.draw(screen, font)
+            elif game_mode & GameMode.OPTIONS:
+                for btn in options_buttons: btn.draw(screen, font)
         else:
             display_info(screen, game_state, last_eval, font, t0, game_mode, wins, draws, losses, bots, depths=depths)
 
