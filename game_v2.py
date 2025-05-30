@@ -299,7 +299,7 @@ class GameStateV2(GameStateBase):
                     moves.append((h, h + 16, piece))
                 # En Passant
                 if (last_move_local is not None and board_local[last_move_local[1]] == -color_local and abs(
-                    last_move_local[1] - last_move_local[0]) == 16 and i == last_move_local[1] // 8):
+                        last_move_local[1] - last_move_local[0]) == 16 and i == last_move_local[1] // 8):
                     if 7 != j == last_move_local[1] % 8 + 1:
                         moves.append((-2, -1, h))
                     elif 0 != j == last_move_local[1] % 8 - 1:

@@ -11,8 +11,7 @@ import threading
 import time
 from scipy.stats import binomtest  # type: ignore
 
-from bots import BotV1
-from bots import BotV1p2
+from bots import BotV1, BotV2, BotV3p5, BotV3p6, BotV3p7, BotV4, BotV4p2, BotV4p3
 
 from bots.bot import Bot
 from fen_utils import game_state_from_line
@@ -252,17 +251,8 @@ def game_loop() -> None:
     game_mode: GameMode = GameMode.MENU
     font: Font = Font(None, 24)
 
-    buttons: list[Button] = [
-        Button((43, 190, 100, 20), "Play White"),
-        Button((43, 230, 100, 20), "Play Black"),
-        Button((43, 270, 100, 20), "AI vs AI"),
-        Button((43, 310, 100, 20), "Deep Test"),
-        Button((43, 150, 100, 20), "Human"),
-        Button((43, 110, 100, 20), "Normal"),
-    ]
-
     computer_thread: threading.Thread | None = None
-    computer_move_result: list[tuple[tuple[int, tuple[int, int, int, int]], int]] = []
+    computer_move_result: list[tuple[tuple[int, tuple[int, int, int, int] | tuple[int, int, int]], int]] = []
     last_eval: int = 0
     depths: list[int] = []
     t0: float = time.time()
@@ -270,16 +260,39 @@ def game_loop() -> None:
     num_lines: int = 500
     line: int = random.randint(1, num_lines)
     reverse: bool = False
-    bots: tuple[Bot, Bot] = (BotV1(), BotV1())
     wins: int = 0
     draws: int = 0
     losses: int = 0
+
+    bot_options: tuple[Callable[[], Bot], ...] = (
+        BotV1,
+        BotV2,
+        BotV3p5,
+        BotV3p6,
+        BotV3p7,
+        BotV4,
+        BotV4p2,
+        BotV4p3
+    )
+    bot_idxs: list[int] = [0, 0]
+    bots: list[Bot] = [BotV1(), BotV1()]
+
+    buttons: list[Button] = [
+        Button((43, 245, 100, 20), "Play White"),
+        Button((43, 285, 100, 20), "Play Black"),
+        Button((43, 325, 100, 20), "AI vs AI"),
+        Button((43, 365, 100, 20), "Deep Test"),
+        Button((43, 205, 100, 20), "Human"),
+        Button((43, 165, 100, 20), "Normal"),
+        Button((43, 85, 100, 20), bots[0].get_version()),
+        Button((43, 125, 100, 20), bots[1].get_version()),
+    ]
 
     test_mode: bool = False
     test_depth = 5
     test_allotted_time = .1
     normal_depth = -1
-    normal_allotted_time = .03
+    normal_allotted_time = .1
 
     running: bool = True
     while running:
@@ -321,6 +334,14 @@ def game_loop() -> None:
                 elif buttons[5].check_hover(pos):
                     test_mode = not test_mode
                     buttons[5].text = "Test" if test_mode else "Normal"
+                elif buttons[6].check_hover(pos):
+                    bot_idxs[0] = (bot_idxs[0] + 1) % len(bot_options)
+                    bots[0] = bot_options[bot_idxs[0]]()
+                    buttons[6].text = bots[0].get_version()
+                elif buttons[7].check_hover(pos):
+                    bot_idxs[1] = (bot_idxs[1] + 1) % len(bot_options)
+                    bots[1] = bot_options[bot_idxs[1]]()
+                    buttons[7].text = bots[1].get_version()
 
             if game_mode in (GameMode.PLAY_WHITE, GameMode.PLAY_BLACK, GameMode.HUMAN) and (
                     event.type == pygame.MOUSEBUTTONDOWN):

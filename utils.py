@@ -1,5 +1,4 @@
 from typing import Sequence, cast, Any
-from numbers import Real
 
 
 def split_table[T](flat_list: Sequence[T]) -> tuple[tuple[T, ...], ...]:
