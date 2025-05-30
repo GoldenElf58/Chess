@@ -107,7 +107,7 @@ start_board: tuple[int, ...] = (
 )
 
 
-class GameStatev2(GameStateBase):
+class GameStateV2(GameStateBase):
     __slots__ = ('board', 'color', 'white_queen', 'white_king', 'black_queen', 'black_king', 'last_move', 'turn',
                  'winner', 'previous_position_count', 'moves_since_pawn', 'moves')
 
@@ -172,7 +172,7 @@ class GameStatev2(GameStateBase):
         moves: list[tuple[int, int, int]] = self.get_moves_no_check()
         moves_len: int = len(moves)
         for i, move_0 in enumerate(reversed(moves)):
-            state: GameStatev2 = self.move(move_0)
+            state: GameStateV2 = self.move(move_0)
             for move_1 in state.get_moves_no_check():
                 if (winner := (state_2 := state.move(move_1)).get_winner()) == -1 or winner == 1:
                     moves.pop(moves_len - i - 1)
@@ -193,7 +193,7 @@ class GameStatev2(GameStateBase):
                     moves.pop(moves_len - i - 1)
                     break
         if len(moves) == 0 and moves_len > 0:
-            game_state: GameStatev2 = GameStatev2(self.board, self.white_queen, self.white_king, self.black_queen,
+            game_state: GameStateV2 = GameStateV2(self.board, self.white_queen, self.white_king, self.black_queen,
                                                   self.black_king, None, -self.color, self.turn, self.winner)
             for move in game_state.get_moves_no_check():
                 if (winner := game_state.move(move).get_winner()) == -1 or winner == 1:
@@ -285,13 +285,13 @@ class GameStatev2(GameStateBase):
                         moves.append((h, dest_square + 1, piece))
                     else:  # Promotion
                         for promotion_piece in promotion_pieces:
-                            moves.append((h, dest_square + 1, promotion_piece))
+                            moves.append((h, dest_square + 1, promotion_piece * color_local))
                 if (j - 1) >= 0 > board_local[dest_square - 1] * color_local:
                     if 7 != i - color_local != 0:
                         moves.append((h, dest_square - 1, piece))
                     else:  # Promotion
                         for promotion_piece in promotion_pieces:
-                            moves.append((h, dest_square - 1, promotion_piece))
+                            moves.append((h, dest_square - 1, promotion_piece * color_local))
                 if color_local == 1:
                     if i == 6 and board_local[4 * 8 + j] == 0 == board_local[5 * 8 + j]:
                         moves.append((h, h - 16, piece))
@@ -316,7 +316,7 @@ class GameStatev2(GameStateBase):
                 return True
         return False
 
-    def move(self, move: tuple[int, int, int]) -> 'GameStatev2':
+    def move(self, move: tuple[int, int, int]) -> 'GameStateV2':
         """
         Make a move on the board.
 
@@ -331,7 +331,7 @@ class GameStatev2(GameStateBase):
 
         Returns
         -------
-        GameStatev2
+        GameStateV2
             A new GameState object, with the move applied.
         """
         board_local: tuple[int, ...] = self.board
@@ -343,7 +343,7 @@ class GameStatev2(GameStateBase):
         new_moves_since_pawn: int = self.moves_since_pawn + 1
 
         if not len(move):
-            return GameStatev2(board_local, turn=self.turn + 1, winner=self.winner)
+            return GameStateV2(board_local, turn=self.turn + 1, winner=self.winner)
 
         move_0, move_1, move_2 = move  # type: int, int, int
         if move_0 == -1:  # Castle
@@ -355,20 +355,20 @@ class GameStatev2(GameStateBase):
                 white_king = False
 
             new_board[move_2] = 0
-            new_board[move_2 + 3] = 0
-            new_board[move_2 + 1] = board_local[move_2]
-            new_board[move_2 + 2] = board_local[move_2 + 3]
-            return GameStatev2(tuple(new_board), white_queen, white_king, black_queen, black_king,
+            new_board[move_2 + (3 if move_1 == 1 else -4)] = 0
+            new_board[move_2 + move_1] = board_local[move_2 + (3 if move_1 == 1 else -4)]
+            new_board[move_2 + 2 * move_1] = board_local[move_2]
+            return GameStateV2(tuple(new_board), white_queen, white_king, black_queen, black_king,
                                color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn)
 
         if move_0 == -2:  # En Passant
             new_board[move_2] = 0
             new_board[move_2 - 8 * self.color + move_1] = self.color
             new_board[move_2 + move_1] = 0
-            return GameStatev2(tuple(new_board), white_queen, white_king, black_queen, black_king,
+            return GameStateV2(tuple(new_board), white_queen, white_king, black_queen, black_king,
                                color=-self.color, turn=self.turn + 1, moves_since_pawn=0)
 
-        if (piece := abs(new_board[move_1])) in [4, 6]:
+        if (piece := abs(move_2)) in (4, 6):
             if move_1 == 56:
                 white_queen = False
             elif move_1 == 63:
@@ -383,7 +383,7 @@ class GameStatev2(GameStateBase):
             elif move_1 == 60:
                 white_queen = False
                 white_king = False
-        if new_board[move_1] in [-4, 4]:
+        if move_2 in (-4, 4):
             if move_1 == 56:
                 white_queen = False
             elif move_1 == 63:
@@ -396,18 +396,18 @@ class GameStatev2(GameStateBase):
         if piece == 1:
             new_moves_since_pawn = 0
 
-        new_board[move_1] = new_board[move_0]
+        new_board[move_1] = move_2
         new_board[move_0] = 0
         new_previous_position_count = copy(self.previous_position_count)
         if (hash_state := hash(board_local)) in new_previous_position_count:
             new_previous_position_count[hash_state] += 1
             if new_previous_position_count[hash_state] >= 3:
-                return GameStatev2(tuple(new_board), winner=0)
+                return GameStateV2(tuple(new_board), winner=0)
         else:
             new_previous_position_count[hash_state] = 1
         last_move: tuple[int, int, int] | None = move if (
-                piece == 1 and (move_0 == move_2 + self.color * 2)) else None
-        return GameStatev2(tuple(new_board), white_queen, white_king, black_queen, black_king, last_move=last_move,
+                piece == 1 and (move_0 == move_1 + self.color * 16)) else None
+        return GameStateV2(tuple(new_board), white_queen, white_king, black_queen, black_king, last_move=last_move,
                            color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn,
                            previous_position_count=new_previous_position_count)
 

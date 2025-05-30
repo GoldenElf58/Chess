@@ -2,7 +2,7 @@ from copy import copy
 
 from game_base import GameStateBase
 from game_bitboards import GameStateBitboards
-from game_v2 import GameStatev2
+from game_v2 import GameStateV2
 from utils import split_table
 
 # Precompute index-to-coordinate mapping for faster lookups
@@ -478,8 +478,8 @@ class GameState(GameStateBase):
                                   self.color, self.turn, self.winner, self.previous_position_count,
                                   self.moves_since_pawn)
 
-    def to_v2(self) -> GameStatev2:
-        return GameStatev2(self.board, self.white_queen, self.white_king, self.black_queen, self.black_king,
+    def to_v2(self) -> GameStateV2:
+        return GameStateV2(self.board, self.white_queen, self.white_king, self.black_queen, self.black_king,
                            None, self.color, self.turn, self.winner, copy(self.previous_position_count),
                            self.moves_since_pawn)
 

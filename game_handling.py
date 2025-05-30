@@ -1,5 +1,5 @@
 import random
-from typing import Callable
+from typing import Callable, cast
 
 import pygame
 from pygame import Surface
@@ -19,7 +19,7 @@ from fen_utils import game_state_from_line
 from game import GameState
 from game_base import GameStateBase
 from game_bitboards import GameStateBitboards
-from game_v2 import GameStatev2
+from game_v2 import GameStateV2
 
 images = [
     pygame.image.load("piece_images/-6.png"),
@@ -47,7 +47,7 @@ def display_board(screen, game_state: GameStateBase, selected_square=(), offset=
             else:
                 pygame.draw.rect(screen, (240, 217, 181) if (i + j) % 2 == 0 else (181, 136, 99),
                                  (j * 60 + offset, i * 60, 60, 60 + offset))
-            if isinstance(game_state, GameState) or isinstance(game_state, GameStatev2):
+            if isinstance(game_state, GameState) or isinstance(game_state, GameStateV2):
                 if game_state.board[i * 8 + j] != 0:
                     screen.blit(images[game_state.board[i * 8 + j] + 6], (j * 60 + offset, i * 60))
             elif isinstance(game_state, GameStateBitboards):
@@ -71,6 +71,7 @@ def display_board(screen, game_state: GameStateBase, selected_square=(), offset=
                     piece *= -1
                 screen.blit(images[piece + 6], (j * 60 + offset, i * 60))
 
+
 class GameMode(Enum):
     MENU = auto()
     HUMAN = auto()
@@ -78,6 +79,7 @@ class GameMode(Enum):
     PLAY_BLACK = auto()
     AI_VS_AI = auto()
     DEEP_TEST = auto()
+
 
 def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, font: Font, t0: float, game_mode: GameMode,
                  wins: int, draws: int, losses: int, bots: tuple[Bot, Bot], depths=None):
@@ -142,10 +144,47 @@ class Button:
         return self.rect.collidepoint(pos)
 
 
+def get_square(x: int, y: int, offset: int) -> tuple[int, int]:
+    """
+    Gets the square of the board at a given position
+
+    :param x: Screen x position
+    :param y: Screen y position
+    :param offset: X offset from the top left corner of the screen
+    :return: (row, col)
+    """
+    return y // 60, (x - offset) // 60
 
 
-def find_move(user_src: tuple[int, int], user_dest: tuple[int, int], legal_moves: list[tuple[int, int, int, int]],
-              game_state) -> tuple[int, int, int, int] | None:
+def can_select_square(row: int, col: int, game_state: GameStateBase, game_mode: GameMode) -> bool:
+    """
+    Whether or not a square can be selected by a user given the current game state and game mode
+
+    :param row: Row index of the square on the interval [0, 7]
+    :param col: Column index of the square on the interval [0, 7]
+    :param game_state: Game state of the current game
+    :param game_mode: Current game mode
+    :return: Whether or not the square can be selected
+    """
+    color = game_state.color
+    if isinstance(game_state, GameStateBitboards):
+        selected_piece_mask = 1 << (63 - (row * 8 + col))
+        return bool(((game_mode == GameMode.HUMAN or game_mode == GameMode.PLAY_WHITE) and
+                     ((selected_piece_mask & game_state.white_pieces) and color == 1) or (
+                             (game_mode == GameMode.PLAY_BLACK or game_mode == GameMode.HUMAN) and
+                             (selected_piece_mask & game_state.black_pieces) and color == -1)))
+    elif isinstance(game_state, GameState) or isinstance(game_state, GameStateV2):
+        selected_piece = game_state.board[row * 8 + col]
+        return ((game_mode == GameMode.HUMAN and ((selected_piece > 0 and color == 1) or (
+                selected_piece < 0 and color == -1))) or (selected_piece > 0 and color == 1 and
+                                                          game_mode == GameMode.PLAY_WHITE) or (
+                        selected_piece < 0 and color == -1 and
+                        game_mode == GameMode.PLAY_BLACK))
+    return False
+
+
+def find_move(user_src: tuple[int, int], user_dest: tuple[int, int],
+              game_state) -> tuple[int, int, int] | tuple[int,  int, int, int] | None:
     """
     Given a user’s source and destination (as (row, col) tuples),
     return a matching legal move (one of the tuples produced by get_moves())
@@ -153,48 +192,51 @@ def find_move(user_src: tuple[int, int], user_dest: tuple[int, int], legal_moves
     The matching is done by checking the source and destination coordinates.
     """
     color = game_state.color
+    legal_moves: list = game_state.get_moves()
     # Loop through legal moves.
-    for move in legal_moves:
-        # For normal moves the tuple is (src_row, src_col, dest_row, dest_col)
-        if move[0] >= 0:
-            if (move[0], move[1]) == user_src and (move[2], move[3]) == user_dest:
-                return move
-        # Castle moves are encoded with a negative first element (-1)
-        elif move[0] == -1:
-            # In your get_moves(), a castle move is added as (-1, offset, src_row, src_col)
-            # We assume the user clicks the king and then a square two columns away.
-            if (move[2], move[3]) == user_src:
-                # King moves two squares horizontally.
-                if user_dest[0] == user_src[0]:
-                    if user_dest[1] == user_src[1] + 2 and move[1] > 0:
-                        return move
-                    if user_dest[1] == user_src[1] - 2 and move[1] < 0:
-                        return move
-        # En passant moves are encoded as (-2, offset, src_row, src_col)
-        elif move[0] == -2:
-            if (move[2], move[3]) == user_src:
-                # The pawn moves diagonally: its destination is one row forward (depending on color)
-                expected_dest = (user_src[0] - color, user_src[1] + move[1])
-                if user_dest == expected_dest:
+    if isinstance(game_state, GameState) or isinstance(game_state, GameStateBitboards):
+        for move in legal_moves: # type: tuple[int, int, int, int]
+            if move[0] >= 0:
+                if (move[0], move[1]) == user_src and (move[2], move[3]) == user_dest:
                     return move
-        # Promotion moves are encoded as (-3, code, src_row, src_col) for non–capture.
-        elif move[0] == -3:
-            if (move[2], move[3]) == user_src:
-                # For a pawn moving forward into promotion:
-                expected_dest = (user_src[0] - color, user_src[1])
-                if user_dest == expected_dest:
-                    # Auto–select queen: for white, choose code 5; for black, code -5.
-                    if (color == 1 and move[1] == 5) or (color == -1 and move[1] == -5):
+            elif (move[2], move[3]) == user_src:
+                if move[0] == -1:
+                    if user_dest[0] == user_src[0]:
+                        if user_dest[1] == user_src[1] + 2 * move[1]:
+                            return move
+                elif move[0] == -2:
+                    expected_dest = (user_src[0] - color, user_src[1] + move[1])
+                    if user_dest == expected_dest:
                         return move
-        # Promotion while capturing (your code uses moves with first element <= -4)
-        elif move[0] <= -4:
-            if (move[2], move[3]) == user_src:
-                # For a capture, the pawn moves diagonally.
-                if user_dest == (user_src[0] - color, user_src[1] + 1) and move[1] > 0:
-                    # Auto–select queen capture promotion (for white, e.g. code 1 in your moves)
-                    return move
-                if user_dest == (user_src[0] - color, user_src[1] - 1) and move[1] < 0:
-                    return move
+                elif move[0] == -3:
+                    expected_dest = (user_src[0] - color, user_src[1])
+                    if user_dest == expected_dest and move[1] in (-5, 5):
+                            return move
+                elif move[0] <= -4:
+                    if user_dest == (user_src[0] - color, user_src[1] + move[1]):
+                        return move
+    elif isinstance(game_state, GameStateV2):
+        user_src_idx: int = user_src[0] * 8 + user_src[1]
+        user_dest_idx: int = user_dest[0] * 8 + user_dest[1]
+        for move_ in legal_moves: # type: tuple[int, int, int]
+            if move_[0] >= 0:
+                if move_[0] == user_src_idx and move_[1] == user_dest_idx:
+                    return move_
+            elif move_[2] == user_src_idx:
+                if move_[0] == -1:
+                    if user_dest[0] == user_src[0] and user_dest[1] == user_src[1] + 2 * move_[1]:
+                        return move_
+                elif move_[0] == -2:
+                    expected_dest = (user_src[0] - color, user_src[1] + move_[1])
+                    if user_dest == expected_dest:
+                        return move_
+                elif move_[0] == -3:
+                    expected_dest = (user_src[0] - color, user_src[1])
+                    if user_dest == expected_dest and move_[0] in (-5, 5):
+                            return move_
+                elif move_[0] <= -4:
+                    if user_dest == (user_src[0] - color, user_src[1] + move_[1]):
+                            return move_
     return None
 
 
@@ -202,13 +244,14 @@ def game_loop() -> None:
     pygame.init()
     screen: Surface = pygame.display.set_mode((854, 480))
     offset: int = 187
-    game_state_type: Callable[[], GameStateBase] = GameStateBitboards
+    game_state_type: Callable[[], GameStateBase] = GameStateV2
     game_state: GameStateBase = game_state_type()
-    selected_square: tuple[int, int] | None = None  # For human move selection (as (col, row))
-    game_mode: GameMode = GameMode.MENU  # Will be set when a button is clicked
+    selected_square: tuple[int, int] | None = None
+    """For human move selection, represented as (col, row)"""
+
+    game_mode: GameMode = GameMode.MENU
     font: Font = Font(None, 24)
 
-    # Create the three buttons.
     buttons: list[Button] = [
         Button((43, 190, 100, 20), "Play White"),
         Button((43, 230, 100, 20), "Play Black"),
@@ -279,25 +322,11 @@ def game_loop() -> None:
                     test_mode = not test_mode
                     buttons[5].text = "Test" if test_mode else "Normal"
 
-            if game_mode in {GameMode.PLAY_WHITE, GameMode.PLAY_BLACK, GameMode.HUMAN} and (
+            if game_mode in (GameMode.PLAY_WHITE, GameMode.PLAY_BLACK, GameMode.HUMAN) and (
                     event.type == pygame.MOUSEBUTTONDOWN):
-                x, y = event.pos
-                col, row = (x - offset) // 60, y // 60
-                color = game_state.color
-                can_select: bool = False
-                if isinstance(game_state, GameStateBitboards):
-                    selected_piece_mask = 1 << (63 - (row * 8 + col))
-                    can_select = bool(((game_mode == GameMode.HUMAN or game_mode == GameMode.PLAY_WHITE) and
-                                         ((selected_piece_mask & game_state.white_pieces) and color == 1) or (
-                                                 (game_mode == GameMode.PLAY_BLACK or game_mode == GameMode.HUMAN) and
-                                         (selected_piece_mask & game_state.black_pieces) and color == -1)))
-                elif isinstance(game_state, GameState) or isinstance(game_state, GameStatev2):
-                    selected_piece = game_state.board[row * 8 + col]
-                    can_select = ((game_mode == GameMode.HUMAN and ((selected_piece > 0 and color == 1) or (
-                            selected_piece < 0 and color == -1))) or (selected_piece > 0 and color == 1 and
-                                                                      game_mode == GameMode.PLAY_WHITE) or (
-                                                    selected_piece < 0 and color == -1 and
-                                                    game_mode == GameMode.PLAY_BLACK))
+                row, col = get_square(event.pos[0], event.pos[1], offset)  # type: int, int
+                can_select: bool = can_select_square(row, col, game_state, game_mode)
+
                 # Store selected square as (col, row)
                 if selected_square is None:
                     # Only select a piece if it belongs to the human.
@@ -306,8 +335,8 @@ def game_loop() -> None:
                     # Convert selected_square (col, row) to (row, col)
                     user_src: tuple[int, int] = (selected_square[1], selected_square[0])
                     user_dest: tuple[int, int] = (row, col)
-                    legal: list[tuple[int, int, int, int]] = game_state.get_moves()
-                    chosen_move: tuple[int, int, int, int] | None = find_move(user_src, user_dest, legal, game_state)
+                    chosen_move: tuple[int, int, int, int] | tuple[int, int, int] | None = find_move(
+                        user_src, user_dest, game_state)
                     if chosen_move is not None:
                         game_state = game_state.move(chosen_move)
                         game_state.get_moves()
@@ -316,7 +345,7 @@ def game_loop() -> None:
 
         if game_mode != GameMode.MENU:
             if computer_thread is None:
-                if game_mode in {GameMode.AI_VS_AI, GameMode.DEEP_TEST} or (
+                if game_mode in (GameMode.AI_VS_AI, GameMode.DEEP_TEST) or (
                         game_mode == GameMode.PLAY_WHITE and game_state.color == -1) or (
                         game_mode == GameMode.PLAY_BLACK and game_state.color == 1):
                     computer_move_result.clear()
@@ -346,27 +375,26 @@ def game_loop() -> None:
                 game_mode = GameMode.MENU
                 depths.clear()
             else:
-                if game_mode == GameMode.DEEP_TEST:
-                    # Determine bot[0]'s color for this game.
-                    computer_move_result.clear()
-                    bot0_color = 1 if not reverse else -1
-                    if winner == 0:
-                        draws += 1
-                    elif winner == bot0_color:
-                        wins += 1
-                    else:
-                        losses += 1
-                    if reverse:
-                        line += 1
-                    reverse = not reverse
-                    if line > num_lines:
-                        line = 1
-                    if wins + draws + losses == num_lines:
-                        game_mode = GameMode.MENU
-                        print(f"{bots[0].get_version()}: {wins}")
-                        print(f"Draws: {draws}")
-                        print(f"{bots[1].get_version()}: {losses}")
-                        print(f"P-Value: {binomtest(wins, wins + losses, 0.5, alternative="two-sided")}")
+                computer_move_result.clear()
+                bot0_color: int = 1 if not reverse else -1
+                if winner == 0:
+                    draws += 1
+                elif winner == bot0_color:
+                    wins += 1
+                else:
+                    losses += 1
+                if reverse:
+                    line += 1
+                reverse = not reverse
+                if line > num_lines:
+                    line = 1
+                if wins + draws + losses == num_lines:
+                    game_mode = GameMode.MENU
+                    print(f"{bots[0].get_version()}: {wins}")
+                    print(f"Draws: {draws}")
+                    print(f"{bots[1].get_version()}: {losses}")
+                    print(f"P-Value: {binomtest(wins, wins + losses, 0.5, alternative="two-sided")}")
+                else:
                     print(wins, draws, losses)
                 game_state = game_state_from_line(line, "fens.txt")
                 bots[0].clear_cache()
