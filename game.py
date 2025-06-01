@@ -2,6 +2,7 @@ from copy import copy
 
 from game_base import GameStateBase
 from game_bitboards import GameStateBitboards
+from game_bitboards_v2 import GameStateBitboardsV2
 from game_v2 import GameStateV2
 from utils import split_table
 
@@ -477,6 +478,9 @@ class GameState(GameStateBase):
                                   self.white_king, self.black_queen, self.black_king, self.last_move,
                                   self.color, self.turn, self.winner, self.previous_position_count,
                                   self.moves_since_pawn)
+
+    def to_bitboards_v2(self) -> GameStateBitboardsV2:
+        return self.to_bitboards().to_bitboards_v2()
 
     def to_v2(self) -> GameStateV2:
         return GameStateV2(self.board, self.white_queen, self.white_king, self.black_queen, self.black_king,

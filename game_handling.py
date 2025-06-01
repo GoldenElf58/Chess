@@ -11,13 +11,14 @@ import threading
 import time
 from scipy.stats import binomtest  # type: ignore
 
-from bots import BotV1, BotV2, BotV3p5, BotV3p6, BotV3p7, BotV4, BotV4p2, BotV4p3
+from bots import BotV1, BotV1p3, BotV2, BotV3p5, BotV3p6, BotV3p7, BotV4, BotV4p2, BotV4p3
 
 from bots.bot import Bot
 from fen_utils import game_state_from_line
 from game import GameState
 from game_base import GameStateBase
 from game_bitboards import GameStateBitboards
+from game_bitboards_v2 import GameStateBitboardsV2
 from game_v2 import GameStateV2
 
 images = [
@@ -49,7 +50,7 @@ def display_board(screen, game_state: GameStateBase, selected_square=(), offset=
             if isinstance(game_state, GameState) or isinstance(game_state, GameStateV2):
                 if game_state.board[i * 8 + j] != 0:
                     screen.blit(images[game_state.board[i * 8 + j] + 6], (j * 60 + offset, i * 60))
-            elif isinstance(game_state, GameStateBitboards):
+            elif isinstance(game_state, GameStateBitboards) or isinstance(game_state, GameStateBitboardsV2):
                 piece = 0
                 piece_mask = 1 << (63 - (i * 8 + j))
                 if not piece_mask & (game_state.white_pieces | game_state.black_pieces):
@@ -108,7 +109,7 @@ def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, fon
     if game_mode & GameMode.DEEP_TEST:
         # --- two‑sided binomial test for wins vs. losses ---
         n_games = wins + losses
-        p_value = 1.0 if n_games == 0 else binomtest(wins, n_games, 0.5, alternative="two-sided").pvalue
+        p_value = 1.0 if n_games == 0 else binomtest(wins, n_games).pvalue
 
         wins_text = f"{bots[0].get_version()}: {wins}"
         draws_text = f"Draws: {draws}"
@@ -168,7 +169,7 @@ def can_select_square(row: int, col: int, game_state: GameStateBase, game_mode: 
     :return: Whether or not the square can be selected
     """
     color = game_state.color
-    if isinstance(game_state, GameStateBitboards):
+    if isinstance(game_state, GameStateBitboards) or isinstance(game_state, GameStateBitboardsV2):
         selected_piece_mask = 1 << (63 - (row * 8 + col))
         return bool(((game_mode & (GameMode.HUMAN | GameMode.PLAY_WHITE)) and
                      ((selected_piece_mask & game_state.white_pieces) and color == 1) or (
@@ -231,13 +232,31 @@ def find_move(user_src: tuple[int, int], user_dest: tuple[int, int],
                     expected_dest = (user_src[0] - color, user_src[1] + move_[1])
                     if user_dest == expected_dest:
                         return move_
+    elif isinstance(game_state, GameStateBitboardsV2):
+        a8 = 1 << 63
+        user_src_mask: int = a8 >> user_src[0] * 8 + user_src[1]
+        user_dest_mask: int = a8 >> user_dest[0] * 8 + user_dest[1]
+        for move_ in legal_moves:
+            if move_[0] >= 0:
+                if move_[0] == user_src_mask and move_[1] == user_dest_mask:
+                    return move_
+            elif move_[2] == user_src_mask:
+                if move_[0] == -1:
+                    if user_dest[0] == user_src[0] and user_dest[1] == user_src[1] + 2 * move_[1]:
+                        return move_
+                elif move_[0] == -2:
+                    expected_dest = (user_src[0] - color, user_src[1] + move_[1])
+                    if user_dest == expected_dest:
+                        return move_
                 elif move_[0] == -3:
                     expected_dest = (user_src[0] - color, user_src[1])
-                    if user_dest == expected_dest and move_[0] in (-5, 5):
+                    if user_dest == expected_dest and move_[1] in (-5, 5):
                             return move_
                 elif move_[0] <= -4:
-                    if user_dest == (user_src[0] - color, user_src[1] + move_[1]):
+                    expected_dest = (user_src[0] - color, user_src[1] + move_[1])
+                    if user_dest == expected_dest and move_[0] in (-8, 8):
                             return move_
+
     return None
 
 
@@ -245,7 +264,7 @@ def game_loop() -> None:
     pygame.init()
     screen: Surface = pygame.display.set_mode((854, 480))
     offset: int = 187
-    game_state_type: Callable[[], GameStateBase] = GameStateBitboards
+    game_state_type: Callable[[], GameStateBase] = GameStateV2
     game_state: GameStateBase = game_state_type()
     selected_square: tuple[int, int] | None = None
     """For human move selection, represented as (col, row)"""
@@ -268,6 +287,7 @@ def game_loop() -> None:
 
     bot_options: tuple[Callable[[], Bot], ...] = (
         BotV1,
+        BotV1p3,
         BotV2,
         BotV3p5,
         BotV3p6,
@@ -398,6 +418,7 @@ def game_loop() -> None:
         screen.fill(0)
         display_board(screen, game_state, selected_square, offset)
 
+        game_state.get_moves()
         if not game_mode & GameMode.MENU and (winner := game_state.get_winner()) is not None:
             if not game_mode & GameMode.DEEP_TEST:
                 print(winner, game_state.turn, time.time() - t0)
