@@ -224,6 +224,7 @@ class GameStateBitboardsV2(GameStateBase):
                     break
             else:
                 self.winner = 0
+                self.moves = moves
                 return moves
             self.winner = winner
         elif self.moves_since_pawn >= 50:
@@ -232,31 +233,10 @@ class GameStateBitboardsV2(GameStateBase):
         return moves
 
     def get_moves_no_check(self) -> list[tuple[int, int, int]]:
-        hash_state: tuple[int, int, int, int, int, int, int, int, int, bool, bool, bool, bool,
-        tuple[int, int, int] | None] = self.get_hashable_state()
-        return self.get_moves_no_check_static(*hash_state)
-
-    @staticmethod
-    def get_moves_no_check_static(
-            white_pieces: int,
-            black_pieces: int,
-            kings: int,
-            queens: int,
-            rooks: int,
-            bishops: int,
-            knights: int,
-            pawns: int,
-            color: int,
-            white_queen: bool,
-            white_king: bool,
-            black_queen: bool,
-            black_king: bool,
-            last_move: tuple[int, int, int] | None
-    ) -> list[tuple[int, int, int]]:
         moves: list[tuple[int, int, int]] = []
         # Local binds for speed
-        color_local: int = color
-        last_move_local: tuple[int, int, int] | None = last_move
+        color_local: int = self.color
+        last_move_local: tuple[int, int, int] | None = self.last_move
         coords_local: list[tuple[int, int]] = index_to_coord
         knight_targets_local: tuple[tuple[int, ...], ...] = knight_targets
         king_targets_local: tuple[tuple[int, ...], ...] = king_targets
@@ -265,10 +245,15 @@ class GameStateBitboardsV2(GameStateBase):
         bishop_diagonals_local: tuple[tuple[tuple[int, ...], tuple[int, ...],
         tuple[int, ...], tuple[int, ...]], ...] = bishop_diagonals
         masks_local: list[int] = bit_masks
-        color_mask: int = white_pieces if color == 1 else black_pieces
-        opponent_mask: int = black_pieces if color == 1 else white_pieces
-        kings_local: int = kings
-        colored_rooks: int = rooks & color_mask
+        color_mask: int = self.white_pieces if self.color == 1 else self.black_pieces
+        opponent_mask: int = self.black_pieces if self.color == 1 else self.white_pieces
+        kings: int = self.kings
+        colored_rooks: int = self.rooks & color_mask
+        rooks: int = self.rooks
+        bishops: int = self.bishops
+        queens: int = self.queens
+        knights: int = self.knights
+        pawns: int = self.pawns
         pieces: int = (color_mask | opponent_mask)
         mask: int = 1 << 64
         for h in range(64):
@@ -311,11 +296,11 @@ class GameStateBitboardsV2(GameStateBase):
                         moves.append((-2, -1, mask))
                     elif 0 != j == last_move_local[2] - 1:
                         moves.append((-2, 1, mask))
-            elif kings_local & mask:
-                if (((color_local == 1 and white_king) or (color_local == -1 and black_king)) and colored_rooks &
+            elif kings & mask:
+                if (((color_local == 1 and self.white_king) or (color_local == -1 and self.black_king)) and colored_rooks &
                         (mask >> 3) and not (pieces & ((mask >> 1) | (mask >> 2)))):
                     moves.append((-1, 1, mask))
-                if (((color_local == 1 and white_queen) or (color_local == -1 and black_queen)) and colored_rooks &
+                if (((color_local == 1 and self.white_queen) or (color_local == -1 and self.black_queen)) and colored_rooks &
                         (mask << 4) and not (pieces & ((mask << 1) | (mask << 2) | (mask << 3)))):
                     moves.append((-1, -1, mask))
                 for target_mask in king_targets_local[h]:

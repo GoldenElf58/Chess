@@ -156,7 +156,7 @@ class BotV1p2(Bot):
     def evaluate(self, game_state: GameStateV2) -> int:
         if game_state.winner is not None:
             return game_state.winner * 9999999
-        hash_state: int = game_state.get_hashed()
+        hash_state: int = hash(game_state)
         if (cached_eval := self.eval_lookup.get(hash_state)) is not None:
             return cached_eval
         board: tuple[int, ...] = game_state.board

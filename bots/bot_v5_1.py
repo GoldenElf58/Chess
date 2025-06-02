@@ -139,19 +139,21 @@ def populate_combined_tables():
 populate_combined_tables()
 
 
-class BotV1(Bot):
+class BotV5p1(Bot):
     def __init__(self, transposition_table: dict | None = None, eval_lookup: dict | None = None) -> None:
         self.transposition_table: dict[
             int, tuple[int, tuple[int, int, int]]] = transposition_table if transposition_table is not None else {}
         self.eval_lookup: dict[int, int] = eval_lookup if eval_lookup is not None else {}
+        self.loose_transposition_table: dict[int, int] = {}
 
     def generate_move(self, game_state: GameStateV2, allotted_time: float = 3.0, depth: int = -1) -> tuple[
         tuple[int, tuple[int, int, int]], int]:
         return self.iterative_deepening(game_state, game_state.color == 1, allotted_time=allotted_time, depth=depth)
 
     def clear_cache(self) -> None:
-        self.transposition_table = {}
-        self.eval_lookup = {}
+        self.transposition_table.clear()
+        self.eval_lookup.clear()
+        self.loose_transposition_table.clear()
 
     def evaluate(self, game_state: GameStateV2) -> int:
         if game_state.winner is not None:
@@ -161,7 +163,8 @@ class BotV1(Bot):
             return cached_eval
         board: tuple[int, ...] = game_state.board
         combined: list[tuple[int, ...]] = combined_tables
-        self.eval_lookup[hash_state] = (evaluation := sum([combined[piece + 6][i] for (i, piece) in enumerate(board) if piece]))
+        self.eval_lookup[hash_state] = (
+            evaluation := sum([combined[piece + 6][i] for (i, piece) in enumerate(board) if piece]))
         return evaluation
 
     def iterative_deepening(self, game_state: GameStateV2, maximizing_player: bool, allotted_time: float = 3.0,
@@ -192,17 +195,18 @@ class BotV1(Bot):
                 first_call: bool = True) -> tuple[int, tuple[int, int, int]]:
         if game_state.get_winner() is not None:
             return self.evaluate(game_state), (game_state.last_move if game_state.last_move is not None else (0, 0, 0))
-        state_key: int = hash((game_state.board, game_state.white_queen, game_state.white_king,
-                               game_state.black_queen, game_state.black_king, depth, maximizing_player))
+        state_key: int = hash((game_state.get_hashable_state(), depth))
         transposition_table: dict[int, tuple[int, tuple[int, int, int]]] = self.transposition_table
         if (cached := transposition_table.get(state_key)) is not None:
             return cached
         moves: tuple[tuple[int, int, int], ...] = tuple(game_state.get_moves() if first_call else
-                                                             game_state.get_moves_no_check())
+                                                        game_state.get_moves_no_check())
         move_fn: Callable[[tuple[int, int, int]], GameStateV2] = game_state.move
         eval_fn: Callable[[GameStateV2], int] = self.evaluate
+        loose_transposition_table: dict[int, int] = self.loose_transposition_table
         child_data: list[tuple[tuple[int, int, int], GameStateV2, int]] = [
-            (move, child_state := move_fn(move), eval_fn(child_state)) for move in moves]  # Cache evaluations
+            (move, child_state := move_fn(move), prev_eval if (prev_eval := loose_transposition_table.get(
+                hash(child_state))) is not None else eval_fn(child_state)) for move in moves]
 
         child_data.sort(key=lambda move: move[2], reverse=maximizing_player)
 
@@ -219,11 +223,12 @@ class BotV1(Bot):
                     best_eval, best_move = evaluation, move
                     alpha = max(alpha, evaluation)
             elif evaluation < best_eval:
-                    best_eval, best_move = evaluation, move
-                    beta = min(beta, evaluation)
+                best_eval, best_move = evaluation, move
+                beta = min(beta, evaluation)
 
             if beta <= alpha:
                 break
 
         transposition_table[state_key] = best_eval, best_move
+        loose_transposition_table[hash(game_state)] = best_eval
         return best_eval, best_move

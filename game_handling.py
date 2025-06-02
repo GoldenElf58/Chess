@@ -11,7 +11,7 @@ import threading
 import time
 from scipy.stats import binomtest  # type: ignore
 
-from bots import BotV1, BotV1p3, BotV2, BotV3p5, BotV3p6, BotV3p7, BotV4, BotV4p2, BotV4p3
+from bots import *
 
 from bots.bot import Bot
 from fen_utils import game_state_from_line
@@ -83,6 +83,7 @@ class GameMode(IntFlag):
     OPTIONS = auto()
     MAIN_MENU = MAIN | MENU
     OPTIONS_MENU = OPTIONS | MENU
+
 
 def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, font: Font, t0: float, game_mode: GameMode,
                  wins: int, draws: int, losses: int, bots: list[Bot], depths=None):
@@ -180,13 +181,13 @@ def can_select_square(row: int, col: int, game_state: GameStateBase, game_mode: 
         return bool((game_mode & GameMode.HUMAN and ((selected_piece > 0 and color == 1) or (
                 selected_piece < 0 and color == -1))) or (selected_piece > 0 and color == 1 and
                                                           game_mode & GameMode.PLAY_WHITE) or (
-                        selected_piece < 0 and color == -1 and
-                        game_mode & GameMode.PLAY_BLACK))
+                            selected_piece < 0 and color == -1 and
+                            game_mode & GameMode.PLAY_BLACK))
     return False
 
 
 def find_move(user_src: tuple[int, int], user_dest: tuple[int, int],
-              game_state) -> tuple[int, int, int] | tuple[int,  int, int, int] | None:
+              game_state) -> tuple[int, int, int] | tuple[int, int, int, int] | None:
     """
     Given a user’s source and destination (as (row, col) tuples),
     return a matching legal move (one of the tuples produced by get_moves())
@@ -197,7 +198,7 @@ def find_move(user_src: tuple[int, int], user_dest: tuple[int, int],
     legal_moves: list = game_state.get_moves()
     # Loop through legal moves.
     if isinstance(game_state, GameState) or isinstance(game_state, GameStateBitboards):
-        for move in legal_moves: # type: tuple[int, int, int, int]
+        for move in legal_moves:  # type: tuple[int, int, int, int]
             if move[0] >= 0:
                 if (move[0], move[1]) == user_src and (move[2], move[3]) == user_dest:
                     return move
@@ -213,14 +214,14 @@ def find_move(user_src: tuple[int, int], user_dest: tuple[int, int],
                 elif move[0] == -3:
                     expected_dest = (user_src[0] - color, user_src[1])
                     if user_dest == expected_dest and move[1] in (-5, 5):
-                            return move
+                        return move
                 elif move[0] <= -4:
                     if user_dest == (user_src[0] - color, user_src[1] + move[1]):
                         return move
     elif isinstance(game_state, GameStateV2):
         user_src_idx: int = user_src[0] * 8 + user_src[1]
         user_dest_idx: int = user_dest[0] * 8 + user_dest[1]
-        for move_ in legal_moves: # type: tuple[int, int, int]
+        for move_ in legal_moves:  # type: tuple[int, int, int]
             if move_[0] >= 0:
                 if move_[0] == user_src_idx and move_[1] == user_dest_idx:
                     return move_
@@ -251,11 +252,11 @@ def find_move(user_src: tuple[int, int], user_dest: tuple[int, int],
                 elif move_[0] == -3:
                     expected_dest = (user_src[0] - color, user_src[1])
                     if user_dest == expected_dest and move_[1] in (-5, 5):
-                            return move_
+                        return move_
                 elif move_[0] <= -4:
                     expected_dest = (user_src[0] - color, user_src[1] + move_[1])
                     if user_dest == expected_dest and move_[0] in (-8, 8):
-                            return move_
+                        return move_
 
     return None
 
@@ -286,6 +287,8 @@ def game_loop() -> None:
     losses: int = 0
 
     bot_options: tuple[Callable[[], Bot], ...] = (
+        BotV5,
+        BotV5p1,
         BotV1,
         BotV1p3,
         BotV2,
@@ -294,10 +297,10 @@ def game_loop() -> None:
         BotV3p7,
         BotV4,
         BotV4p2,
-        BotV4p3
+        BotV4p3,
     )
     bot_idxs: list[int] = [0, 0]
-    bots: list[Bot] = [BotV1(), BotV1()]
+    bots: list[Bot] = [bot_options[bot_idxs[0]](), bot_options[bot_idxs[1]]()]
 
     main_buttons: list[Button] = [
         Button((43, 190, 100, 20), "Play White"),
@@ -351,7 +354,14 @@ def game_loop() -> None:
                     game_mode = GameMode.DEEP_TEST
                     line = 1
                     reverse = False
-                    game_state = game_state_from_line(line, "fens.txt")
+                    game_state = game_state_from_line(line)
+                    assert isinstance(game_state, GameState)
+                    if game_state_type == GameStateV2:
+                        game_state = game_state.to_v2()
+                    elif game_state_type == GameStateBitboards:
+                        game_state = game_state.to_bitboards()
+                    elif game_state_type == GameStateBitboardsV2:
+                        game_state = game_state.to_bitboards_v2()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
                 elif main_buttons[4].check_hover(pos):
@@ -443,10 +453,17 @@ def game_loop() -> None:
                     print(f"{bots[0].get_version()}: {wins}")
                     print(f"Draws: {draws}")
                     print(f"{bots[1].get_version()}: {losses}")
-                    print(f"P-Value: {binomtest(wins, wins + losses, 0.5, alternative="two-sided")}")
+                    print(f"P-Value: {binomtest(wins, wins + losses)}")
                 else:
                     print(wins, draws, losses)
-                game_state = game_state_from_line(line, "fens.txt")
+                game_state = game_state_from_line(line)
+                assert isinstance(game_state, GameState)
+                if game_state_type == GameStateV2:
+                    game_state = game_state.to_v2()
+                elif game_state_type == GameStateBitboards:
+                    game_state = game_state.to_bitboards()
+                elif game_state_type == GameStateBitboardsV2:
+                    game_state = game_state.to_bitboards_v2()
                 bots[0].clear_cache()
                 bots[1].clear_cache()
 

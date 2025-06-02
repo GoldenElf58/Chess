@@ -150,14 +150,15 @@ class GameStateV2(GameStateBase):
         super().__init__(white_queen, white_king, black_queen, black_king, color, turn, winner,
                          previous_position_count, moves_since_pawn)
 
-    def get_hashable_state(self) -> tuple[
-        tuple[int, ...], int, bool, bool, bool, bool, tuple[int, int, int] | None]:
+    def get_hashable_state(self) -> tuple[tuple[int, ...], int, bool, bool, bool, bool,
+    tuple[int, int, int] | None, int]:
         """ Convert the game state into a hashable format for caching. """
-        return self.board, self.color, self.white_queen, self.white_king, self.black_queen, self.black_king, self.last_move
+        return (self.board, self.color, self.white_queen, self.white_king, self.black_queen, self.black_king,
+                    self.last_move, self.turn)
 
-    def get_hashed(self) -> int:
-        return hash((self.board, (((self.color == 1) << 4) | (self.white_queen << 3) | (self.white_king << 2) | (
-                self.black_queen << 1) | self.black_king), self.last_move))
+    def __hash__(self) -> int:
+        return hash((self.board, self.color, self.white_queen, self.white_king, self.black_queen, self.black_king,
+                    self.last_move, self.turn))
 
     def get_moves(self) -> list[tuple[int, int, int]]:
         """
@@ -200,6 +201,7 @@ class GameStateV2(GameStateBase):
                     break
             else:
                 self.winner = 0
+                self.moves = moves
                 return moves
             self.winner = winner
         elif self.moves_since_pawn >= 50:
@@ -208,25 +210,11 @@ class GameStateV2(GameStateBase):
         return moves
 
     def get_moves_no_check(self) -> list[tuple[int, int, int]]:
-        hash_state: tuple[
-            tuple[int, ...], int, bool, bool, bool, bool, tuple[int, int, int] | None] = self.get_hashable_state()
-        return self.get_moves_no_check_static(*hash_state)
-
-    @staticmethod
-    def get_moves_no_check_static(
-            board: tuple[int, ...],
-            color: int,
-            white_queen: bool,
-            white_king: bool,
-            black_queen: bool,
-            black_king: bool,
-            last_move: tuple[int, int, int] | None
-    ) -> list[tuple[int, int, int]]:
         moves: list[tuple[int, int, int]] = []
         # Local binds for speed
-        color_local: int = color
-        board_local: tuple[int, ...] = board
-        last_move_local: tuple[int, int, int] | None = last_move
+        color_local: int = self.color
+        board_local: tuple[int, ...] = self.board
+        last_move_local: tuple[int, int, int] | None = self.last_move
         coords_local: list[tuple[int, int]] = index_to_coord
         knight_targets_local: tuple[tuple[int, ...], ...] = knight_targets
         king_targets_local: tuple[tuple[int, ...], ...] = king_targets
@@ -239,11 +227,11 @@ class GameStateV2(GameStateBase):
             if piece_type <= 0: continue
             if piece_type == 6:  # King
                 row_base: int = h - j
-                if (((color_local == 1 and white_king) or (color_local == -1 and black_king)) and board_local[
+                if (((color_local == 1 and self.white_king) or (color_local == -1 and self.black_king)) and board_local[
                     row_base + 7] == 4 * color_local
                         and board_local[row_base + 5] == board_local[row_base + 6] == 0):
                     moves.append((-1, 1, h))
-                if (((color_local == 1 and white_queen) or (color_local == -1 and black_queen)) and board_local[
+                if (((color_local == 1 and self.white_queen) or (color_local == -1 and self.black_queen)) and board_local[
                     row_base + 7] == 4 * color_local
                         and board_local[row_base + 1] == board_local[row_base + 2] == board_local[row_base + 3] == 0):
                     moves.append((-1, -1, h))
@@ -430,7 +418,7 @@ class GameStateV2(GameStateBase):
         return self.winner
 
     def __repr__(self) -> str:
-        return f"""GameStatev2(board={self.board}
+        return f"""GameStateV2(board={self.board}
           color={self.color},
           turn={self.turn},
           winner={self.winner},

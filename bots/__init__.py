@@ -8,3 +8,5 @@ from bots.bot_v3_7 import BotV3p7
 from bots.bot_v4 import BotV4
 from bots.bot_v4_2 import BotV4p2
 from bots.bot_v4_3 import BotV4p3
+from bots.bot_v5 import BotV5
+from bots.bot_v5_1 import BotV5p1

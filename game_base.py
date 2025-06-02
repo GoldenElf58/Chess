@@ -21,7 +21,7 @@ class GameStateBase:
         """ Convert the game state into a hashable format for caching. """
         raise NotImplementedError
 
-    def get_hashed(self) -> int:
+    def __hash__(self) -> int:
         raise NotImplementedError
 
     def get_moves(self) -> Any:
