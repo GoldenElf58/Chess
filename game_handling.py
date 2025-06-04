@@ -289,6 +289,7 @@ def game_loop() -> None:
     bot_options: tuple[Callable[[], Bot], ...] = (
         BotV5,
         BotV5p1,
+        BotV5p3,
         BotV1,
         BotV1p3,
         BotV2,

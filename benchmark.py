@@ -8,7 +8,7 @@ from typing import Any
 
 from scipy import stats  # type: ignore
 
-from bots import BotV5p1
+from bots import BotV5p1, BotV5p3, Bot
 from fen_utils import game_state_from_line
 from game import GameState
 from game_v2 import GameStateV2
@@ -33,16 +33,18 @@ def populate_game_states():
 
 populate_game_states()
 
-def benchmark(condition: bool, game_state: GameState | GameStateV2 | GameStateBitboards | GameStateBitboardsV2) -> None:
+def benchmark(condition: bool, game_state: GameState) -> None:
     # game_state.moves = None
     # game_state.previous_position_count = {}
     # game_state.are_captures()
     # game_state.get_moves()
-    bot = BotV5p1()
+    game_state_v2 = game_state.to_v2()
     if condition:
-        bot.evaluate_new(game_state)
+        bot: Bot = BotV5p3()
+        bot.generate_move(game_state_v2, depth=5)
     else:
-        bot.evaluate(game_state)
+        bot = BotV5p1()
+        bot.generate_move(game_state_v2, depth=5)
     # game_state.get_moves()
     # game_state.get_moves_no_check()
     # game_state.move(random.choice(moves))
@@ -89,10 +91,10 @@ def main() -> None:
     t3 = []
     for _ in range(50_000_000): pass
     print('Warmup complete')
-    N = 25_000
-    n = 50
-    timeit(lambda: benchmark(True, game_states[0].to_v2()), number=n*10)
-    test = timeit(lambda: benchmark(True, game_states[0].to_v2()), number=n * N // 200) / n / N * 200
+    N = 50
+    n = 1
+    timeit(lambda: benchmark(True, game_states[0]), number=n*3)
+    test = timeit(lambda: benchmark(True, game_states[0]), number=n) / n
     scale = 1_000_000 if test < .001 else (1_000 if test < 1 else 1)
     print(f'Test: {test}')
     print(f'Scale: {scale}')
@@ -105,9 +107,9 @@ def main() -> None:
         # t1.append(mean([benchmark(True, game_state)[1] for i in range(3)]))
         # t2.append(mean([benchmark(False, game_state)[1] for i in range(3)]))
         # timeit(lambda: benchmark(True, game_state_a), number=20)
-        game_state_a = game_state.to_v2()
+        game_state_a = game_state#.to_v2()
         t1.append(timeit(lambda: benchmark(True, game_state_a), number=n) * scale / n)
-        game_state_b = game_state.to_v2()
+        game_state_b = game_state#.to_v2()
         t2.append(timeit(lambda: benchmark(False, game_state_b), number=n) * scale / n)
         t3.append(t1[-1] - t2[-1])
         if i > 0 and i % (N // 50) == 0:

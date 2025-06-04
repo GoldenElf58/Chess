@@ -139,7 +139,7 @@ def populate_combined_tables():
 populate_combined_tables()
 
 
-class BotV5p1(Bot):
+class BotV5p3(Bot):
     def __init__(self, transposition_table: dict | None = None, eval_lookup: dict | None = None) -> None:
         self.transposition_table: dict[
             int, tuple[int, tuple[int, int, int]]] = transposition_table if transposition_table is not None else {}
@@ -171,12 +171,12 @@ class BotV5p1(Bot):
                             depth: int = -1) -> tuple[tuple[int, tuple[int, int, int]], int]:
         if depth >= 0:
             result: tuple[int, tuple[int, int, int]] = (0, game_state.get_moves()[0])
-            for i in range(min(depth, 3), depth + 1):
+            for i in range(min(depth, 4), depth + 1):
                 result = self.minimax(game_state, i, -(1 << 31), (1 << 31), maximizing_player)
             return result, depth
         t0: float = time.time()
         results: list[tuple[int, tuple[int, int, int]]] = [(0, game_state.get_moves()[0])]
-        depth = 3
+        depth = 4
         minimax_thread: threading.Thread = threading.Thread(
             target=lambda: results.append(self.minimax(game_state, depth, -(1 << 31), (1 << 31), maximizing_player)))
         minimax_thread.start()
