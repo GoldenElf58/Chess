@@ -1,6 +1,5 @@
 from bots.bot import Bot
 from bots.bot_v1 import BotV1
-from bots.bot_v1_3 import BotV1p3
 from bots.bot_v2 import BotV2
 from bots.bot_v3_5 import BotV3p5
 from bots.bot_v3_6 import BotV3p6
@@ -11,3 +10,4 @@ from bots.bot_v4_3 import BotV4p3
 from bots.bot_v5 import BotV5
 from bots.bot_v5_1 import BotV5p1
 from bots.bot_v5_3 import BotV5p3
+from bots.bot_v5_4 import BotV5p4

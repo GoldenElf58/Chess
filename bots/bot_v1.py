@@ -186,7 +186,8 @@ class BotV1(Bot):
             if time.time() - t0 < allotted_time: minimax_thread.start()
         if minimax_thread.is_alive():
             minimax_thread.join(0)
-        return results[-1], (len(results) if len(results) != 1 else 0)
+            return results[-1], (depth - 1 if len(results) != 1 else 0)
+        return results[-1], (depth if len(results) != 1 else 0)
 
     def minimax(self, game_state: GameStateV2, depth: int, alpha: int, beta: int, maximizing_player: bool,
                 first_call: bool = True) -> tuple[int, tuple[int, int, int]]:

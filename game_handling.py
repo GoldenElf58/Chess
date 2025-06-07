@@ -13,7 +13,6 @@ from scipy.stats import binomtest  # type: ignore
 
 from bots import *
 
-from bots.bot import Bot
 from fen_utils import game_state_from_line
 from game import GameState
 from game_base import GameStateBase
@@ -86,15 +85,15 @@ class GameMode(IntFlag):
 
 
 def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, font: Font, t0: float, game_mode: GameMode,
-                 wins: int, draws: int, losses: int, bots: list[Bot], depths=None):
+                 wins: int, draws: int, losses: int, bots: list[Bot], depths: list[list[int]] | None = None):
     info_x = 667
     info_rect = pygame.Rect(info_x, 0, screen.get_width() - info_x, screen.get_height())
 
     pygame.draw.rect(screen, (0, 0, 0), info_rect)
 
     eval_text = f"Evaluation: {last_eval / 100}"
-    turn_text = f"Turn: {game_state.turn}"
-    time_text = f"Time: {time.time() - t0:.0f}"
+    turn_text = f"Turn: {game_state.turn / 2}"
+    time_text = f"Time: {time.time() - t0:.{1 if time.time() - t0 < 10 else 0}f}"
     eval_surf = font.render(eval_text, True, "white")
     turn_surf = font.render(turn_text, True, "white")
     time_surf = font.render(time_text, True, "white")
@@ -103,9 +102,15 @@ def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, fon
     screen.blit(time_surf, (info_rect.x + 10, 70))
 
     if depths is not None and len(depths) != 0:
-        depths_text = f"Depth Average: {sum(depths) / len(depths):.1f}"
-        depths_surf = font.render(depths_text, True, "white")
-        screen.blit(depths_surf, (info_rect.x + 10, 100))
+        if len(depths[0]) != 0:
+            depths_text = f"Depth {bots[0].get_version()}: {sum(depths[0]) / len(depths[0]):.1f}"
+            depths_surf = font.render(depths_text, True, "white")
+            screen.blit(depths_surf, (info_rect.x + 10, 100))
+
+        if len(depths[1]) != 0:
+            depths_text = f"Depth {bots[1].get_version()}: {sum(depths[1]) / len(depths[1]):.1f}"
+            depths_surf = font.render(depths_text, True, "white")
+            screen.blit(depths_surf, (info_rect.x + 10, 130))
 
     if game_mode & GameMode.DEEP_TEST:
         # --- two‑sided binomial test for wins vs. losses ---
@@ -122,10 +127,10 @@ def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, fon
         losses_surf = font.render(losses_text, True, "white")
         p_value_surf = font.render(p_value_text, True, "white")
 
-        screen.blit(wins_surf, (info_rect.x + 10, 130))
-        screen.blit(draws_surf, (info_rect.x + 10, 160))
-        screen.blit(losses_surf, (info_rect.x + 10, 190))
-        screen.blit(p_value_surf, (info_rect.x + 10, 220))
+        screen.blit(wins_surf, (info_rect.x + 10, 160))
+        screen.blit(draws_surf, (info_rect.x + 10, 190))
+        screen.blit(losses_surf, (info_rect.x + 10, 220))
+        screen.blit(p_value_surf, (info_rect.x + 10, 250))
 
 
 class Button:
@@ -276,7 +281,7 @@ def game_loop() -> None:
     computer_thread: threading.Thread | None = None
     computer_move_result: list[tuple[tuple[int, tuple[int, int, int, int] | tuple[int, int, int]], int]] = []
     last_eval: int = 0
-    depths: list[int] = []
+    depths: list[list[int]] = [[], []]
     t0: float = time.time()
 
     num_lines: int = 500
@@ -290,8 +295,8 @@ def game_loop() -> None:
         BotV5,
         BotV5p1,
         BotV5p3,
+        BotV5p4,
         BotV1,
-        BotV1p3,
         BotV2,
         BotV3p5,
         BotV3p6,
@@ -300,7 +305,7 @@ def game_loop() -> None:
         BotV4p2,
         BotV4p3,
     )
-    bot_idxs: list[int] = [0, 0]
+    bot_idxs: list[int] = [2, 2]
     bots: list[Bot] = [bot_options[bot_idxs[0]](), bot_options[bot_idxs[1]]()]
 
     main_buttons: list[Button] = [
@@ -319,7 +324,7 @@ def game_loop() -> None:
         Button((43, 190, 100, 20), bots[1].get_version()),
     ]
 
-    test_mode: bool = False
+    test_mode: bool = True
     test_depth = 5
     test_allotted_time = .1
     normal_depth = -1
@@ -335,6 +340,7 @@ def game_loop() -> None:
                 pos = event.pos
                 t0 = time.time()
                 if main_buttons[0].check_hover(pos):
+                    reverse = False
                     game_mode = GameMode.PLAY_WHITE
                     game_state = game_state_type()
                     bots[0].clear_cache()
@@ -411,7 +417,7 @@ def game_loop() -> None:
                         game_mode & GameMode.PLAY_BLACK and game_state.color == 1):
                     computer_move_result.clear()
                     computer_thread = threading.Thread(target=lambda: computer_move_result.append(
-                        bots[0 if (game_state.color == 1) != reverse else 1]
+                        bots[0 if (game_state.color == 1) is not reverse else 1]
                         .generate_move(game_state, test_allotted_time if test_mode else normal_allotted_time,
                                        depth=test_depth if test_mode else normal_depth)))
                     computer_thread.start()
@@ -419,7 +425,7 @@ def game_loop() -> None:
                 if computer_move_result:
                     computer_thread.join()
                     (last_eval, best_move), depth = computer_move_result.pop(0)
-                    depths.append(depth)
+                    depths[0 if (game_state.color == 1) is not reverse else 1].append(depth)
                     game_state = game_state.move(best_move)
                     if game_state.turn % 10 == 0 and game_mode & GameMode.AI_VS_AI and test_mode:
                         print(time.time() - t0)
@@ -434,7 +440,7 @@ def game_loop() -> None:
             if not game_mode & GameMode.DEEP_TEST:
                 print(winner, game_state.turn, time.time() - t0)
                 game_mode = GameMode.MAIN_MENU
-                depths.clear()
+                depths[0].clear(); depths[1].clear()
             else:
                 computer_move_result.clear()
                 bot0_color: int = 1 if not reverse else -1

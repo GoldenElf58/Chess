@@ -176,7 +176,7 @@ class BotV5p3(Bot):
             return result, depth
         t0: float = time.time()
         results: list[tuple[int, tuple[int, int, int]]] = [(0, game_state.get_moves()[0])]
-        depth = 4
+        depth = 4 if allotted_time >= .4 else (3 if allotted_time >= .035 else 2)
         minimax_thread: threading.Thread = threading.Thread(
             target=lambda: results.append(self.minimax(game_state, depth, -(1 << 31), (1 << 31), maximizing_player)))
         minimax_thread.start()
@@ -189,7 +189,8 @@ class BotV5p3(Bot):
             if time.time() - t0 < allotted_time: minimax_thread.start()
         if minimax_thread.is_alive():
             minimax_thread.join(0)
-        return results[-1], (len(results) if len(results) != 1 else 0)
+            return results[-1], (depth - 1 if len(results) != 1 else 0)
+        return results[-1], (depth if len(results) != 1 else 0)
 
     def minimax(self, game_state: GameStateV2, depth: int, alpha: int, beta: int, maximizing_player: bool,
                 first_call: bool = True) -> tuple[int, tuple[int, int, int]]:
