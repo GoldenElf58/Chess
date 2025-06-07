@@ -1,4 +1,4 @@
-from game_v2 import GameStateV2 as GameStateTest
+from game_v3 import GameStateV3 as GameStateTest
 from correct_game_v2 import GameStateV2Correct, start_board
 
 base_board: tuple[int, ...] = (
