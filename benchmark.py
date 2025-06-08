@@ -6,10 +6,10 @@ from timeit import timeit
 
 from scipy import stats  # type: ignore
 
-from bots import BotV5p4, BotV5p3, Bot
+from bots import BotV1
 from fen_utils import game_state_from_line
 from game import GameState
-from game_v2 import GameStateV2
+from game_v3 import GameStateV3
 # from game_base import GameStateBase
 # from game_bitboards import GameStateBitboards
 # from game_bitboards_v2 import GameStateBitboardsV2
@@ -31,19 +31,21 @@ def populate_game_states():
 
 populate_game_states()
 
-def benchmark(condition: bool, game_state: GameState) -> None:
+def benchmark(condition: bool, game_state: GameStateV3) -> None:
+    # pass
     # game_state.moves = None
     # game_state.previous_position_count = {}
     # game_state.are_captures()
     # game_state.get_moves()
-    game_state_v2 = game_state.to_v2()
-    BotV5p3().generate_move(game_state_v2, depth=3)
-    # if condition:
-    #     bot: Bot = BotV5p3()
-    #     bot.generate_move(game_state_v2, depth=5)
-    # else:
-    #     bot = BotV5p1()
-    #     bot.generate_move(game_state_v2, depth=5)
+    # game_state = GameStateV2()
+    # bot = BotV1()
+    # while game_state.get_winner() is None:
+    #     game_state.move(bot.generate_move(game_state, depth=2)[0][1])
+
+    if condition:
+         game_state.get_moves()
+    else:
+        game_state.get_moves_no_check()
     # game_state.get_moves()
     # game_state.get_moves_no_check()
     # game_state.move(random.choice(moves))
@@ -58,31 +60,36 @@ def benchmark(condition: bool, game_state: GameState) -> None:
 
 
 def test():
-    game_state = GameStateV2()
+    game_state = GameStateV3()
     t0 = time.time_ns()
     moves = 0
-    while game_state.get_winner() is None:
-        game_state = game_state.move(random.choice(game_state.get_moves()))
+    bot = BotV1()
+    for i in range(7):
+        game_state.get_winner()
+    # while game_state.get_winner() is None:
+        game_state = game_state.move(bot.generate_move(game_state, depth=2)[0][1])
         game_state.get_moves()
         moves += 1
     t1 = time.time_ns()
-    print(f'Total time (ms): {(t1 - t0) / 1_000_000:.5f}')
+    # print(f'Total time (ms): {(t1 - t0) / 1_000_000:.5f}')
+    print(f'Moves: {moves}')
     print(f'Average time (µs): {((t1 - t0) / 1_000) / moves:.5f}')
-    return t1 - t0, (t1 - t0) / moves
+    return moves, (t1 - t0) / moves
 
 def deep_test():
-    game_times = []
+    moves = []
     turn_times = []
     for i in range(100):
-        game_time, turn_time = test()
-        game_times.append(game_time)
+        turns, turn_time = test()
+        moves.append(turns)
         turn_times.append(turn_time)
     print()
-    print(f'Average game time (ms): {mean(game_times) / 1_000_000:.5f}')
-    print(f'Std dev game time (ms): {stdev(game_times) / 1_000_000:.5f}')
+    print(f'Average moves: {mean(moves):.1f}')
+    print(f'Std dev moves: {stdev(moves):.2f}')
     print()
     print(f'Average turn time (µs): {mean(turn_times) / 1_000:.5f}')
     print(f'Std dev turn time (µs): {stdev(turn_times) / 1_000:.5f}')
+
 
 def main() -> None:
     t1 = []
@@ -90,10 +97,10 @@ def main() -> None:
     t3 = []
     for _ in range(50_000_000): pass
     print('Warmup complete')
-    N = 500
-    n = 1
-    timeit(lambda: benchmark(True, game_states[0]), number=n*3)
-    test = timeit(lambda: benchmark(True, game_states[0]), number=n) / n
+    N = 2500
+    n = 25
+    timeit(lambda: benchmark(True, GameStateV3()), number=n*3)
+    test = timeit(lambda: benchmark(True, GameStateV3()), number=n) / n
     scale = 1_000_000 if test < .001 else (1_000 if test < 1 else 1)
     print(f'Test: {test}')
     print(f'Scale: {scale}')
@@ -107,9 +114,9 @@ def main() -> None:
         # t1.append(mean([benchmark(True, game_state)[1] for i in range(3)]))
         # t2.append(mean([benchmark(False, game_state)[1] for i in range(3)]))
         # timeit(lambda: benchmark(True, game_state_a), number=20)
-        game_state_a = game_state#.to_v2()
+        game_state_a = game_state.to_v3()
         t1.append(timeit(lambda: benchmark(True, game_state_a), number=n) * scale / n)
-        game_state_b = game_state#.to_v2()
+        game_state_b = game_state.to_v3()
         t2.append(timeit(lambda: benchmark(False, game_state_b), number=n) * scale / n)
         t3.append(t1[-1] - t2[-1])
         if (i - start) > 0 and (i - start) % (N // 50) == 0:
@@ -139,5 +146,5 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    # deep_test()
-    main()
+    deep_test()
+    # main()

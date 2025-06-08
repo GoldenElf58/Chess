@@ -1,6 +1,6 @@
 from copy import copy
 
-from game_base import GameStateBase
+from game_format_v2 import GameStateFormatV2
 from utils import split_table
 
 # Precompute index-to-coordinate mapping for faster lookups
@@ -95,19 +95,8 @@ def populate_precomputed_tables() -> None:
 
 populate_precomputed_tables()
 
-start_board: tuple[int, ...] = (
-    -4, -2, -3, -5, -6, -3, -2, -4,
-    -1, -1, -1, -1, -1, -1, -1, -1,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    1, 1, 1, 1, 1, 1, 1, 1,
-    4, 2, 3, 5, 6, 3, 2, 4
-)
 
-
-class GameStateV2(GameStateBase):
+class GameStateV2(GameStateFormatV2):
     __slots__ = ('board', 'color', 'white_queen', 'white_king', 'black_queen', 'black_king', 'last_move', 'turn',
                  'winner', 'previous_position_count', 'moves_since_pawn', 'moves')
 
@@ -144,11 +133,8 @@ class GameStateV2(GameStateBase):
         moves_since_pawn : int, optional
             The number of moves since the last pawn move. Defaults to 0.
         """
-        self.board: tuple[int, ...] = start_board if board is None else board
-        self.moves: list[tuple[int, int, int]] | None = None
-        self.last_move: tuple[int, int, int] | None = last_move
-        super().__init__(white_queen, white_king, black_queen, black_king, color, turn, winner,
-                         previous_position_count, moves_since_pawn)
+        super().__init__(board, white_queen, white_king, black_queen, black_king, last_move,
+                         color, turn, winner, previous_position_count, moves_since_pawn)
 
     def get_hashable_state(self) -> tuple[tuple[int, ...], int, bool, bool, bool, bool,
     tuple[int, int, int] | None, int]:
@@ -195,7 +181,7 @@ class GameStateV2(GameStateBase):
                     break
         if len(moves) == 0 and moves_len > 0:
             game_state: GameStateV2 = GameStateV2(self.board, self.white_queen, self.white_king, self.black_queen,
-                                                  self.black_king, None, -self.color, self.turn, self.winner)
+                                              self.black_king, None, -self.color, self.turn, self.winner)
             for move in game_state.get_moves_no_check():
                 if (winner := game_state.move(move).get_winner()) == -1 or winner == 1:
                     break
@@ -319,7 +305,7 @@ class GameStateV2(GameStateBase):
         Returns
         -------
         GameStateV2
-            A new GameState object, with the move applied.
+            A new GameStateV2 object, with the move applied.
         """
         board_local: tuple[int, ...] = self.board
         new_board: list[int] = list(board_local)
@@ -346,14 +332,14 @@ class GameStateV2(GameStateBase):
             new_board[move_2 + move_1] = board_local[move_2 + (3 if move_1 == 1 else -4)]
             new_board[move_2 + 2 * move_1] = board_local[move_2]
             return GameStateV2(tuple(new_board), white_queen, white_king, black_queen, black_king,
-                               color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn)
+                             color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn)
 
         if move_0 == -2:  # En Passant
             new_board[move_2] = 0
             new_board[move_2 - 8 * self.color + move_1] = self.color
             new_board[move_2 + move_1] = 0
             return GameStateV2(tuple(new_board), white_queen, white_king, black_queen, black_king,
-                               color=-self.color, turn=self.turn + 1, moves_since_pawn=0)
+                             color=-self.color, turn=self.turn + 1, moves_since_pawn=0)
 
         if (piece := abs(move_2)) in (4, 6):
             if move_1 == 56:
@@ -395,8 +381,8 @@ class GameStateV2(GameStateBase):
         last_move: tuple[int, int, int] | None = move if (
                 piece == 1 and (move_0 == move_1 + self.color * 16)) else None
         return GameStateV2(tuple(new_board), white_queen, white_king, black_queen, black_king, last_move=last_move,
-                           color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn,
-                           previous_position_count=new_previous_position_count)
+                         color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn,
+                         previous_position_count=new_previous_position_count)
 
     def get_winner(self) -> int | None:
         if self.winner is not None:

@@ -1,5 +1,5 @@
 from game_v3 import GameStateV3 as GameStateTest
-from correct_game_v2 import GameStateV2Correct, start_board
+from correct_game_v2 import GameStateCorrect
 
 base_board: tuple[int, ...] = (
     0, 0, 0, 0, 0, 0, 0, 0,
@@ -14,13 +14,12 @@ base_board: tuple[int, ...] = (
 
 
 def test_create_start_board() -> None:
-    game_state: GameStateTest = GameStateTest()
-    assert game_state.board == start_board
+    assert GameStateTest().board == GameStateCorrect().board
 
 
 def board_move_matches(board: tuple[int, ...], **kwargs) -> None:
     game_state: GameStateTest = GameStateTest(board, **kwargs)
-    game_state_correct: GameStateV2Correct = GameStateV2Correct(board, **kwargs)
+    game_state_correct: GameStateCorrect = GameStateCorrect(board, **kwargs)
     assert game_state.get_moves() == game_state_correct.get_moves()
     for move in game_state.get_moves():
         assert game_state.move(move).board == game_state_correct.move(move).board
@@ -28,7 +27,7 @@ def board_move_matches(board: tuple[int, ...], **kwargs) -> None:
 
 def board_result_matches(board: tuple[int, ...], **kwargs) -> None:
     game_state: GameStateTest = GameStateTest(board, **kwargs)
-    game_state_correct: GameStateV2Correct = GameStateV2Correct(board, **kwargs)
+    game_state_correct: GameStateCorrect = GameStateCorrect(board, **kwargs)
     assert game_state.get_winner() == game_state_correct.get_winner()
 
 
@@ -294,12 +293,12 @@ def test_stalemate() -> None:
         ),
     ]
     for board in boards:
-        board_move_matches(board, color=1)
+        board_result_matches(board, color=1)
 
 
 def test_castle_through_check() -> None:
     board = (
-        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, -6, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
@@ -317,7 +316,7 @@ def test_castle_through_check() -> None:
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 6, 0, 0, 0, 0,
     )
     board_move_matches(board, color=-1)
 
@@ -336,9 +335,9 @@ def test_en_passant_discover_check() -> None:
     board_move_matches(board, color=1, last_move=(10, 26, -1))
 
 
-def test_check_pin_bishop() -> None:
+def test_check_pin_rook() -> None:
     board = (
-        0, 0, 0, 0, 0, 0, 0, 0,
+        -6, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, -4, 0, 0, 0, 0,
@@ -350,7 +349,7 @@ def test_check_pin_bishop() -> None:
     board_move_matches(board, color=1)
 
     board = (
-        0, 0, 0, 0, 0, 0, 0, 0,
+        6, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 4, 0, 0, 0, 0,
@@ -362,13 +361,13 @@ def test_check_pin_bishop() -> None:
     board_move_matches(board, color=-1)
 
 
-def test_check_pin_rook() -> None:
+def test_check_pin_bishop() -> None:
     board = (
+        -6, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0,
-        0, 3, 0, 0, 0, 0, 0, 0,
+        0, -3, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 4, 0, 0, 0, 0,
         0, 0, 0, 0, 6, 0, 0, 0,
@@ -376,11 +375,11 @@ def test_check_pin_rook() -> None:
     board_move_matches(board, color=1)
 
     board = (
+        6, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0,
-        0, -3, 0, 0, 0, 0, 0, 0,
+        0, 3, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, -4, 0, 0, 0, 0,
         0, 0, 0, 0, -6, 0, 0, 0,
@@ -388,30 +387,120 @@ def test_check_pin_rook() -> None:
     board_move_matches(board, color=-1)
 
 
-def test_check_block() -> None:
+def test_walk_into_knight() -> None:
+    board = (
+        -6, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, -2, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 6, 0, 0, 0, 0,
+    )
+    board_move_matches(board, color=1)
+
+    board = (
+        6, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 2, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, -6, 0, 0, 0, 0,
+    )
+    board_move_matches(board, color=-1)
+
+
+def test_walk_into_king() -> None:
     board = (
         0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, -6, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 6, 0, 0, 0, 0,
+    )
+    board_move_matches(board, color=1)
+    board_move_matches(board, color=-1)
+
+
+def test_walk_into_pawn() -> None:
+    board = (
+        -6, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, -1, 0, 0, 0, 0,
+        0, 0, 0, 6, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+    )
+    board_move_matches(board, color=1)
+
+    board = (
+        6, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 1, 0, 0, 0, 0,
+        0, 0, 0, -6, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+    )
+    board_move_matches(board, color=-1)
+
+
+def test_check_rook_block() -> None:
+    board = (
+        -6, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, -4, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 2, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 4, 0,
-        0, 0, 0, 0, 6, 0, 0, 0,
+        0, 0, 0, 3, 6, 0, 0, 0,
     )
     board_move_matches(board, color=1)
 
     board = (
-        0, 0, 0, 0, 0, 0, 0, 0,
+        6, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 4, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, -2, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, -4, 0,
-        0, 0, 0, 0, -6, 0, 0, 0,
+        0, 0, 0, -3, -6, 0, 0, 0,
+    )
+    board_move_matches(board, color=-1)
+
+
+def test_check_bishop_block() -> None:
+    board = (
+        -6, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, -3,
+        0, 0, 0, 2, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 4, 0,
+        0, 0, 0, 0, 6, 0, 3, 0,
     )
     board_move_matches(board, color=1)
 
-
-
+    board = (
+        6, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 3,
+        0, 0, 0, -2, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, -4, 0,
+        0, 0, 0, 0, -6, 0, -3, 0,
+    )
+    board_move_matches(board, color=-1)

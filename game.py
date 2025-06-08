@@ -3,6 +3,7 @@ from copy import copy
 from game_base import GameStateBase
 from game_bitboards import GameStateBitboards
 from game_bitboards_v2 import GameStateBitboardsV2
+from game_v3 import GameStateV3
 from game_v2 import GameStateV2
 from utils import split_table
 
@@ -197,6 +198,7 @@ class GameState(GameStateBase):
                     break
             else:
                 self.winner = 0
+                self.moves = moves
                 return moves
             self.winner = winner
         elif self.moves_since_pawn >= 50:
@@ -484,8 +486,13 @@ class GameState(GameStateBase):
 
     def to_v2(self) -> GameStateV2:
         return GameStateV2(self.board, self.white_queen, self.white_king, self.black_queen, self.black_king,
-                           None, self.color, self.turn, self.winner, copy(self.previous_position_count),
-                           self.moves_since_pawn)
+                         None, self.color, self.turn, self.winner, copy(self.previous_position_count),
+                         self.moves_since_pawn)
+
+    def to_v3(self) -> GameStateV3:
+        return GameStateV3(self.board, self.white_queen, self.white_king, self.black_queen, self.black_king,
+                         None, self.color, self.turn, self.winner, copy(self.previous_position_count),
+                         self.moves_since_pawn)
 
     def copy(self) -> 'GameState':
         return GameState(self.board, self.white_queen, self.white_king, self.black_queen, self.black_king,

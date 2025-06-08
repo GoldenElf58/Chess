@@ -18,7 +18,7 @@ from game import GameState
 from game_base import GameStateBase
 from game_bitboards import GameStateBitboards
 from game_bitboards_v2 import GameStateBitboardsV2
-from game_v2 import GameStateV2
+from game_format_v2 import GameStateFormatV2
 
 images = [
     pygame.image.load("piece_images/-6.png"),
@@ -46,7 +46,7 @@ def display_board(screen, game_state: GameStateBase, selected_square=(), offset=
             else:
                 pygame.draw.rect(screen, (240, 217, 181) if (i + j) % 2 == 0 else (181, 136, 99),
                                  (j * 60 + offset, i * 60, 60, 60 + offset))
-            if isinstance(game_state, GameState) or isinstance(game_state, GameStateV2):
+            if isinstance(game_state, GameState) or isinstance(game_state, GameStateFormatV2):
                 if game_state.board[i * 8 + j] != 0:
                     screen.blit(images[game_state.board[i * 8 + j] + 6], (j * 60 + offset, i * 60))
             elif isinstance(game_state, GameStateBitboards) or isinstance(game_state, GameStateBitboardsV2):
@@ -181,7 +181,7 @@ def can_select_square(row: int, col: int, game_state: GameStateBase, game_mode: 
                      ((selected_piece_mask & game_state.white_pieces) and color == 1) or (
                              (game_mode & (GameMode.PLAY_BLACK | GameMode.HUMAN)) and
                              (selected_piece_mask & game_state.black_pieces) and color == -1)))
-    elif isinstance(game_state, GameState) or isinstance(game_state, GameStateV2):
+    elif isinstance(game_state, GameState) or isinstance(game_state, GameStateFormatV2):
         selected_piece = game_state.board[row * 8 + col]
         return bool((game_mode & GameMode.HUMAN and ((selected_piece > 0 and color == 1) or (
                 selected_piece < 0 and color == -1))) or (selected_piece > 0 and color == 1 and
@@ -223,7 +223,7 @@ def find_move(user_src: tuple[int, int], user_dest: tuple[int, int],
                 elif move[0] <= -4:
                     if user_dest == (user_src[0] - color, user_src[1] + move[1]):
                         return move
-    elif isinstance(game_state, GameStateV2):
+    elif isinstance(game_state, GameStateFormatV2):
         user_src_idx: int = user_src[0] * 8 + user_src[1]
         user_dest_idx: int = user_dest[0] * 8 + user_dest[1]
         for move_ in legal_moves:  # type: tuple[int, int, int]
@@ -270,7 +270,7 @@ def game_loop() -> None:
     pygame.init()
     screen: Surface = pygame.display.set_mode((854, 480))
     offset: int = 187
-    game_state_type: Callable[[], GameStateBase] = GameStateV2
+    game_state_type: Callable[[], GameStateBase] = GameState
     game_state: GameStateBase = game_state_type()
     selected_square: tuple[int, int] | None = None
     """For human move selection, represented as (col, row)"""
@@ -308,6 +308,12 @@ def game_loop() -> None:
     bot_idxs: list[int] = [2, 2]
     bots: list[Bot] = [bot_options[bot_idxs[0]](), bot_options[bot_idxs[1]]()]
 
+    test_mode: bool = False
+    test_depth = 5
+    test_allotted_time = .1
+    normal_depth = -1
+    normal_allotted_time = .1
+
     main_buttons: list[Button] = [
         Button((43, 190, 100, 20), "Play White"),
         Button((43, 230, 100, 20), "Play Black"),
@@ -319,16 +325,10 @@ def game_loop() -> None:
 
     options_buttons: list[Button] = [
         Button((43, 110, 100, 20), "Main Menu"),
-        Button((43, 230, 100, 20), "Normal"),
+        Button((43, 230, 100, 20), "Test" if test_mode else "Normal"),
         Button((43, 150, 100, 20), bots[0].get_version()),
         Button((43, 190, 100, 20), bots[1].get_version()),
     ]
-
-    test_mode: bool = True
-    test_depth = 5
-    test_allotted_time = .1
-    normal_depth = -1
-    normal_allotted_time = .1
 
     running: bool = True
     while running:
@@ -363,7 +363,7 @@ def game_loop() -> None:
                     reverse = False
                     game_state = game_state_from_line(line)
                     assert isinstance(game_state, GameState)
-                    if game_state_type == GameStateV2:
+                    if game_state_type == GameState:
                         game_state = game_state.to_v2()
                     elif game_state_type == GameStateBitboards:
                         game_state = game_state.to_bitboards()
@@ -465,7 +465,7 @@ def game_loop() -> None:
                     print(wins, draws, losses)
                 game_state = game_state_from_line(line)
                 assert isinstance(game_state, GameState)
-                if game_state_type == GameStateV2:
+                if game_state_type == GameState:
                     game_state = game_state.to_v2()
                 elif game_state_type == GameStateBitboards:
                     game_state = game_state.to_bitboards()
