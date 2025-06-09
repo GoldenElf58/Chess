@@ -1,0 +1,5 @@
+numpy~=2.2.5
+setuptools~=80.7.1
+mypy~=1.15.0
+scipy~=1.15.3
+pygame~=2.6.1
