@@ -11,7 +11,7 @@
     ```bash
     python build/setup.py build_ext --inplace
     ```
-> **Note:** Unless you see an actual error message, you can ignore any error-looking output.
+> **Note:** Unless you see a message that says "error", you can ignore any error-looking output.
 
 ## Usage Instructions - The Main Program
 
