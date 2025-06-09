@@ -43,9 +43,9 @@ def benchmark(condition: bool, game_state: GameStateV3) -> None:
     #     game_state.move(bot.generate_move(game_state, depth=2)[0][1])
 
     if condition:
-         game_state.get_moves()
+         game_state.get_moves_new()
     else:
-        game_state.get_moves_no_check()
+        game_state.get_moves()
     # game_state.get_moves()
     # game_state.get_moves_no_check()
     # game_state.move(random.choice(moves))
@@ -64,9 +64,9 @@ def test():
     t0 = time.time_ns()
     moves = 0
     bot = BotV1()
-    for i in range(7):
-        game_state.get_winner()
-    # while game_state.get_winner() is None:
+    # for i in range(7):
+    #     game_state.get_winner()
+    while game_state.get_winner() is None:
         game_state = game_state.move(bot.generate_move(game_state, depth=2)[0][1])
         game_state.get_moves()
         moves += 1
@@ -97,8 +97,8 @@ def main() -> None:
     t3 = []
     for _ in range(50_000_000): pass
     print('Warmup complete')
-    N = 2500
-    n = 25
+    N = 5000
+    n = 30
     timeit(lambda: benchmark(True, GameStateV3()), number=n*3)
     test = timeit(lambda: benchmark(True, GameStateV3()), number=n) / n
     scale = 1_000_000 if test < .001 else (1_000 if test < 1 else 1)

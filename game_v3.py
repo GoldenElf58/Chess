@@ -46,7 +46,7 @@ def populate_precomputed_tables() -> None:
         temp_king.append(tuple(curr))
 
         curr = []
-        curr2: list = []
+        curr2: list[int] = []
         for k in range(j + 1, 8):
             curr2.append(h - j + k)
         curr.append(tuple(curr2))
@@ -156,182 +156,101 @@ class GameStateV3(GameStateFormatV2):
         """
         if self.moves is not None: return self.moves
         moves: list[tuple[int, int, int]] = self.get_moves_no_check()
-        moves_len: int = len(moves)
+        pop_idx_base: int = len(moves) - 1
         color_local = self.color
         bishop_diagonals_local: tuple[tuple[tuple[int, ...], tuple[int, ...],
         tuple[int, ...], tuple[int, ...]], ...] = bishop_diagonals
         rook_rays_local: tuple[tuple[tuple[int, ...], tuple[int, ...],
         tuple[int, ...], tuple[int, ...]], ...] = rook_rays
+        king_idx: int = -1
+        for i, piece in enumerate(self.board):
+            if piece * color_local == 6:
+                king_idx = i
+                break
         for i, move in enumerate(reversed(moves)):
-            state: GameStateV3 = self.move(move)
-            additional_squares: list[int] = []
+            board_local: tuple[int, ...] = self.move(move).board
             illegal: bool = False
+            castled: bool = False
+            king_moved: bool = False
             if move[0] == -1:  # Castle
-                additional_squares = [move[2], move[2] + move[1], move[2] + move[1] * 2]
-            king_moved = move[2] == 6 or move[2] == -6 or move[0] == -1
-            for h, piece in enumerate(state.board):
-                piece_type = color_local * piece
-                if piece_type >= 0: continue
-                if piece_type == -3 or piece_type == -5:
-                    for diagonal in bishop_diagonals_local[h]:
-                        for diagonal_idx in diagonal:
-                            if king_moved and diagonal_idx in additional_squares:
-                                illegal = True
-                                break
-                            if state.board[diagonal_idx] == 0:
-                                continue
-                            if state.board[diagonal_idx] * color_local == 6:
-                                illegal = True
-                            break
-                        if illegal:
-                            break
-                    if illegal:
-                        moves.pop(moves_len - i - 1)
-                        break
-                if piece_type == -4 or piece_type == -5:
-                    for ray in rook_rays_local[h]:
-                        for ray_idx in ray:
-                            if king_moved and ray_idx in additional_squares:
-                                illegal = True
-                                break
-                            if state.board[ray_idx] == 0:
-                                continue
-                            if state.board[ray_idx] * color_local == 6:
-                                illegal = True
-                            break
-                        if illegal:
-                            break
-                    if illegal:
-                        moves.pop(moves_len - i - 1)
-                        break
-                elif king_moved:
-                    if piece_type == -6:
-                        for target_idx in king_targets[h]:
-                            if state.board[target_idx] * color_local == 6:
-                                break
-                        else:
-                            continue
-                        moves.pop(moves_len - i - 1)
-                        break
-                    elif piece_type == -2:
-                        for target_idx in knight_targets[h]:
-                            if state.board[target_idx] * color_local == 6:
-                                break
-                        else:
-                            continue
-                        moves.pop(moves_len - i - 1)
-                        break
-                    elif piece_type == -1:
-                        dest_square = h + color_local * 8
-                        if state.board[dest_square + 1] * color_local == 6:
-                            moves.pop(moves_len - i - 1)
-                            break
-                        if state.board[dest_square - 1] * color_local == 6:
-                            moves.pop(moves_len - i - 1)
-                            break
-
-        if len(moves) == 0 and moves_len > 0:
-            game_state: GameStateV3 = GameStateV3(self.board, self.white_queen, self.white_king, self.black_queen,
-                                                  self.black_king, None, -color_local, self.turn, self.winner)
-            for move in game_state.get_moves_no_check():
-                if (winner := game_state.move(move).get_winner()) == -1 or winner == 1:
-                    break
+                castled = True
+                king_moved = True
+                cs0, cs1, cs2 = move[2], move[2] + move[1], move[2] + move[1] * 2 # type: int, int, int
+            elif move[2] == 6 or move[2] == -6:
+                king_moved = True
+                check_square: int = move[1]
             else:
-                self.winner = 0
-                self.moves = moves
-                return moves
-            self.winner = winner
-        elif self.moves_since_pawn >= 50:
-            self.winner = 0
-        self.moves = moves
-        return moves
-
-    def get_moves_new(self) -> list[tuple[int, int, int]]:
-        """
-        Get all the possible moves for the current player.
-
-        Returns
-        -------
-        list[tuple[int, int, int]]
-            A list of tuples, each representing a move in the format (start_row, start_col, end_row, end_col).
-        """
-        if self.moves is not None: return self.moves
-        moves: list[tuple[int, int, int]] = self.get_moves_no_check()
-        moves_len: int = len(moves)
-        color_local = self.color
-        bishop_diagonals_local: tuple[tuple[tuple[int, ...], tuple[int, ...],
-        tuple[int, ...], tuple[int, ...]], ...] = bishop_diagonals
-        rook_rays_local: tuple[tuple[tuple[int, ...], tuple[int, ...],
-        tuple[int, ...], tuple[int, ...]], ...] = rook_rays
-        for i, move in enumerate(reversed(moves)):
-            state: GameStateV3 = self.move(move)
-            additional_squares: list[int] = []
-            illegal: bool = False
-            if move[0] == -1:  # Castle
-                additional_squares = [move[2], move[2] + move[1], move[2] + move[1] * 2]
-            king_moved = move[2] == 6 or move[2] == -6 or move[0] == -1
-            for h, piece in enumerate(state.board):
+                check_square = king_idx
+            for h, piece in enumerate(board_local):
                 piece_type = color_local * piece
                 if piece_type >= 0: continue
                 if piece_type == -3 or piece_type == -5:
                     for diagonal in bishop_diagonals_local[h]:
                         for diagonal_idx in diagonal:
-                            if king_moved and diagonal_idx in additional_squares:
-                                illegal = True
-                                break
-                            if state.board[diagonal_idx] == 0:
+                            if board_local[diagonal_idx] == 0:
                                 continue
-                            if state.board[diagonal_idx] * color_local == 6:
+                            if castled:
+                                if diagonal_idx == cs0 or diagonal_idx == cs1 or diagonal_idx == cs2:
+                                    illegal = True
+                            elif diagonal_idx == check_square:
                                 illegal = True
                             break
                         if illegal:
                             break
                     if illegal:
-                        moves.pop(moves_len - i - 1)
+                        moves.pop(pop_idx_base - i)
                         break
                 if piece_type == -4 or piece_type == -5:
                     for ray in rook_rays_local[h]:
                         for ray_idx in ray:
-                            if king_moved and ray_idx in additional_squares:
-                                illegal = True
-                                break
-                            if state.board[ray_idx] == 0:
+                            if board_local[ray_idx] == 0:
                                 continue
-                            if state.board[ray_idx] * color_local == 6:
+                            if castled:
+                                if ray_idx == cs0 or ray_idx == cs1 or ray_idx == cs2:
+                                    illegal = True
+                            elif ray_idx == check_square:
                                 illegal = True
                             break
                         if illegal:
                             break
                     if illegal:
-                        moves.pop(moves_len - i - 1)
+                        moves.pop(pop_idx_base - i)
                         break
                 elif king_moved:
                     if piece_type == -6:
                         for target_idx in king_targets[h]:
-                            if state.board[target_idx] * color_local == 6:
+                            if castled:
+                                if target_idx == cs0 or target_idx == cs1 or target_idx == cs2:
+                                    break
+                            elif target_idx == check_square:
                                 break
                         else:
                             continue
-                        moves.pop(moves_len - i - 1)
+                        moves.pop(pop_idx_base - i)
                         break
                     elif piece_type == -2:
                         for target_idx in knight_targets[h]:
-                            if state.board[target_idx] * color_local == 6:
+                            if castled:
+                                if target_idx == cs0 or target_idx == cs1 or target_idx == cs2:
+                                    break
+                            elif target_idx == check_square:
                                 break
                         else:
                             continue
-                        moves.pop(moves_len - i - 1)
+                        moves.pop(pop_idx_base - i)
                         break
                     elif piece_type == -1:
                         dest_square = h + color_local * 8
-                        if state.board[dest_square + 1] * color_local == 6:
-                            moves.pop(moves_len - i - 1)
-                            break
-                        if state.board[dest_square - 1] * color_local == 6:
-                            moves.pop(moves_len - i - 1)
+                        if castled:
+                            if dest_square + 1 == cs0 or dest_square + 1 == cs1 or dest_square + 1 == cs2 or \
+                                    dest_square - 1 == cs0 or dest_square - 1 == cs1 or dest_square - 1 == cs2:
+                                moves.pop(pop_idx_base - i)
+                                break
+                        elif dest_square + 1 == check_square or dest_square - 1 == check_square:
+                            moves.pop(pop_idx_base - i)
                             break
 
-        if len(moves) == 0 and moves_len > 0:
+        if len(moves) == 0 and pop_idx_base > -1:
             game_state: GameStateV3 = GameStateV3(self.board, self.white_queen, self.white_king, self.black_queen,
                                                   self.black_king, None, -color_local, self.turn, self.winner)
             for move in game_state.get_moves_no_check():
