@@ -2,13 +2,19 @@ from setuptools import setup  # type: ignore
 from setuptools.command.build_ext import build_ext  # type: ignore
 from mypyc.build import mypycify
 import glob
+import time
 
 # collect all .py files in bots/
 bot_files = glob.glob("bots/*.py")
 
 class BuildExtOptimized(build_ext):
+    def run(self):
+        start = time.time()
+        super().run()
+        duration = time.time() - start
+        print(f"Compilation completed in {duration:.2f} seconds")
+
     def build_extensions(self):
-        # apply flags to every extension
         for ext in self.extensions:
             ext.extra_compile_args = [
                 "-O3",

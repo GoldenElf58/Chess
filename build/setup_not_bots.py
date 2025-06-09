@@ -1,30 +1,9 @@
+from setup import BuildExtOptimized
+
 from setuptools import setup  # type: ignore
 from setuptools.command.build_ext import build_ext  # type: ignore
 from mypyc.build import mypycify
-import time
 
-
-class BuildExtOptimized(build_ext):
-    def run(self):
-        start = time.time()
-        super().run()
-        duration = time.time() - start
-        print(f"Compilation completed in {duration:.2f} seconds")
-
-    def build_extensions(self):
-        # apply flags to every extension
-        for ext in self.extensions:
-            ext.extra_compile_args = [
-                "-O3",
-                "-g0",
-                "-march=native",
-                "-Wno-unused-variable",
-                "-Wno-unused-function",
-                "-Wno-unused-label",
-                "-Wno-unreachable-code",
-                "-Wno-unused-but-set-variable",
-            ]
-        super().build_extensions()
 
 setup(
     name="Chess",
