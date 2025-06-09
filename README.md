@@ -11,6 +11,7 @@
     ```bash
     python build/setup.py build_ext --inplace
     ```
+> **Note:** Unless you see an actual error message, you can ignore any error-looking output.
 
 ## Usage Instructions - The Main Program
 
@@ -36,7 +37,7 @@
 
 ## Usage Instructions - `benchmark.py`
 
- - In `if __name == '__main__':`, toggle between `deep_test()` and `main()`.
+In `if __name == '__main__':`, you can toggle between `deep_test()` and `main()`.
 
 ### `main()`
 
