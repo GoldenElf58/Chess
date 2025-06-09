@@ -2,7 +2,7 @@ import random
 from typing import Callable
 
 import pygame
-from pygame import Surface
+from pygame import Surface, Rect
 from pygame.font import Font
 
 from enum import IntFlag, auto
@@ -15,8 +15,6 @@ from bots import *
 
 from fen_utils import game_state_from_line
 from game_states import GameState, GameStateBase, GameStateBitboardsV2, GameStateFormatV2, GameStateV3
-from archive.game_bitboards import GameStateBitboards
-from archive.game_base import GameStateBase as GameStateBaseArchive
 
 images = [
     pygame.image.load("piece_images/-6.png"),
@@ -47,7 +45,7 @@ def display_board(screen, game_state: GameStateBase, selected_square=(), offset=
             if isinstance(game_state, GameState) or isinstance(game_state, GameStateFormatV2):
                 if game_state.board[i * 8 + j] != 0:
                     screen.blit(images[game_state.board[i * 8 + j] + 6], (j * 60 + offset, i * 60))
-            elif isinstance(game_state, GameStateBitboards) or isinstance(game_state, GameStateBitboardsV2):
+            elif isinstance(game_state, GameStateBitboardsV2):
                 piece = 0
                 piece_mask = 1 << (63 - (i * 8 + j))
                 if not piece_mask & (game_state.white_pieces | game_state.black_pieces):
@@ -83,26 +81,41 @@ class GameMode(IntFlag):
 
 
 def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, font: Font, t0: float, game_mode: GameMode,
-                 wins: int, draws: int, losses: int, bots: list[Bot], depths: list[list[int]] | None = None):
+                 wins: int, draws: int, losses: int, bots: list[Bot], depths: list[list[int]] | None = None) -> None:
+    """
+    Displays information about the game
+
+    :param screen: The screen to display the information on
+    :param game_state: The current game state
+    :param last_eval: The last evaluation from the bot
+    :param font: The font to use
+    :param t0: The time the game started
+    :param game_mode: The game mode
+    :param wins: The number of wins bots[0] has
+    :param draws: The number of draws
+    :param losses: The number of losses bots[0] has
+    :param bots: The two bots that are playing against each other
+    :param depths: The previous depths the bots searched to
+    """
     info_x = 667
     info_rect = pygame.Rect(info_x, 0, screen.get_width() - info_x, screen.get_height())
 
     pygame.draw.rect(screen, (0, 0, 0), info_rect)
 
-    eval_text = f"Evaluation: {last_eval / 100}"
-    turn_text = f"Turn: {game_state.turn / 2}"
-    time_text = f"Time: {time.time() - t0:.{1 if time.time() - t0 < 10 else 0}f}"
-    eval_surf = font.render(eval_text, True, "white")
-    turn_surf = font.render(turn_text, True, "white")
-    time_surf = font.render(time_text, True, "white")
+    eval_text: str = f"Evaluation: {last_eval / 100}"
+    turn_text: str = f"Turn: {game_state.turn / 2}"
+    time_text: str = f"Time: {time.time() - t0:.{1 if time.time() - t0 < 10 else 0}f}"
+    eval_surf: Surface = font.render(eval_text, True, "white")
+    turn_surf: Surface = font.render(turn_text, True, "white")
+    time_surf: Surface = font.render(time_text, True, "white")
     screen.blit(eval_surf, (info_rect.x + 10, 10))
     screen.blit(turn_surf, (info_rect.x + 10, 40))
     screen.blit(time_surf, (info_rect.x + 10, 70))
 
     if depths is not None and len(depths) != 0:
         if len(depths[0]) != 0:
-            depths_text = f"Depth {bots[0].get_version()}: {sum(depths[0]) / len(depths[0]):.1f}"
-            depths_surf = font.render(depths_text, True, "white")
+            depths_text: str = f"Depth {bots[0].get_version()}: {sum(depths[0]) / len(depths[0]):.1f}"
+            depths_surf: Surface = font.render(depths_text, True, "white")
             screen.blit(depths_surf, (info_rect.x + 10, 100))
 
         if len(depths[1]) != 0:
@@ -112,18 +125,18 @@ def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, fon
 
     if game_mode & GameMode.DEEP_TEST:
         # --- two‑sided binomial test for wins vs. losses ---
-        n_games = wins + losses
-        p_value = 1.0 if n_games == 0 else binomtest(wins, n_games).pvalue
+        n_games: int = wins + losses
+        p_value: float = 1.0 if n_games == 0 else binomtest(wins, n_games).pvalue
 
-        wins_text = f"{bots[0].get_version()}: {wins}"
-        draws_text = f"Draws: {draws}"
-        losses_text = f"{bots[1].get_version()}: {losses}"
-        p_value_text = f"P-Value: {p_value:.4f}"
+        wins_text: str = f"{bots[0].get_version()}: {wins}"
+        draws_text: str = f"Draws: {draws}"
+        losses_text: str = f"{bots[1].get_version()}: {losses}"
+        p_value_text: str = f"P-Value: {p_value:.4f}"
 
-        wins_surf = font.render(wins_text, True, "white")
-        draws_surf = font.render(draws_text, True, "white")
-        losses_surf = font.render(losses_text, True, "white")
-        p_value_surf = font.render(p_value_text, True, "white")
+        wins_surf: Surface = font.render(wins_text, True, "white")
+        draws_surf: Surface = font.render(draws_text, True, "white")
+        losses_surf: Surface = font.render(losses_text, True, "white")
+        p_value_surf: Surface = font.render(p_value_text, True, "white")
 
         screen.blit(wins_surf, (info_rect.x + 10, 160))
         screen.blit(draws_surf, (info_rect.x + 10, 190))
@@ -132,21 +145,33 @@ def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, fon
 
 
 class Button:
-    def __init__(self, rect, text, color="gray", hover_color="lightgray", text_color=(0, 0, 0)):
+    def __init__(self, rect, text, color="gray", hover_color="lightgray", text_color=(0, 0, 0)) -> None:
         self.rect = pygame.Rect(rect)
         self.text = text
         self.color = color
         self.hover_color = hover_color
         self.text_color = text_color
 
-    def draw(self, screen, font):
-        mouse_pos = pygame.mouse.get_pos()
+    def draw(self, screen: Surface, font: Font) -> None:
+        """
+        Draws the button
+
+        :param screen: The screen to draw the button on
+        :param font: The font to use to draw the text
+        """
+        mouse_pos: tuple[int, int] = pygame.mouse.get_pos()
         pygame.draw.rect(screen, self.hover_color if self.check_hover(mouse_pos) else self.color, self.rect)
-        text_surf = font.render(self.text, True, self.text_color)
-        text_rect = text_surf.get_rect(center=self.rect.center)
+        text_surf: Surface = font.render(self.text, True, self.text_color)
+        text_rect: Rect = text_surf.get_rect(center=self.rect.center)
         screen.blit(text_surf, text_rect)
 
-    def check_hover(self, pos) -> bool:
+    def check_hover(self, pos: tuple[int, int]) -> bool:
+        """
+        Checks if the mouse is hovering over the button
+
+        :param pos: Position of the mouse, represented as (x, y)
+        :return: Whether or not the mouse is hovering over the button
+        """
         return self.rect.collidepoint(pos)
 
 
@@ -173,7 +198,7 @@ def can_select_square(row: int, col: int, game_state: GameStateBase, game_mode: 
     :return: Whether or not the square can be selected
     """
     color = game_state.color
-    if isinstance(game_state, GameStateBitboards) or isinstance(game_state, GameStateBitboardsV2):
+    if isinstance(game_state, GameStateBitboardsV2):
         selected_piece_mask = 1 << (63 - (row * 8 + col))
         return bool(((game_mode & (GameMode.HUMAN | GameMode.PLAY_WHITE)) and
                      ((selected_piece_mask & game_state.white_pieces) and color == 1) or (
@@ -200,7 +225,7 @@ def find_move(user_src: tuple[int, int], user_dest: tuple[int, int],
     color = game_state.color
     legal_moves: list = game_state.get_moves()
     # Loop through legal moves.
-    if isinstance(game_state, GameState) or isinstance(game_state, GameStateBitboards):
+    if isinstance(game_state, GameState):
         for move in legal_moves:  # type: tuple[int, int, int, int]
             if move[0] >= 0:
                 if (move[0], move[1]) == user_src and (move[2], move[3]) == user_dest:
@@ -268,7 +293,7 @@ def game_loop() -> None:
     pygame.init()
     screen: Surface = pygame.display.set_mode((854, 480))
     offset: int = 187
-    game_state_type: Callable[[], GameStateBase | GameStateBaseArchive] = GameStateV3
+    game_state_type: Callable[[], GameStateBase] = GameStateV3
     game_state: GameStateBase = game_state_type()
     selected_square: tuple[int, int] | None = None
     """For human move selection, represented as (col, row)"""
@@ -363,8 +388,6 @@ def game_loop() -> None:
                     assert isinstance(game_state, GameState)
                     if game_state_type == GameState:
                         game_state = game_state.to_v2()
-                    elif game_state_type == GameStateBitboards:
-                        game_state = game_state.to_bitboards()
                     elif game_state_type == GameStateBitboardsV2:
                         game_state = game_state.to_bitboards_v2()
                     bots[0].clear_cache()
@@ -465,8 +488,6 @@ def game_loop() -> None:
                 assert isinstance(game_state, GameState)
                 if game_state_type == GameState:
                     game_state = game_state.to_v2()
-                elif game_state_type == GameStateBitboards:
-                    game_state = game_state.to_bitboards()
                 elif game_state_type == GameStateBitboardsV2:
                     game_state = game_state.to_bitboards_v2()
                 bots[0].clear_cache()
