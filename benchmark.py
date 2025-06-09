@@ -6,16 +6,14 @@ from timeit import timeit
 
 from scipy import stats  # type: ignore
 
-from bots import BotV1
 from fen_utils import game_state_from_line
-from game import GameState
-from game_v3 import GameStateV3
-# from game_base import GameStateBase
-# from game_bitboards import GameStateBitboards
-# from game_bitboards_v2 import GameStateBitboardsV2
+from game_states import GameState, GameStateBase, GameStateV2, GameStateV3, GameStateBitboardsV2
+from archive.game_bitboards import GameStateBitboards
+from archive.game_base import GameStateBase as GameStateBaseArchive
 
 game_states: list[GameState] = []
 coord_to_index: list[list[int]] = [[0 for _ in range(8)] for _ in range(8)]
+
 
 def populate_game_states():
     global game_states
@@ -29,22 +27,24 @@ def populate_game_states():
     #     game_state.get_moves()
     # print("Moves calculated")
 
+
 populate_game_states()
 
-def benchmark(condition: bool, game_state: GameStateV3) -> None:
+
+def benchmark(condition: bool, game_state: GameStateBase | GameStateBaseArchive) -> None:
     # pass
-    game_state.moves = None
+    # game_state.moves = None
     # game_state.are_captures()
-    # game_state.get_moves()
+    game_state.get_moves_no_check()
     # game_state = GameStateV2()
     # bot = BotV1()
     # while game_state.get_winner() is None:
     #     game_state.move(bot.generate_move(game_state, depth=2)[0][1])
 
-    if condition:
-        game_state.get_moves()
-    else:
-        game_state.get_moves_no_check()
+    # if condition:
+    #     game_state.get_moves()
+    # else:
+    #     game_state.get_moves_no_check()
     # game_state.get_moves()
     # game_state.get_moves_no_check()
     # game_state.move(random.choice(moves))
@@ -66,14 +66,15 @@ def test():
     # for i in range(7):
     #     game_state.get_winner()
     while game_state.get_winner() is None:
-        game_state = game_state.move(random.choice(game_state.get_moves_no_check()))#game_state.move(bot.generate_move(game_state, depth=2)[0][1])
-        # game_state.get_moves()
+        game_state = game_state.move(random.choice(game_state.get_moves()))  # game_state.move(bot.generate_move(game_state, depth=2)[0][1])
+        game_state.get_moves()
         moves += 1
     t1 = time.time_ns()
     print(f'Total time (µs): {(t1 - t0) / 1_000:#.5g}')
     # print(f'Moves: {moves}')
     print(f'Average time (µs): {((t1 - t0) / 1_000) / moves:#.5g}')
     return (t1 - t0), (t1 - t0) / moves
+
 
 def deep_test():
     game_times = []
@@ -98,8 +99,8 @@ def main() -> None:
     print('Warmup complete')
     N = 10000
     n = 50
-    timeit(lambda: benchmark(True, GameStateV3()), number=n*3)
-    test = timeit(lambda: benchmark(True, GameStateV3()), number=n) / n
+    timeit(lambda: benchmark(True, GameStateBitboards()), number=n * 3)
+    test = timeit(lambda: benchmark(True, GameStateBitboards()), number=n) / n
     scale = 1_000_000 if test < .001 else (1_000 if test < 1 else 1)
     unit = 'µs' if test < .001 else ('ms' if test < 1 else 's')
     print(f'Test: {test}')
@@ -107,7 +108,7 @@ def main() -> None:
     print(f'Unit: {unit}')
     start = random.randint(0, len(game_states) - 1)
     for i in range(start, start + N):
-        game_state = GameState()#game_states[i % 500]#.copy()
+        game_state = GameState()  # game_states[i % 500]#.copy()
 
         # timeit(lambda: benchmark(True, game_state_a), number=500) * 1_000
         # game_state_a.get_moves()
@@ -115,9 +116,9 @@ def main() -> None:
         # t1.append(mean([benchmark(True, game_state)[1] for i in range(3)]))
         # t2.append(mean([benchmark(False, game_state)[1] for i in range(3)]))
         # timeit(lambda: benchmark(True, game_state_a), number=20)
-        game_state_a = game_state.to_v3()
+        game_state_a = game_state.to_bitboards_v2()
         t1.append(timeit(lambda: benchmark(True, game_state_a), number=n) * scale / n)
-        game_state_b = game_state.to_v3()
+        game_state_b = game_state.to_bitboards()
         t2.append(timeit(lambda: benchmark(False, game_state_b), number=n) * scale / n)
         t3.append(t1[-1] - t2[-1])
         if (i - start) > 0 and (i - start) % (N // 50) == 0:

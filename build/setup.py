@@ -6,6 +6,7 @@ import time
 
 # collect all .py files in bots/
 bot_files = glob.glob("bots/*.py")
+game_files = glob.glob("game_states/*.py")
 
 class BuildExtOptimized(build_ext):
     def run(self):
@@ -32,9 +33,5 @@ setup(
     name="Chess",
     cmdclass={"build_ext": BuildExtOptimized},
     options={"build_ext": {"parallel": 8}},
-    ext_modules=mypycify(
-        ["utils.py", "fen_utils.py", "correct_game_v2.py", "game_format_v2.py", "game_base.py",
-         "game.py", "game_bitboards.py", "game_bitboards_v2.py", "game_v2.py", "game_v3.py"]
-        + bot_files
-    ),
+    ext_modules=mypycify(["utils.py", "fen_utils.py"] + bot_files + game_files),
 )

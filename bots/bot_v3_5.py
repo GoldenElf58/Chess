@@ -1,12 +1,10 @@
 import threading
 import time
-from collections import Counter
-from itertools import count
 from typing import Callable
 
 import numpy as np
 
-from game import GameState
+from game_states.game import GameState
 from utils import mirror, negate
 from bots.bot import Bot
 

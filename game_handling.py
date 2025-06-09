@@ -14,12 +14,9 @@ from scipy.stats import binomtest  # type: ignore
 from bots import *
 
 from fen_utils import game_state_from_line
-from game import GameState
-from game_base import GameStateBase
-from game_bitboards import GameStateBitboards
-from game_bitboards_v2 import GameStateBitboardsV2
-from game_format_v2 import GameStateFormatV2
-from game_v3 import GameStateV3
+from game_states import GameState, GameStateBase, GameStateBitboardsV2, GameStateFormatV2, GameStateV3
+from archive.game_bitboards import GameStateBitboards
+from archive.game_base import GameStateBase as GameStateBaseArchive
 
 images = [
     pygame.image.load("piece_images/-6.png"),
@@ -271,7 +268,7 @@ def game_loop() -> None:
     pygame.init()
     screen: Surface = pygame.display.set_mode((854, 480))
     offset: int = 187
-    game_state_type: Callable[[], GameStateBase] = GameStateV3
+    game_state_type: Callable[[], GameStateBase | GameStateBaseArchive] = GameStateV3
     game_state: GameStateBase = game_state_type()
     selected_square: tuple[int, int] | None = None
     """For human move selection, represented as (col, row)"""

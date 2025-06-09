@@ -1,4 +1,4 @@
-from game import GameState
+from game_states.game import GameState
 
 # Mapping from FEN characters to GameState piece values.
 fen_piece_to_int = {

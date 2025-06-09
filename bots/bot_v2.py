@@ -2,7 +2,7 @@ import threading
 import time
 from typing import Callable
 
-from game_format_v2 import GameStateFormatV2
+from game_states.game_format_v2 import GameStateFormatV2
 from utils import mirror, negate
 from bots.bot import Bot
 

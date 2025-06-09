@@ -1,10 +1,10 @@
 from copy import copy
 
-from game_base import GameStateBase
-from game_bitboards import GameStateBitboards
-from game_bitboards_v2 import GameStateBitboardsV2
-from game_v3 import GameStateV3
-from game_v2 import GameStateV2
+from game_states.game_base import GameStateBase
+from archive.game_bitboards import GameStateBitboards
+from game_states.game_bitboards_v2 import GameStateBitboardsV2
+from game_states.game_v3 import GameStateV3
+from game_states.game_v2 import GameStateV2
 from utils import split_table
 
 # Precompute index-to-coordinate mapping for faster lookups

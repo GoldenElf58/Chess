@@ -1,6 +1,6 @@
 from copy import copy
-from game_base import GameStateBase
-from game_bitboards_v2 import GameStateBitboardsV2
+from archive.game_base import GameStateBase
+from game_states.game_bitboards_v2 import GameStateBitboardsV2
 
 # Precompute index-to-coordinate mapping for faster lookups
 index_to_coord: list[tuple[int, int]] = [(h // 8, h % 8) for h in range(64)]
