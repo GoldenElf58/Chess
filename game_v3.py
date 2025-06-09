@@ -1,4 +1,5 @@
 from copy import copy
+from typing import Callable
 
 from game_format_v2 import GameStateFormatV2
 from utils import split_table
@@ -162,7 +163,10 @@ class GameStateV3(GameStateFormatV2):
         tuple[int, ...], tuple[int, ...]], ...] = bishop_diagonals
         rook_rays_local: tuple[tuple[tuple[int, ...], tuple[int, ...],
         tuple[int, ...], tuple[int, ...]], ...] = rook_rays
+        knight_targets_local: tuple[tuple[int, ...], ...] = knight_targets
+        king_targets_local: tuple[tuple[int, ...], ...] = king_targets
         king_idx: int = -1
+        coords_local: list[tuple[int, int]] = index_to_coord
         for i, piece in enumerate(self.board):
             if piece * color_local == 6:
                 king_idx = i
@@ -170,70 +174,53 @@ class GameStateV3(GameStateFormatV2):
         for i, move in enumerate(reversed(moves)):
             board_local: tuple[int, ...] = self.move(move).board
             illegal: bool = False
-            castled: bool = False
-            king_moved: bool = False
             if move[0] == -1:  # Castle
-                castled = True
-                king_moved = True
-                cs0, cs1, cs2 = move[2], move[2] + move[1], move[2] + move[1] * 2 # type: int, int, int
-            elif move[2] == 6 or move[2] == -6:
-                king_moved = True
-                check_square: int = move[1]
-            else:
-                check_square = king_idx
-            for h, piece in enumerate(board_local):
-                piece_type = color_local * piece
-                if piece_type >= 0: continue
-                if piece_type == -3 or piece_type == -5:
-                    for diagonal in bishop_diagonals_local[h]:
-                        for diagonal_idx in diagonal:
-                            if board_local[diagonal_idx] == 0:
-                                continue
-                            if castled:
+                cs0, cs1, cs2 = move[2], move[2] + move[1], move[2] + move[1] * 2  # type: int, int, int
+                for h, piece in enumerate(board_local):
+                    piece_type = color_local * piece
+                    if piece_type >= 0: continue
+                    if piece_type == -3 or piece_type == -5:
+                        for diagonal in bishop_diagonals_local[h]:
+                            for diagonal_idx in diagonal:
+                                if board_local[diagonal_idx] == 0:
+                                    continue
                                 if diagonal_idx == cs0 or diagonal_idx == cs1 or diagonal_idx == cs2:
                                     illegal = True
-                            elif diagonal_idx == check_square:
-                                illegal = True
-                            break
+                                break
+                            if illegal:
+                                break
                         if illegal:
+                            moves.pop(pop_idx_base - i)
                             break
-                    if illegal:
-                        moves.pop(pop_idx_base - i)
-                        break
-                if piece_type == -4 or piece_type == -5:
-                    for ray in rook_rays_local[h]:
-                        for ray_idx in ray:
-                            if board_local[ray_idx] == 0:
-                                continue
-                            if castled:
+                    if (piece_type == -4 or piece_type == -5) and (coords_local[cs0][0] == coords_local[h][0] or
+                                                                  coords_local[cs0][1] == coords_local[h][1] or
+                                                                  coords_local[cs1][0] == coords_local[h][0] or
+                                                                  coords_local[cs1][1] == coords_local[h][1] or
+                                                                  coords_local[cs2][0] == coords_local[h][0] or
+                                                                  coords_local[cs2][1] == coords_local[h][1]):
+                        for ray in rook_rays_local[h]:
+                            for ray_idx in ray:
+                                if board_local[ray_idx] == 0:
+                                    continue
                                 if ray_idx == cs0 or ray_idx == cs1 or ray_idx == cs2:
                                     illegal = True
-                            elif ray_idx == check_square:
-                                illegal = True
-                            break
+                                break
+                            if illegal:
+                                break
                         if illegal:
+                            moves.pop(pop_idx_base - i)
                             break
-                    if illegal:
-                        moves.pop(pop_idx_base - i)
-                        break
-                elif king_moved:
-                    if piece_type == -6:
-                        for target_idx in king_targets[h]:
-                            if castled:
-                                if target_idx == cs0 or target_idx == cs1 or target_idx == cs2:
-                                    break
-                            elif target_idx == check_square:
+                    elif piece_type == -6:
+                        for target_idx in king_targets_local[h]:
+                            if target_idx == cs0 or target_idx == cs1 or target_idx == cs2:
                                 break
                         else:
                             continue
                         moves.pop(pop_idx_base - i)
                         break
                     elif piece_type == -2:
-                        for target_idx in knight_targets[h]:
-                            if castled:
-                                if target_idx == cs0 or target_idx == cs1 or target_idx == cs2:
-                                    break
-                            elif target_idx == check_square:
+                        for target_idx in knight_targets_local[h]:
+                            if target_idx == cs0:
                                 break
                         else:
                             continue
@@ -241,12 +228,93 @@ class GameStateV3(GameStateFormatV2):
                         break
                     elif piece_type == -1:
                         dest_square = h + color_local * 8
-                        if castled:
-                            if dest_square + 1 == cs0 or dest_square + 1 == cs1 or dest_square + 1 == cs2 or \
-                                    dest_square - 1 == cs0 or dest_square - 1 == cs1 or dest_square - 1 == cs2:
-                                moves.pop(pop_idx_base - i)
+                        if dest_square + 1 == cs0 or dest_square + 1 == cs1 or dest_square + 1 == cs2 or \
+                                dest_square - 1 == cs0 or dest_square - 1 == cs1 or dest_square - 1 == cs2:
+                            moves.pop(pop_idx_base - i)
+                            break
+            elif move[2] == 6 or move[2] == -6:
+                check_square: int = move[1]
+                for h, piece in enumerate(board_local):
+                    piece_type = color_local * piece
+                    if piece_type >= 0: continue
+                    if piece_type == -3 or piece_type == -5 and (check_square % 9 == h % 9 or check_square % 7 == h % 7):
+                        for diagonal in bishop_diagonals_local[h]:
+                            for diagonal_idx in diagonal:
+                                if board_local[diagonal_idx] == 0:
+                                    continue
+                                if diagonal_idx == check_square:
+                                    illegal = True
                                 break
-                        elif dest_square + 1 == check_square or dest_square - 1 == check_square:
+                            if illegal:
+                                break
+                        if illegal:
+                            moves.pop(pop_idx_base - i)
+                            break
+                    if ((piece_type == -4 or piece_type == -5) and
+                            (coords_local[check_square][0] == coords_local[h][0] or
+                             coords_local[check_square][1] == coords_local[h][1])):
+                        for ray in rook_rays_local[h]:
+                            for ray_idx in ray:
+                                if board_local[ray_idx] == 0:
+                                    continue
+                                if ray_idx == check_square:
+                                    illegal = True
+                                break
+                            if illegal:
+                                break
+                        if illegal:
+                            moves.pop(pop_idx_base - i)
+                            break
+                    elif piece_type == -6:
+                        for target_idx in king_targets_local[h]:
+                            if target_idx == check_square:
+                                break
+                        else:
+                            continue
+                        moves.pop(pop_idx_base - i)
+                        break
+                    elif piece_type == -2:
+                        for target_idx in knight_targets_local[h]:
+                            if target_idx == check_square:
+                                break
+                        else:
+                            continue
+                        moves.pop(pop_idx_base - i)
+                        break
+                    elif piece_type == -1:
+                        dest_square = h + color_local * 8
+                        if dest_square + 1 == check_square or dest_square - 1 == check_square:
+                            moves.pop(pop_idx_base - i)
+                            break
+            else:
+                for h, piece in enumerate(board_local):
+                    piece_type = color_local * piece
+                    if piece_type > -3: continue
+                    if piece_type == -3 or piece_type == -5 and (king_idx % 9 == h % 9 or king_idx % 7 == h % 7):
+                        for diagonal in bishop_diagonals_local[h]:
+                            for diagonal_idx in diagonal:
+                                if board_local[diagonal_idx] == 0:
+                                    continue
+                                if diagonal_idx == king_idx:
+                                    illegal = True
+                                break
+                            if illegal:
+                                break
+                        if illegal:
+                            moves.pop(pop_idx_base - i)
+                            break
+                    if ((piece_type == -4 or piece_type == -5) and (coords_local[king_idx][0] == coords_local[h][0] or
+                                                                    coords_local[king_idx][1] == coords_local[h][1])):
+                        for ray in rook_rays_local[h]:
+                            for ray_idx in ray:
+                                if board_local[ray_idx] == 0:
+                                    continue
+                                if ray_idx == king_idx:
+                                    illegal = True
+                                break
+                            if illegal:
+                                break
+                        if illegal:
                             moves.pop(pop_idx_base - i)
                             break
 

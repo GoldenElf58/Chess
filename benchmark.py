@@ -33,8 +33,7 @@ populate_game_states()
 
 def benchmark(condition: bool, game_state: GameStateV3) -> None:
     # pass
-    # game_state.moves = None
-    # game_state.previous_position_count = {}
+    game_state.moves = None
     # game_state.are_captures()
     # game_state.get_moves()
     # game_state = GameStateV2()
@@ -43,7 +42,7 @@ def benchmark(condition: bool, game_state: GameStateV3) -> None:
     #     game_state.move(bot.generate_move(game_state, depth=2)[0][1])
 
     if condition:
-         game_state.get_moves_new()
+        game_state.get_moves_new()
     else:
         game_state.get_moves()
     # game_state.get_moves()
@@ -103,7 +102,7 @@ def main() -> None:
     test = timeit(lambda: benchmark(True, GameStateV3()), number=n) / n
     scale = 1_000_000 if test < .001 else (1_000 if test < 1 else 1)
     print(f'Test: {test}')
-    print(f'Scale: {scale}')
+    print(f'Scale: {scale:,}')
     start = random.randint(0, len(game_states) - 1)
     for i in range(start, start + N):
         game_state = game_states[i % 500]#.copy()
@@ -146,5 +145,5 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    deep_test()
-    # main()
+    # deep_test()
+    main()
