@@ -19,6 +19,7 @@ from game_base import GameStateBase
 from game_bitboards import GameStateBitboards
 from game_bitboards_v2 import GameStateBitboardsV2
 from game_format_v2 import GameStateFormatV2
+from game_v3 import GameStateV3
 
 images = [
     pygame.image.load("piece_images/-6.png"),
@@ -270,7 +271,7 @@ def game_loop() -> None:
     pygame.init()
     screen: Surface = pygame.display.set_mode((854, 480))
     offset: int = 187
-    game_state_type: Callable[[], GameStateBase] = GameState
+    game_state_type: Callable[[], GameStateBase] = GameStateV3
     game_state: GameStateBase = game_state_type()
     selected_square: tuple[int, int] | None = None
     """For human move selection, represented as (col, row)"""
