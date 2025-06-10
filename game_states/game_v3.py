@@ -231,8 +231,8 @@ class GameStateV3(GameStateFormatV2):
                                 dest_square - 1 == cs0 or dest_square - 1 == cs1 or dest_square - 1 == cs2:
                             moves.pop(pop_idx_base - i)
                             break
-            elif move[2] == 6 or move[2] == -6:
-                check_square: int = move[1]
+            else:
+                check_square: int = move[1] if move[2] == 6 or move[2] == -6 else king_idx
                 for h, piece in enumerate(board_local):
                     piece_type = color_local * piece
                     if piece_type >= 0: continue
@@ -284,37 +284,6 @@ class GameStateV3(GameStateFormatV2):
                     elif piece_type == -1:
                         dest_square = h + color_local * 8
                         if dest_square + 1 == check_square or dest_square - 1 == check_square:
-                            moves.pop(pop_idx_base - i)
-                            break
-            else:
-                for h, piece in enumerate(board_local):
-                    piece_type = color_local * piece
-                    if piece_type > -3: continue
-                    if piece_type == -3 or piece_type == -5 and (king_idx % 9 == h % 9 or king_idx % 7 == h % 7):
-                        for diagonal in bishop_diagonals_local[h]:
-                            for diagonal_idx in diagonal:
-                                if board_local[diagonal_idx] == 0:
-                                    continue
-                                if diagonal_idx == king_idx:
-                                    illegal = True
-                                break
-                            if illegal:
-                                break
-                        if illegal:
-                            moves.pop(pop_idx_base - i)
-                            break
-                    if ((piece_type == -4 or piece_type == -5) and (coords_local[king_idx][0] == coords_local[h][0] or
-                                                                    coords_local[king_idx][1] == coords_local[h][1])):
-                        for ray in rook_rays_local[h]:
-                            for ray_idx in ray:
-                                if board_local[ray_idx] == 0:
-                                    continue
-                                if ray_idx == king_idx:
-                                    illegal = True
-                                break
-                            if illegal:
-                                break
-                        if illegal:
                             moves.pop(pop_idx_base - i)
                             break
 
