@@ -81,7 +81,8 @@ class GameMode(IntFlag):
 
 
 def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, font: Font, t0: float, game_mode: GameMode,
-                 wins: int, draws: int, losses: int, bots: list[Bot], depths: list[list[int]] | None = None) -> None:
+                 wins: int, draws: int, losses: int, bots: list[Bot], reverse: bool,
+                 depths: list[list[int]] | None = None) -> None:
     """
     Displays information about the game
 
@@ -95,6 +96,7 @@ def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, fon
     :param draws: The number of draws
     :param losses: The number of losses bots[0] has
     :param bots: The two bots that are playing against each other
+    :param reverse: Whether the bots are playing in reverse (bots[0] is blaak, bots[1] is white)
     :param depths: The previous depths the bots searched to
     """
     info_x = 667
@@ -128,9 +130,9 @@ def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, fon
         n_games: int = wins + losses
         p_value: float = 1.0 if n_games == 0 else binomtest(wins, n_games).pvalue
 
-        wins_text: str = f"{bots[0].get_version()}: {wins}"
+        wins_text: str = f"{bots[0].get_version()} ({"B" if reverse else "W"}): {wins}"
         draws_text: str = f"Draws: {draws}"
-        losses_text: str = f"{bots[1].get_version()}: {losses}"
+        losses_text: str = f"{bots[1].get_version()} ({"W" if reverse else "B"}): {losses}"
         p_value_text: str = f"P-Value: {p_value:.4f}"
 
         wins_surf: Surface = font.render(wins_text, True, "white")
@@ -142,6 +144,8 @@ def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, fon
         screen.blit(draws_surf, (info_rect.x + 10, 190))
         screen.blit(losses_surf, (info_rect.x + 10, 220))
         screen.blit(p_value_surf, (info_rect.x + 10, 250))
+
+
 
 
 class Button:
@@ -504,7 +508,8 @@ def game_loop() -> None:
             elif game_mode & GameMode.OPTIONS:
                 for btn in options_buttons: btn.draw(screen, font)
         else:
-            display_info(screen, game_state, last_eval, font, t0, game_mode, wins, draws, losses, bots, depths=depths)
+            display_info(screen, game_state, last_eval, font, t0, game_mode, wins, draws, losses, bots, reverse,
+                         depths=depths)
 
         pygame.display.flip()
 
