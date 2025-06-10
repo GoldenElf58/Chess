@@ -185,7 +185,7 @@ class BotV2(Bot):
                 game_state.last_move if game_state.last_move is not None else (0, 0, 0, 0))
         state_key: int = hash((game_state.board, game_state.white_queen, game_state.white_king,
                                game_state.black_queen, game_state.black_king, depth, maximizing_player))
-        transposition_table: dict[int, tuple[int, tuple[int, int, int] | tuple]] = self.transposition_table
+        transposition_table: dict[int, tuple[int, tuple[int, int, int]]] = self.transposition_table
         if (cached := transposition_table.get(state_key)) is not None:
             return cached
         moves: tuple[tuple[int, int, int], ...] = tuple(game_state.get_moves() if true_move_depth > 0 else
