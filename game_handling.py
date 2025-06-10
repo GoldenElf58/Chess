@@ -328,7 +328,7 @@ def game_loop() -> None:
         BotV4p2,
         BotV4p3,
     )
-    bot_idxs: list[int] = [2, 2]
+    bot_idxs: list[int] = [5, 4]
     bots: list[Bot] = [bot_options[bot_idxs[0]](), bot_options[bot_idxs[1]]()]
 
     test_mode: bool = False
@@ -390,6 +390,8 @@ def game_loop() -> None:
                         game_state = game_state.to_v2()
                     elif game_state_type == GameStateBitboardsV2:
                         game_state = game_state.to_bitboards_v2()
+                    elif game_state_type == GameStateV3:
+                        game_state = game_state.to_v3()
                     bots[0].clear_cache()
                     bots[1].clear_cache()
                 elif main_buttons[4].check_hover(pos):
@@ -461,7 +463,7 @@ def game_loop() -> None:
             if not game_mode & GameMode.DEEP_TEST:
                 print(winner, game_state.turn, time.time() - t0)
                 game_mode = GameMode.MAIN_MENU
-                depths[0].clear();
+                depths[0].clear()
                 depths[1].clear()
             else:
                 computer_move_result.clear()
@@ -491,6 +493,8 @@ def game_loop() -> None:
                     game_state = game_state.to_v2()
                 elif game_state_type == GameStateBitboardsV2:
                     game_state = game_state.to_bitboards_v2()
+                elif game_state_type == GameStateV3:
+                    game_state = game_state.to_v3()
                 bots[0].clear_cache()
                 bots[1].clear_cache()
 
