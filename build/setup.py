@@ -8,6 +8,7 @@ import time
 bot_files = glob.glob("bots/*.py")
 game_files = glob.glob("game_states/*.py")
 
+
 class BuildExtOptimized(build_ext):
     def run(self):
         start = time.time()
@@ -28,6 +29,7 @@ class BuildExtOptimized(build_ext):
                 "-Wno-unused-but-set-variable",
             ]
         super().build_extensions()
+
 
 setup(
     name="Chess",

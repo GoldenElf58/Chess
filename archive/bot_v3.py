@@ -194,7 +194,8 @@ class Botv3(Bot):
         board: tuple[int, ...] = game_state.board
         combined: list[tuple[int, ...]] = combined_tables_end if np.count_nonzero(
             board not in [0, -1, 1, -6, 6]) < 5 else combined_tables_start
-        self.eval_lookup[hash_state] = (evaluation := sum([combined[piece + 6][i] for (i, piece) in enumerate(board) if piece]))
+        self.eval_lookup[hash_state] = (
+            evaluation := sum([combined[piece + 6][i] for (i, piece) in enumerate(board) if piece]))
         return evaluation
 
     def iterative_deepening(self, game_state: GameState, maximizing_player: bool, allotted_time: float = 3.0,
@@ -252,8 +253,8 @@ class Botv3(Bot):
                     best_eval, best_move = evaluation, move
                     alpha = max(alpha, evaluation)
             elif evaluation < best_eval:
-                    best_eval, best_move = evaluation, move
-                    beta = min(beta, evaluation)
+                best_eval, best_move = evaluation, move
+                beta = min(beta, evaluation)
 
             if beta <= alpha:
                 break

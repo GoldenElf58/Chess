@@ -139,11 +139,11 @@ class GameStateV3(GameStateFormatV2):
     tuple[int, int, int] | None, int]:
         """ Convert the game state into a hashable format for caching. """
         return (self.board, self.color, self.white_queen, self.white_king, self.black_queen, self.black_king,
-                    self.last_move, self.turn)
+                self.last_move, self.turn)
 
     def __hash__(self) -> int:
         return hash((self.board, self.color, self.white_queen, self.white_king, self.black_queen, self.black_king,
-                    self.last_move, self.turn))
+                     self.last_move, self.turn))
 
     def get_moves(self) -> list[tuple[int, int, int]]:
         """
@@ -192,11 +192,11 @@ class GameStateV3(GameStateFormatV2):
                             moves.pop(pop_idx_base - i)
                             break
                     if (piece_type == -4 or piece_type == -5) and (coords_local[cs0][0] == coords_local[h][0] or
-                                                                  coords_local[cs0][1] == coords_local[h][1] or
-                                                                  coords_local[cs1][0] == coords_local[h][0] or
-                                                                  coords_local[cs1][1] == coords_local[h][1] or
-                                                                  coords_local[cs2][0] == coords_local[h][0] or
-                                                                  coords_local[cs2][1] == coords_local[h][1]):
+                                                                   coords_local[cs0][1] == coords_local[h][1] or
+                                                                   coords_local[cs1][0] == coords_local[h][0] or
+                                                                   coords_local[cs1][1] == coords_local[h][1] or
+                                                                   coords_local[cs2][0] == coords_local[h][0] or
+                                                                   coords_local[cs2][1] == coords_local[h][1]):
                         for ray in rook_rays_local[h]:
                             for ray_idx in ray:
                                 if board_local[ray_idx] == 0:
@@ -236,7 +236,8 @@ class GameStateV3(GameStateFormatV2):
                 for h, piece in enumerate(board_local):
                     piece_type = color_local * piece
                     if piece_type >= 0: continue
-                    if piece_type == -3 or piece_type == -5 and (check_square % 9 == h % 9 or check_square % 7 == h % 7):
+                    if piece_type == -3 or piece_type == -5 and (
+                            check_square % 9 == h % 9 or check_square % 7 == h % 7):
                         for diagonal in bishop_diagonals_local[h]:
                             for diagonal_idx in diagonal:
                                 if board_local[diagonal_idx] == 0:
@@ -355,8 +356,9 @@ class GameStateV3(GameStateFormatV2):
                     row_base + 7] == 4 * color_local
                         and board_local[row_base + 5] == board_local[row_base + 6] == 0):
                     moves.append((-1, 1, h))
-                if (((color_local == 1 and self.white_queen) or (color_local == -1 and self.black_queen)) and board_local[
-                    row_base + 7] == 4 * color_local
+                if (((color_local == 1 and self.white_queen) or (color_local == -1 and self.black_queen)) and
+                        board_local[
+                            row_base + 7] == 4 * color_local
                         and board_local[row_base + 1] == board_local[row_base + 2] == board_local[row_base + 3] == 0):
                     moves.append((-1, -1, h))
                 for target_idx in king_targets_local[h]:

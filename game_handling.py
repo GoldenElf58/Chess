@@ -461,7 +461,8 @@ def game_loop() -> None:
             if not game_mode & GameMode.DEEP_TEST:
                 print(winner, game_state.turn, time.time() - t0)
                 game_mode = GameMode.MAIN_MENU
-                depths[0].clear(); depths[1].clear()
+                depths[0].clear();
+                depths[1].clear()
             else:
                 computer_move_result.clear()
                 bot0_color: int = 1 if not reverse else -1

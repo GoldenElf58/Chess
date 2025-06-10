@@ -172,7 +172,8 @@ def populate_combined_tables() -> None:
         for j in range(13):
             if j - 6 == 0: continue
             combined_tables_transition[i][j] = tuple(int(combined_tables_start[j][idx] * min(i, 5) / 5 +
-                                                 combined_tables_end[j][idx] * max(5 - i, 0) / 5) for idx in range(64))
+                                                         combined_tables_end[j][idx] * max(5 - i, 0) / 5) for idx in
+                                                     range(64))
 
 
 populate_combined_tables()
@@ -259,8 +260,8 @@ class Botv3_4(Bot):
                     best_eval, best_move = evaluation, move
                     alpha = max(alpha, evaluation)
             elif evaluation < best_eval:
-                    best_eval, best_move = evaluation, move
-                    beta = min(beta, evaluation)
+                best_eval, best_move = evaluation, move
+                beta = min(beta, evaluation)
 
             if beta <= alpha:
                 break

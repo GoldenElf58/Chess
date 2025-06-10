@@ -18,6 +18,7 @@ tuple[tuple[int, int, int], ...], tuple[tuple[int, int, int], ...]], ...]
 promotion_forward: tuple[tuple[int, int], ...] = ((-3, 5), (-3, 4), (-3, 3), (-3, 2))
 promotion_taking: tuple[tuple[int, int], ...] = ((-7, 1), (-6, 1), (-5, 1), (-4, 1))
 
+
 def populate_precomputed_tables() -> None:
     global knight_targets
     global king_targets
@@ -343,7 +344,7 @@ class GameState:
         new_moves_since_pawn: int = self.moves_since_pawn + 1
         move_0: int = move[0]
         move_1: int = move[1]
-        move_2: int = move[2] # No statistical evidence of a difference with or without move_2
+        move_2: int = move[2]  # No statistical evidence of a difference with or without move_2
         move_3: int = move[3]
 
         if len(move) == 0:
@@ -410,7 +411,6 @@ class GameState:
                 black_queen = False
             if move_2 == 0 and move_3 == 7:
                 black_king = False
-
 
         if piece == 1:
             new_moves_since_pawn = 0
@@ -503,9 +503,9 @@ class GameState:
             -2: "n",
             -1: "p",
         }
-        for row in split_table(self.board.tolist()): # type: tuple[int, ...]
+        for row in split_table(self.board.tolist()):  # type: tuple[int, ...]
             result += "| "
-            for piece in row: # type: int
+            for piece in row:  # type: int
                 result += piece_to_string[piece]
                 result += " | "
             result += "\n|___|___|___|___|___|___|___|___|\n"

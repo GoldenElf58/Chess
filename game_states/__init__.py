@@ -5,4 +5,3 @@ from game_states.game_bitboards_v2 import GameStateBitboardsV2
 from game_states.game_format_v2 import GameStateFormatV2
 from game_states.game_v2 import GameStateV2
 from game_states.game_v3 import GameStateV3
-

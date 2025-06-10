@@ -1,5 +1,6 @@
 from typing import Any
 
+
 class GameStateBase:
     def __init__(self, white_queen: bool = True, white_king: bool = True,
                  black_queen: bool = True, black_king: bool = True,
@@ -15,7 +16,6 @@ class GameStateBase:
         self.previous_position_count: dict[
             int, int] = previous_position_count if previous_position_count is not None else {}
         self.moves_since_pawn: int = moves_since_pawn
-
 
     def get_hashable_state(self) -> Any:
         """ Convert the game state into a hashable format for caching. """

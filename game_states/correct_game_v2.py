@@ -253,7 +253,7 @@ class GameStateCorrect(GameStateFormatV2):
                 if board_local[dest_square] == 0:
                     if 7 != i - color_local != 0:
                         moves.append((h, dest_square, piece))
-                    else: # Promotion
+                    else:  # Promotion
                         for promotion_piece in promotion_pieces:
                             moves.append((h, dest_square, promotion_piece * color_local))
                 if 8 > (j + 1) and 0 > board_local[dest_square + 1] * color_local:

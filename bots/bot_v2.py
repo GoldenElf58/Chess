@@ -189,7 +189,7 @@ class BotV2(Bot):
         if (cached := transposition_table.get(state_key)) is not None:
             return cached
         moves: tuple[tuple[int, int, int], ...] = tuple(game_state.get_moves() if true_move_depth > 0 else
-                                                             game_state.get_moves_no_check())
+                                                        game_state.get_moves_no_check())
         move_fn: Callable[[tuple[int, int, int]], GameStateFormatV2] = game_state.move
         eval_fn: Callable[[GameStateFormatV2], int] = self.evaluate
         child_data: list[tuple[tuple[int, int, int], GameStateFormatV2, int]] = [

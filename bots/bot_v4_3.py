@@ -161,7 +161,8 @@ class BotV4p3(Bot):
             return cached_eval
         board: tuple[int, ...] = game_state.board
         combined: list[tuple[int, ...]] = combined_tables
-        self.eval_lookup[hash_state] = (evaluation := sum([combined[piece + 6][i] for (i, piece) in enumerate(board) if piece]))
+        self.eval_lookup[hash_state] = (
+            evaluation := sum([combined[piece + 6][i] for (i, piece) in enumerate(board) if piece]))
         return evaluation
 
     def iterative_deepening(self, game_state: GameState, maximizing_player: bool, allotted_time: float = 3.0,
@@ -192,7 +193,8 @@ class BotV4p3(Bot):
                 first_call: bool = True) -> tuple[int, tuple[int, int, int, int]]:
         game_state.get_winner()
         if game_state.winner is not None:
-            return game_state.winner * (9999999 + depth), (game_state.last_move if game_state.last_move is not None else (0, 0, 0, 0))
+            return game_state.winner * (9999999 + depth), (
+                game_state.last_move if game_state.last_move is not None else (0, 0, 0, 0))
         state_key: int = hash((game_state.board, game_state.white_queen, game_state.white_king,
                                game_state.black_queen, game_state.black_king, depth, maximizing_player))
         transposition_table: dict[int, tuple[int, tuple[int, int, int, int]]] = self.transposition_table
@@ -220,8 +222,8 @@ class BotV4p3(Bot):
                     best_eval, best_move = evaluation, move
                     alpha = max(alpha, evaluation)
             elif evaluation < best_eval:
-                    best_eval, best_move = evaluation, move
-                    beta = min(beta, evaluation)
+                best_eval, best_move = evaluation, move
+                beta = min(beta, evaluation)
 
             if beta <= alpha:
                 break

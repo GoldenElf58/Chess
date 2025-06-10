@@ -66,7 +66,8 @@ def test():
     # for i in range(7):
     #     game_state.get_winner()
     while game_state.get_winner() is None:
-        game_state = game_state.move(random.choice(game_state.get_moves()))  # game_state.move(bot.generate_move(game_state, depth=2)[0][1])
+        game_state = game_state.move(
+            random.choice(game_state.get_moves()))  # game_state.move(bot.generate_move(game_state, depth=2)[0][1])
         game_state.get_moves()
         moves += 1
     t1 = time.time_ns()

@@ -140,11 +140,11 @@ class GameStateV2(GameStateFormatV2):
     tuple[int, int, int] | None, int]:
         """ Convert the game state into a hashable format for caching. """
         return (self.board, self.color, self.white_queen, self.white_king, self.black_queen, self.black_king,
-                    self.last_move, self.turn)
+                self.last_move, self.turn)
 
     def __hash__(self) -> int:
         return hash((self.board, self.color, self.white_queen, self.white_king, self.black_queen, self.black_king,
-                    self.last_move, self.turn))
+                     self.last_move, self.turn))
 
     def get_moves(self) -> list[tuple[int, int, int]]:
         """
@@ -181,7 +181,7 @@ class GameStateV2(GameStateFormatV2):
                     break
         if len(moves) == 0 and moves_len > 0:
             game_state: GameStateV2 = GameStateV2(self.board, self.white_queen, self.white_king, self.black_queen,
-                                              self.black_king, None, -self.color, self.turn, self.winner)
+                                                  self.black_king, None, -self.color, self.turn, self.winner)
             for move in game_state.get_moves_no_check():
                 if (winner := game_state.move(move).get_winner()) == -1 or winner == 1:
                     break
@@ -217,8 +217,8 @@ class GameStateV2(GameStateFormatV2):
                     row_base + 7] == 4 * color_local
                         and board_local[row_base + 5] == board_local[row_base + 6] == 0):
                     moves.append((-1, 1, h))
-                if (((color_local == 1 and self.white_queen) or (color_local == -1 and self.black_queen)) and board_local[
-                    row_base + 7] == 4 * color_local
+                if (((color_local == 1 and self.white_queen) or (color_local == -1 and self.black_queen)) and
+                        board_local[row_base + 7] == 4 * color_local
                         and board_local[row_base + 1] == board_local[row_base + 2] == board_local[row_base + 3] == 0):
                     moves.append((-1, -1, h))
                 for target_idx in king_targets_local[h]:
@@ -332,14 +332,14 @@ class GameStateV2(GameStateFormatV2):
             new_board[move_2 + move_1] = board_local[move_2 + (3 if move_1 == 1 else -4)]
             new_board[move_2 + 2 * move_1] = board_local[move_2]
             return GameStateV2(tuple(new_board), white_queen, white_king, black_queen, black_king,
-                             color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn)
+                               color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn)
 
         if move_0 == -2:  # En Passant
             new_board[move_2] = 0
             new_board[move_2 - 8 * self.color + move_1] = self.color
             new_board[move_2 + move_1] = 0
             return GameStateV2(tuple(new_board), white_queen, white_king, black_queen, black_king,
-                             color=-self.color, turn=self.turn + 1, moves_since_pawn=0)
+                               color=-self.color, turn=self.turn + 1, moves_since_pawn=0)
 
         if (piece := abs(move_2)) in (4, 6):
             if move_1 == 56:
@@ -381,8 +381,8 @@ class GameStateV2(GameStateFormatV2):
         last_move: tuple[int, int, int] | None = move if (
                 piece == 1 and (move_0 == move_1 + self.color * 16)) else None
         return GameStateV2(tuple(new_board), white_queen, white_king, black_queen, black_king, last_move=last_move,
-                         color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn,
-                         previous_position_count=new_previous_position_count)
+                           color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn,
+                           previous_position_count=new_previous_position_count)
 
     def get_winner(self) -> int | None:
         if self.winner is not None:

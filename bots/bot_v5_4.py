@@ -204,7 +204,8 @@ class BotV5p4(Bot):
         eval_fn: Callable[[GameStateFormatV2], int] = self.evaluate
         child_data: list[tuple[tuple[int, int, int], GameStateFormatV2, int]] = [
             (move, child_state := move_fn(move), prev_eval[0] if (prev_eval := transposition_table.get(
-                hash((child_state.get_hashable_state(), depth - 3)))) is not None else eval_fn(child_state)) for move in moves]
+                hash((child_state.get_hashable_state(), depth - 3)))) is not None else eval_fn(child_state)) for move in
+            moves]
 
         child_data.sort(key=lambda move: move[2], reverse=maximizing_player)
 
