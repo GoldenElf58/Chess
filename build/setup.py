@@ -14,12 +14,19 @@ class BuildExtOptimized(build_ext):
         start = time.time()
         super().run()
         duration = time.time() - start
+        print("\n")
+        print(f'Compilation finished at {time.strftime("%I:%M:%S %p")}')
         print(f"Compilation completed in {duration:.2f} seconds")
+        print("\n")
 
     def build_extensions(self):
         for ext in self.extensions:
             ext.extra_compile_args = [
                 "-O3",
+                "-ffast-math",
+                "-funroll-loops",
+                "-ffunction-sections",
+                "-fdata-sections",
                 "-g0",
                 "-march=native",
                 "-Wno-unused-variable",
@@ -27,6 +34,7 @@ class BuildExtOptimized(build_ext):
                 "-Wno-unused-label",
                 "-Wno-unreachable-code",
                 "-Wno-unused-but-set-variable",
+                "-Wno-nan-infinity-disabled",
             ]
         super().build_extensions()
 
