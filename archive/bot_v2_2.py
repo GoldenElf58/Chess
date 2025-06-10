@@ -127,7 +127,7 @@ def populate_combined_tables():
 populate_combined_tables()
 
 
-class BotV2(Bot):
+class BotV2p2(Bot):
     def __init__(self, transposition_table: dict | None = None, eval_lookup: dict | None = None) -> None:
         self.transposition_table: dict[
             int, tuple[int, tuple[int, int, int]]] = transposition_table if transposition_table is not None else {}
@@ -154,7 +154,7 @@ class BotV2(Bot):
         return evaluation
 
     def iterative_deepening(self, game_state: GameStateFormatV2, maximizing_player: bool, allotted_time: float = 3.0,
-                            depth: int = -1) -> tuple[tuple[int, tuple[int, int, int] | tuple], int]:
+                            depth: int = -1) -> tuple[tuple[int, tuple[int, int, int]], int]:
         if depth >= 0:
             result: tuple[int, tuple[int, int, int]] = (0, game_state.get_moves()[0])
             for i in range(min(depth, 2), depth + 1):
@@ -171,7 +171,7 @@ class BotV2(Bot):
             minimax_thread.join(allotted_time - (time.time() - t0))
             minimax_thread = threading.Thread(
                 target=lambda: results.append(
-                    self.minimax(game_state, depth, -(1 << 31), (1 << 31), maximizing_player, true_move_depth=2)))
+                    self.minimax(game_state, depth, -(1 << 31), (1 << 31), maximizing_player, true_move_depth=3)))
             if time.time() - t0 < allotted_time: minimax_thread.start()
         if minimax_thread.is_alive():
             minimax_thread.join(0)
@@ -179,10 +179,9 @@ class BotV2(Bot):
         return results[-1], (depth if len(results) != 1 else 0)
 
     def minimax(self, game_state: GameStateFormatV2, depth: int, alpha: int, beta: int, maximizing_player: bool,
-                true_move_depth: int = 0) -> tuple[int, tuple[int, int, int] | tuple]:
+                true_move_depth: int = 0) -> tuple[int, tuple[int, int, int]]:
         if game_state.get_winner() is not None:
-            return self.evaluate(game_state), (
-                game_state.last_move if game_state.last_move is not None else (0, 0, 0, 0))
+            return game_state.get_winner() * 9999999, (0, 0, 0)  # type: ignore
         state_key: int = hash((game_state.board, game_state.white_queen, game_state.white_king,
                                game_state.black_queen, game_state.black_king, depth, maximizing_player))
         transposition_table: dict[int, tuple[int, tuple[int, int, int]]] = self.transposition_table
@@ -190,6 +189,8 @@ class BotV2(Bot):
             return cached
         moves: tuple[tuple[int, int, int], ...] = tuple(game_state.get_moves() if true_move_depth > 0 else
                                                         game_state.get_moves_no_check())
+        if len(moves) == 0:
+            return game_state.get_winner() * 9999999, (0, 0, 0) # type: ignore
         move_fn: Callable[[tuple[int, int, int]], GameStateFormatV2] = game_state.move
         eval_fn: Callable[[GameStateFormatV2], int] = self.evaluate
         child_data: list[tuple[tuple[int, int, int], GameStateFormatV2, int]] = [
@@ -198,7 +199,7 @@ class BotV2(Bot):
         child_data.sort(key=lambda move: move[2], reverse=maximizing_player)
 
         best_eval: int = -(1 << 31) if maximizing_player else (1 << 31)  # Large negative/positive integers
-        best_move: tuple[int, int, int] | tuple = ()
+        best_move: tuple[int, int, int] = child_data[0][0]
         recurse: Callable = self.minimax
 
         for move, child, score in child_data:

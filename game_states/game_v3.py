@@ -288,10 +288,8 @@ class GameStateV3(GameStateFormatV2):
                             break
 
         if len(moves) == 0 and pop_idx_base > -1:
-            game_state: GameStateV3 = GameStateV3(self.board, self.white_queen, self.white_king, self.black_queen,
-                                                  self.black_king, None, -color_local, self.turn, self.winner)
-            for move in game_state.get_moves_no_check():
-                if (winner := game_state.move(move).get_winner()) == -1 or winner == 1:
+            for move in moves:
+                if (winner := self.move(move).get_winner()) == -1 or winner == 1:
                     break
             else:
                 self.winner = 0
@@ -380,8 +378,7 @@ class GameStateV3(GameStateFormatV2):
                 elif i == 1 and board_local[3 * 8 + j] == 0 == board_local[2 * 8 + j]:
                     moves.append((h, h + 16, piece))
                 # En Passant
-                if (last_move_local is not None and board_local[last_move_local[1]] == -color_local and abs(
-                        last_move_local[1] - last_move_local[0]) == 16 and i == last_move_local[1] // 8):
+                if last_move_local is not None and i == last_move_local[1] // 8:
                     if 7 != j == last_move_local[1] % 8 + 1:
                         moves.append((-2, -1, h))
                     elif 0 != j == last_move_local[1] % 8 - 1:

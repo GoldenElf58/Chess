@@ -1,3 +1,4 @@
+import cProfile
 import random
 import time
 from statistics import mean, stdev
@@ -5,9 +6,12 @@ from timeit import timeit
 # from typing import Any
 
 from scipy import stats  # type: ignore
+from pstats import Stats
+from io import StringIO
 
 from fen_utils import game_state_from_line
 from game_states import GameState, GameStateBase, GameStateV2, GameStateV3, GameStateBitboardsV2
+from bots import *
 from archive.game_bitboards import GameStateBitboards
 from archive.game_base import GameStateBase as GameStateBaseArchive
 
@@ -28,23 +32,20 @@ def populate_game_states():
     # print("Moves calculated")
 
 
-populate_game_states()
-
-
-def benchmark(condition: bool, game_state: GameStateBase | GameStateBaseArchive) -> None:
+def benchmark(condition: bool, game_state: GameStateV3) -> None:
     # pass
-    # game_state.moves = None
+    game_state.moves = None
     # game_state.are_captures()
-    game_state.get_moves_no_check()
+    # game_state.get_moves()
     # game_state = GameStateV2()
     # bot = BotV1()
     # while game_state.get_winner() is None:
     #     game_state.move(bot.generate_move(game_state, depth=2)[0][1])
 
-    # if condition:
-    #     game_state.get_moves()
-    # else:
-    #     game_state.get_moves_no_check()
+    if condition:
+        game_state.get_moves_new()
+    else:
+        game_state.get_moves()
     # game_state.get_moves()
     # game_state.get_moves_no_check()
     # game_state.move(random.choice(moves))
@@ -100,13 +101,13 @@ def main() -> None:
     print('Warmup complete')
     N = 10000
     n = 50
-    timeit(lambda: benchmark(True, GameStateBitboards()), number=n * 3)
-    test = timeit(lambda: benchmark(True, GameStateBitboards()), number=n) / n
+    timeit(lambda: benchmark(True, GameStateV3()), number=n * 5)
+    test = timeit(lambda: benchmark(True, GameStateV3()), number=n*10) / n / 10
     scale = 1_000_000 if test < .001 else (1_000 if test < 1 else 1)
     unit = 'µs' if test < .001 else ('ms' if test < 1 else 's')
     print(f'Test: {test}')
     print(f'Scale: {scale:,}')
-    print(f'Unit: {unit}')
+    print(f'Unit: {unit}\n')
     start = random.randint(0, len(game_states) - 1)
     for i in range(start, start + N):
         game_state = GameState()  # game_states[i % 500]#.copy()
@@ -117,9 +118,9 @@ def main() -> None:
         # t1.append(mean([benchmark(True, game_state)[1] for i in range(3)]))
         # t2.append(mean([benchmark(False, game_state)[1] for i in range(3)]))
         # timeit(lambda: benchmark(True, game_state_a), number=20)
-        game_state_a = game_state.to_bitboards_v2()
+        game_state_a = game_state.to_v3()
         t1.append(timeit(lambda: benchmark(True, game_state_a), number=n) * scale / n)
-        game_state_b = game_state.to_bitboards()
+        game_state_b = game_state.to_v3()
         t2.append(timeit(lambda: benchmark(False, game_state_b), number=n) * scale / n)
         t3.append(t1[-1] - t2[-1])
         if (i - start) > 0 and (i - start) % (N // 50) == 0:
@@ -147,6 +148,42 @@ def main() -> None:
     print(f'Slowdown: {mean(t1) / mean(t2):#.5g}')
 
 
+def profile():
+    bot = BotV2p3()
+    game_state = game_state_from_line(50).to_v3()
+
+    profiler = cProfile.Profile()
+    profiler.enable()
+    for i in range(10_000):
+        game_state.moves = None
+        game_state.get_moves()
+    profiler.disable()
+
+    s = StringIO()
+    stats = Stats(profiler, stream=s)
+    stats.strip_dirs().sort_stats('tottime')
+    stats.print_stats()
+
+    lines = s.getvalue().splitlines()
+    printed_header = False
+    for line in lines:
+        if line.startswith(" " * 3) or line.strip().startswith("ncalls"):
+            parts = line.split()
+            if len(parts) >= 6:
+                if not printed_header:
+                    print(f"{'function':35}  {'tottime':7}  {'cumtime':8}  {'ncalls':8}")
+                    printed_header = True
+                if parts[-1].startswith("seconds") or parts[-1].startswith("filename"):
+                    continue
+                print(f"{parts[-1]:35}  {parts[1]:7}  {parts[3]:8}  {parts[0]:8}")
+            elif not printed_header and line.strip().startswith("ncalls"):
+                # fallback in case headers appear in-line unexpectedly
+                print(f"{'function':35}  {'tottime':7}  {'cumtime':8}  {'ncalls':8}")
+                printed_header = True
+
+
 if __name__ == '__main__':
-    deep_test()
+    # populate_game_states()
+    profile()
+    # deep_test()
     # main()
