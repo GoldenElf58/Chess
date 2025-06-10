@@ -60,9 +60,9 @@ def benchmark(condition: bool, game_state: GameStateBase | GameStateBaseArchive)
 
 def test():
     game_state = GameStateV3()
-    t0 = time.time_ns()
     moves = 0
     # bot = BotV1()
+    t0 = time.time_ns()
     # for i in range(7):
     #     game_state.get_winner()
     while game_state.get_winner() is None:
