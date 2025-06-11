@@ -181,9 +181,8 @@ class GameStateCorrect(GameStateFormatV2):
                     break
         if len(moves) == 0 and moves_len > 0:
             game_state: GameStateCorrect = GameStateCorrect(self.board, self.white_queen, self.white_king,
-                                                            self.black_queen,
-                                                            self.black_king, None, -self.color, self.turn,
-                                                            self.winner)
+                                                  self.black_queen, self.black_king,
+                                                  color=-self.color, turn=self.turn, winner=self.winner)
             for move in game_state.get_moves_no_check():
                 if (winner := game_state.move(move).get_winner()) == -1 or winner == 1:
                     break
