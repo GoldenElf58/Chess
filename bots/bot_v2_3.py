@@ -130,7 +130,8 @@ populate_combined_tables()
 class BotV2p3(Bot):
     def __init__(self, transposition_table: dict | None = None, eval_lookup: dict | None = None) -> None:
         self.transposition_table: dict[
-            int, tuple[int, tuple[int, int, int] | tuple]] = transposition_table if transposition_table is not None else {}
+            int, tuple[
+                int, tuple[int, int, int] | tuple]] = transposition_table if transposition_table is not None else {}
         self.eval_lookup: dict[int, int] = eval_lookup if eval_lookup is not None else {}
 
     def generate_move(self, game_state: GameStateFormatV2, allotted_time: float = 3.0, depth: int = -1) -> tuple[
@@ -178,9 +179,10 @@ class BotV2p3(Bot):
             return results[-1], (depth - 1 if len(results) != 1 else 0)
         return results[-1], (depth if len(results) != 1 else 0)
 
-    def minimax(self, game_state: GameStateFormatV2, depth: int, alpha: int, beta: int, maximizing_player: bool) -> tuple[int, tuple[int, int, int] | tuple]:
+    def minimax(self, game_state: GameStateFormatV2, depth: int, alpha: int, beta: int, maximizing_player: bool) -> \
+    tuple[int, tuple[int, int, int] | tuple]:
         if game_state.get_winner() is not None:
-            return game_state.get_winner() * 9999999, (0, 0, 0)  # type: ignore
+            return game_state.winner * 9999999, (0, 0, 0)  # type: ignore
         state_key: int = hash((game_state.board, game_state.white_queen, game_state.white_king,
                                game_state.black_queen, game_state.black_king, depth, maximizing_player))
         transposition_table: dict[int, tuple[int, tuple[int, int, int] | tuple]] = self.transposition_table
@@ -188,7 +190,7 @@ class BotV2p3(Bot):
             return cached
         moves: tuple[tuple[int, int, int], ...] = tuple(game_state.get_moves())
         if len(moves) == 0:
-            return game_state.get_winner() * 9999999, (0, 0, 0) # type: ignore
+            return game_state.winner * 9999999, (0, 0, 0)  # type: ignore
         move_fn: Callable[[tuple[int, int, int]], GameStateFormatV2] = game_state.move
         eval_fn: Callable[[GameStateFormatV2], int] = self.evaluate
         child_data: list[tuple[tuple[int, int, int], GameStateFormatV2, int]] = [
