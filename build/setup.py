@@ -38,10 +38,10 @@ class BuildExtOptimized(build_ext):
             ]
         super().build_extensions()
 
-
-setup(
-    name="Chess",
-    cmdclass={"build_ext": BuildExtOptimized},
-    options={"build_ext": {"parallel": 8}},
-    ext_modules=mypycify(["utils.py", "fen_utils.py"] + bot_files + game_files),
-)
+if __name__ == "__main__":
+    setup(
+        name="Chess",
+        cmdclass={"build_ext": BuildExtOptimized},
+        options={"build_ext": {"parallel": 8}},
+        ext_modules=mypycify(["utils.py", "fen_utils.py"] + bot_files + game_files),
+    )
