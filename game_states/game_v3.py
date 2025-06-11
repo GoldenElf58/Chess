@@ -288,15 +288,18 @@ class GameStateV3(GameStateFormatV2):
                             break
 
         if len(moves) == 0 and pop_idx_base > -1:
-            for move in moves:
-                if (winner := self.move(move).get_winner()) == -1 or winner == 1:
+            game_state: GameStateV3 = GameStateV3(self.board, self.white_queen, self.white_king,
+                                                  self.black_queen, self.black_king,
+                                                  color=-self.color, turn=self.turn, winner=self.winner)
+            for move in game_state.get_moves_no_check():
+                if (winner := game_state.move(move).get_winner()) == -1 or winner == 1:
                     break
             else:
                 self.winner = 0
                 self.moves = moves
                 return moves
             self.winner = winner
-        elif self.moves_since_pawn >= 50:
+        elif self.moves_since_pawn >= 50:  # TODO: Update 50 move rule to 100 (turns not plies)
             self.winner = 0
         self.moves = moves
         return moves
