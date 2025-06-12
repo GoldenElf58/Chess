@@ -52,9 +52,14 @@ def board_move_matches_both_colors(board: tuple[int, ...], *, color: int = 1, **
     board_move_matches(tuple(-piece for piece in board), color=-color, **kwargs)
 
 
-def board_result_matches(board: tuple[int, ...], **kwargs) -> None:
+def board_result_matches(board: tuple[int, ...], debug: bool = False, **kwargs) -> None:
     game_state: GameStateTest = GameStateTest(board, **kwargs)
     game_state_correct: GameStateCorrect = GameStateCorrect(board, **kwargs)
+    if debug:
+        print(game_state)
+        print(game_state_correct)
+        print(game_state.get_winner())
+        print(game_state_correct.get_winner())
     assert game_state.get_winner() == game_state_correct.get_winner()
 
 
