@@ -1,4 +1,4 @@
-from game_states.game_format_v2 import GameStateFormatV2
+from game_states.game_base import GameStateBase
 from utils import split_table
 
 # Precompute index-to-coordinate mapping for faster lookups
@@ -93,17 +93,28 @@ def populate_precomputed_tables() -> None:
 
 populate_precomputed_tables()
 
+start_board: list[int] = [
+    -4, -2, -3, -5, -6, -3, -2, -4,
+    -1, -1, -1, -1, -1, -1, -1, -1,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1,
+    4, 2, 3, 5, 6, 3, 2, 4
+]
 
-class GameStateV3(GameStateFormatV2):
+
+class GameStateV3List(GameStateBase):
     __slots__ = ('board', 'color', 'white_queen', 'white_king', 'black_queen', 'black_king', 'last_move', 'turn',
                  'winner', 'previous_position_count', 'moves_since_pawn', 'moves', 'moves_and_states')
 
-    def __init__(self, board: tuple[int, ...] | None = None, white_queen: bool = True, white_king: bool = True,
+    def __init__(self, board: list[int] | None = None, white_queen: bool = True, white_king: bool = True,
                  black_queen: bool = True, black_king: bool = True, last_move: tuple[int, int, int] | None = None,
                  color: int = 1, turn: int = 0, winner: int | None = None,
                  previous_position_count: dict[int, int] | None = None, moves_since_pawn: int = 0) -> None:
         """
-        Initialize a GameStateV3 object.
+        Initialize a GameStateV3List object.
 
         Parameters
         ----------
@@ -130,19 +141,22 @@ class GameStateV3(GameStateFormatV2):
         moves_since_pawn : int, optional
             The number of moves since the last pawn move. Defaults to 0.
         """
-        self.moves_and_states: list[tuple[tuple[int, int, int], GameStateV3]] | None = None
-        super().__init__(board, white_queen, white_king, black_queen, black_king, last_move,
-                         color, turn, winner, previous_position_count, moves_since_pawn)
+        self.moves_and_states: list[tuple[tuple[int, int, int], GameStateV3List]] | None = None
+        self.board: list[int] = start_board if board is None else board
+        self.moves: list[tuple[int, int, int]] | None = None
+        self.last_move: tuple[int, int, int] | None = last_move
+        super().__init__(white_queen, white_king, black_queen, black_king, color, turn, winner,
+                         previous_position_count, moves_since_pawn)
 
     def get_hashable_state(self) -> tuple[tuple[int, ...], int, bool, bool, bool, bool,
     tuple[int, int, int] | None, int]:
         """ Convert the game state into a hashable format for caching. """
-        return (self.board, self.color, self.white_queen, self.white_king, self.black_queen, self.black_king,
+        return (tuple(self.board), self.color, self.white_queen, self.white_king, self.black_queen, self.black_king,
                 self.last_move, self.turn)
 
     def __hash__(self) -> int:
-        return hash((self.board, self.color, self.white_queen, self.white_king, self.black_queen, self.black_king,
-                     self.last_move, self.turn))
+        return hash((tuple(self.board), self.color, self.white_queen, self.white_king,
+                     self.black_queen, self.black_king, self.last_move, self.turn))
 
     def get_moves(self) -> list[tuple[int, int, int]]:
         """
@@ -155,164 +169,6 @@ class GameStateV3(GameStateFormatV2):
         """
         if self.moves is not None: return self.moves
         moves: list[tuple[int, int, int]] = self.get_moves_no_check()
-        self.moves = moves
-        pop_idx_base: int = len(moves) - 1
-        color_local = self.color
-        bishop_diagonals_local: tuple[tuple[tuple[int, ...], tuple[int, ...],
-        tuple[int, ...], tuple[int, ...]], ...] = bishop_diagonals
-        rook_rays_local: tuple[tuple[tuple[int, ...], tuple[int, ...],
-        tuple[int, ...], tuple[int, ...]], ...] = rook_rays
-        knight_targets_local: tuple[tuple[int, ...], ...] = knight_targets
-        king_targets_local: tuple[tuple[int, ...], ...] = king_targets
-        king_idx: int = -1
-        coords_local: list[tuple[int, int]] = index_to_coord
-        for i, piece in enumerate(self.board):
-            if piece * color_local == 6:
-                king_idx = i
-                break
-        for i, move in enumerate(reversed(moves)):
-            board_local: list[int] = self.move_only_board(move)
-            illegal: bool = False
-            if move[0] == -1:  # Castle
-                cs0, cs1, cs2 = king_idx, king_idx + move[1], king_idx + move[1] * 2  # type: int, int, int
-                for h, piece in enumerate(board_local):
-                    piece_type = color_local * piece
-                    if piece_type >= 0: continue
-                    if piece_type == -3 or piece_type == -5:
-                        for diagonal in bishop_diagonals_local[h]:
-                            for diagonal_idx in diagonal:
-                                if diagonal_idx == cs0 or diagonal_idx == cs1 or diagonal_idx == cs2:
-                                    illegal = True
-                                    break
-                                if board_local[diagonal_idx]:
-                                    break
-                            if illegal:
-                                break
-                        if illegal:
-                            moves.pop(pop_idx_base - i)
-                            break
-                    if (piece_type == -4 or piece_type == -5) and (coords_local[cs0][0] == coords_local[h][0] or
-                                                                   coords_local[cs0][1] == coords_local[h][1] or
-                                                                   coords_local[cs1][0] == coords_local[h][0] or
-                                                                   coords_local[cs1][1] == coords_local[h][1] or
-                                                                   coords_local[cs2][0] == coords_local[h][0] or
-                                                                   coords_local[cs2][1] == coords_local[h][1]):
-                        for ray in rook_rays_local[h]:
-                            for ray_idx in ray:
-                                if ray_idx == cs0 or ray_idx == cs1 or ray_idx == cs2:
-                                    illegal = True
-                                    break
-                                if board_local[ray_idx]:
-                                    break
-                            if illegal:
-                                break
-                        if illegal:
-                            moves.pop(pop_idx_base - i)
-                            break
-                    elif piece_type == -6:
-                        for target_idx in king_targets_local[h]:
-                            if target_idx == cs0 or target_idx == cs1 or target_idx == cs2:
-                                break
-                        else:
-                            continue
-                        moves.pop(pop_idx_base - i)
-                        break
-                    elif piece_type == -2:
-                        for target_idx in knight_targets_local[h]:
-                            if target_idx == cs0 or target_idx == cs1 or target_idx == cs2:
-                                break
-                        else:
-                            continue
-                        moves.pop(pop_idx_base - i)
-                        break
-                    elif piece_type == -1:
-                        forward_idx = h + color_local * 8
-                        if forward_idx + 1 == cs0 or forward_idx + 1 == cs1 or forward_idx + 1 == cs2 or \
-                                forward_idx - 1 == cs0 or forward_idx - 1 == cs1 or forward_idx - 1 == cs2:
-                            moves.pop(pop_idx_base - i)
-                            break
-            else:
-                check_square: int = move[1] if move[2] == 6 or move[2] == -6 else king_idx
-                for h, piece in enumerate(board_local):
-                    piece_type = color_local * piece
-                    if piece_type >= 0: continue
-                    if piece_type == -3 or piece_type == -5 and (
-                            check_square % 9 == h % 9 or check_square % 7 == h % 7):
-                        for diagonal in bishop_diagonals_local[h]:
-                            for diagonal_idx in diagonal:
-                                if board_local[diagonal_idx] == 0:
-                                    continue
-                                if diagonal_idx == check_square:
-                                    illegal = True
-                                break
-                            if illegal:
-                                break
-                        if illegal:
-                            moves.pop(pop_idx_base - i)
-                            break
-                    if ((piece_type == -4 or piece_type == -5) and
-                            (coords_local[check_square][0] == coords_local[h][0] or
-                             coords_local[check_square][1] == coords_local[h][1])):
-                        for ray in rook_rays_local[h]:
-                            for ray_idx in ray:
-                                if board_local[ray_idx] == 0:
-                                    continue
-                                if ray_idx == check_square:
-                                    illegal = True
-                                break
-                            if illegal:
-                                break
-                        if illegal:
-                            moves.pop(pop_idx_base - i)
-                            break
-                    elif piece_type == -6:
-                        for target_idx in king_targets_local[h]:
-                            if target_idx == check_square:
-                                break
-                        else:
-                            continue
-                        moves.pop(pop_idx_base - i)
-                        break
-                    elif piece_type == -2:
-                        for target_idx in knight_targets_local[h]:
-                            if target_idx == check_square:
-                                break
-                        else:
-                            continue
-                        moves.pop(pop_idx_base - i)
-                        break
-                    elif piece_type == -1:
-                        forward_idx = h + color_local * 8
-                        if ((forward_idx + 1 == check_square and coords_local[h][1] != 7) or
-                            (forward_idx - 1 == check_square and coords_local[h][1] != 0)):
-                            moves.pop(pop_idx_base - i)
-                            break
-
-        if len(moves) == 0 and pop_idx_base > -1:
-            game_state: GameStateV3 = GameStateV3(self.board, False, False, False,
-                                                False, color=-self.color)
-            for _, dest_idx, _ in game_state.get_moves_no_check():
-                if dest_idx == king_idx:
-                    self.winner = -self.color
-                    return moves
-            self.winner = 0
-            return moves
-        elif self.moves_since_pawn >= 100:
-            self.winner = 0
-        return moves
-
-    def get_moves_new_a(self) -> list[tuple[int, int, int]]:
-        """
-        Get all the possible moves for the current player.
-
-        Returns
-        -------
-        list[tuple[int, int, int]]
-            A list of tuples, each representing a move in the format (start_row, start_col, end_row, end_col).
-        """
-        if self.moves is not None: return self.moves
-        moves: list[tuple[int, int, int]] = self.get_moves_no_check()
-        self.moves = moves
         pop_idx_base: int = len(moves) - 1
         color_local = self.color
         bishop_diagonals_local: tuple[tuple[tuple[int, ...], tuple[int, ...],
@@ -445,19 +301,23 @@ class GameStateV3(GameStateFormatV2):
                             break
 
         if len(moves) == 0 and pop_idx_base > -1:
-            game_state: GameStateV3 = GameStateV3(self.board, False, False, False,
-                                                False, color=-self.color)
-            for _, dest_idx, _ in game_state.get_moves_no_check():
-                if dest_idx == king_idx:
-                    self.winner = -self.color
-                    return moves
-            self.winner = 0
-            return moves
+            game_state: GameStateV3List = GameStateV3List(self.board, self.white_queen, self.white_king,
+                                                  self.black_queen, self.black_king,
+                                                  color=-self.color, turn=self.turn, winner=self.winner)
+            for move in game_state.get_moves_no_check():
+                if (winner := game_state.move(move).get_winner()) == -1 or winner == 1:
+                    break
+            else:
+                self.winner = 0
+                self.moves = moves
+                return moves
+            self.winner = winner
         elif self.moves_since_pawn >= 100:
             self.winner = 0
+        self.moves = moves
         return moves
 
-    def get_moves_new(self) -> list[tuple[tuple[int, int, int], 'GameStateV3']]:  # type: ignore
+    def get_moves_new(self) -> list[tuple[tuple[int, int, int], 'GameStateV3List']]:  # type: ignore
         """
         Get all the possible moves for the current player.
 
@@ -478,11 +338,11 @@ class GameStateV3(GameStateFormatV2):
         king_targets_local: tuple[tuple[int, ...], ...] = king_targets
         coords_local: list[tuple[int, int]] = index_to_coord
         king_idx: int = self.board.index(6 * color_local)
-        moves_and_states: list[tuple[tuple[int, int, int], GameStateV3]] = []
+        moves_and_states: list[tuple[tuple[int, int, int], GameStateV3List]] = []
         for i, move in enumerate(reversed(moves)):
-            state: GameStateV3 = self.move(move)
+            state: GameStateV3List = self.move(move)
             moves_and_states.append((move, state))
-            board_local: tuple[int, ...] = state.board
+            board_local: list[int] = state.board
             illegal: bool = False
             if move[0] == -1:  # Castle
                 cs0, cs1, cs2 = move[2], move[2] + move[1], move[2] + move[1] * 2  # type: int, int, int
@@ -600,7 +460,7 @@ class GameStateV3(GameStateFormatV2):
 
         self.moves_and_states = moves_and_states
         if len(moves) == 0 and pop_idx_base > -1:
-            game_state: GameStateV3 = GameStateV3(self.board, self.white_queen, self.white_king,
+            game_state: GameStateV3List = GameStateV3List(self.board, self.white_queen, self.white_king,
                                                   self.black_queen, self.black_king,
                                                   color=-self.color, turn=self.turn, winner=self.winner)
             for move in game_state.get_moves_no_check():
@@ -614,7 +474,7 @@ class GameStateV3(GameStateFormatV2):
             self.winner = 0
         return moves_and_states
 
-    def get_new_states(self) -> list[tuple[tuple[int, int, int], 'GameStateV3']]:
+    def get_new_states(self) -> list[tuple[tuple[int, int, int], 'GameStateV3List']]:
         """
         Get all the possible moves for the current player.
 
@@ -626,10 +486,10 @@ class GameStateV3(GameStateFormatV2):
         if self.moves_and_states is not None: return self.moves_and_states
         moves: list[tuple[int, int, int]] = self.get_moves_no_check()
         pop_idx_base: int = len(moves) - 1
-        moves_and_states: list[tuple[tuple[int, int, int], GameStateV3]] = []
+        moves_and_states: list[tuple[tuple[int, int, int], GameStateV3List]] = []
         color_local: int = self.color
         for i, move in enumerate(reversed(moves)):
-            state: GameStateV3 = self.move(move)
+            state: GameStateV3List = self.move(move)
             for move_2 in state.get_moves_no_check():
                 if (winner := (state_2 := state.move(move_2)).get_winner()) == -1 or winner == 1:
                     moves.pop(pop_idx_base - i)
@@ -652,7 +512,7 @@ class GameStateV3(GameStateFormatV2):
             else:
                 moves_and_states.append((move, state))
         if len(moves) == 0 and pop_idx_base > -1:
-            game_state: GameStateV3 = GameStateV3(self.board, self.white_queen, self.white_king,
+            game_state: GameStateV3List = GameStateV3List(self.board, self.white_queen, self.white_king,
                                                   self.black_queen, self.black_king,
                                                   color=-color_local, turn=self.turn, winner=self.winner)
             for move in game_state.get_moves_no_check():
@@ -672,7 +532,7 @@ class GameStateV3(GameStateFormatV2):
         moves: list[tuple[int, int, int]] = []
         # Local binds for speed
         color_local: int = self.color
-        board_local: tuple[int, ...] = self.board
+        board_local: list[int] = self.board
         last_move_local: tuple[int, int, int] | None = self.last_move
         coords_local: list[tuple[int, int]] = index_to_coord
         knight_targets_local: tuple[tuple[int, ...], ...] = knight_targets
@@ -686,12 +546,13 @@ class GameStateV3(GameStateFormatV2):
             if piece_type <= 0: continue
             if piece_type == 6:  # King
                 row_base: int = h - j
-                if (((color_local == 1 and self.white_king) or (color_local == -1 and self.black_king)) and
-                        board_local[row_base + 7] == 4 * color_local
+                if (((color_local == 1 and self.white_king) or (color_local == -1 and self.black_king)) and board_local[
+                    row_base + 7] == 4 * color_local
                         and board_local[row_base + 5] == board_local[row_base + 6] == 0):
                     moves.append((-1, 1, h))
                 if (((color_local == 1 and self.white_queen) or (color_local == -1 and self.black_queen)) and
-                        board_local[row_base] == 4 * color_local
+                        board_local[
+                            row_base + 7] == 4 * color_local
                         and board_local[row_base + 1] == board_local[row_base + 2] == board_local[row_base + 3] == 0):
                     moves.append((-1, -1, h))
                 for target_idx in king_targets_local[h]:
@@ -753,15 +614,15 @@ class GameStateV3(GameStateFormatV2):
 
     def are_captures(self) -> bool:
         moves: list[tuple[int, int, int]] = self.get_moves()
-        board_local: tuple[int, ...] = self.board
+        board_local: list[int] = self.board
         empty_count: int = board_local.count(0)
         for move in moves:
-            new_board: list[int] = self.move_only_board(move)
+            new_board: list[int] = self.move(move).board
             if new_board.count(0) != empty_count:
                 return True
         return False
 
-    def move(self, move: tuple[int, int, int]) -> 'GameStateV3':
+    def move(self, move: tuple[int, int, int]) -> 'GameStateV3List':
         """
         Make a move on the board.
 
@@ -776,11 +637,11 @@ class GameStateV3(GameStateFormatV2):
 
         Returns
         -------
-        GameStateV3
+        GameStateV3List
             A new GameState object, with the move applied.
         """
-        board_local: tuple[int, ...] = self.board
-        new_board: list[int] = list(board_local)
+        board_local: list[int] = self.board
+        new_board: list[int] = board_local.copy()
         white_queen: bool = self.white_queen
         white_king: bool = self.white_king
         black_queen: bool = self.black_queen
@@ -788,7 +649,7 @@ class GameStateV3(GameStateFormatV2):
         new_moves_since_pawn: int = self.moves_since_pawn + 1
 
         if not len(move):
-            return GameStateV3(board_local, turn=self.turn + 1, winner=self.winner)
+            return GameStateV3List(board_local, turn=self.turn + 1, winner=self.winner)
 
         move_0, move_1, move_2 = move  # type: int, int, int
         if move_0 == -1:  # Castle
@@ -803,47 +664,56 @@ class GameStateV3(GameStateFormatV2):
             new_board[move_2 + (3 if move_1 == 1 else -4)] = 0
             new_board[move_2 + move_1] = board_local[move_2 + (3 if move_1 == 1 else -4)]
             new_board[move_2 + 2 * move_1] = board_local[move_2]
-            return GameStateV3(tuple(new_board), white_queen, white_king, black_queen, black_king,
+            return GameStateV3List(new_board, white_queen, white_king, black_queen, black_king,
                                color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn)
 
         if move_0 == -2:  # En Passant
             new_board[move_2] = 0
             new_board[move_2 - 8 * self.color + move_1] = self.color
             new_board[move_2 + move_1] = 0
-            return GameStateV3(tuple(new_board), white_queen, white_king, black_queen, black_king,
-                               color=-self.color, turn=self.turn + 1)
+            return GameStateV3List(new_board, white_queen, white_king, black_queen, black_king,
+                               color=-self.color, turn=self.turn + 1, moves_since_pawn=0)
 
-        if (piece := abs(move_2)) == 6:
-            if move_0 == 4:
+        if (piece := abs(move_2)) in (4, 6):
+            if move_1 == 56:
+                white_queen = False
+            elif move_1 == 63:
+                white_king = False
+            elif not move_1:
+                black_queen = False
+            elif move_1 == 7:
+                black_king = False
+            elif move_1 == 4:
                 black_queen = False
                 black_king = False
-            elif move_0 == 60:
+            elif move_1 == 60:
                 white_queen = False
                 white_king = False
-        elif piece == 4:
-            if move_0 == 56:
+        if move_2 in (-4, 4):
+            if move_1 == 56:
                 white_queen = False
-            elif move_0 == 63:
+            elif move_1 == 63:
                 white_king = False
-            elif not move_0:
+            elif not move_1:
                 black_queen = False
-            elif move_0 == 7:
+            elif move_1 == 7:
                 black_king = False
-        elif piece == 1:
+
+        if piece == 1:
             new_moves_since_pawn = 0
 
         new_board[move_1] = move_2
         new_board[move_0] = 0
         new_previous_position_count = dict(self.previous_position_count)
-        if (hash_state := hash(board_local)) in new_previous_position_count:
+        if (hash_state := hash(tuple(board_local))) in new_previous_position_count:
             new_previous_position_count[hash_state] += 1
             if new_previous_position_count[hash_state] >= 3:
-                return GameStateV3(tuple(new_board), winner=0)
+                return GameStateV3List(new_board, winner=0)
         else:
             new_previous_position_count[hash_state] = 1
         last_move: tuple[int, int, int] | None = move if (
                 piece == 1 and (move_0 == move_1 + self.color * 16)) else None
-        return GameStateV3(tuple(new_board), white_queen, white_king, black_queen, black_king, last_move=last_move,
+        return GameStateV3List(new_board, white_queen, white_king, black_queen, black_king, last_move=last_move,
                            color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn,
                            previous_position_count=new_previous_position_count)
 
@@ -862,10 +732,10 @@ class GameStateV3(GameStateFormatV2):
 
         Returns
         -------
-        GameStateV3
+        GameStateV3List
             A new GameState object, with the move applied.
         """
-        new_board: list[int] = list(self.board)
+        new_board: list[int] = self.board.copy()
 
         move_0, move_1, move_2 = move  # type: int, int, int
         if move_0 == -1:  # Castle
@@ -900,10 +770,10 @@ class GameStateV3(GameStateFormatV2):
 
         Returns
         -------
-        GameStateV3
+        GameStateV3List
             A new GameState object, with the move applied.
         """
-        new_board: list[int] = list(self.board)
+        new_board: list[int] = self.board.copy()
 
         move_0, move_1, move_2 = move  # type: int, int, int
         if move_0 == -1:  # Castle
@@ -943,7 +813,7 @@ class GameStateV3(GameStateFormatV2):
         return self.winner
 
     def __repr__(self) -> str:
-        return f"""GameStateV3(board={self.board}
+        return f"""GameStateV3List(board={self.board}
           color={self.color},
           turn={self.turn},
           winner={self.winner},

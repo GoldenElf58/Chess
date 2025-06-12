@@ -33,20 +33,21 @@ def populate_game_states():
 def benchmark(condition: bool, game_state: GameStateV3, move) -> None:
     # pass
     game_state.moves = None
+    # game_state.moves_and_states = None
     # game_state.are_captures()
-    # game_state.get_moves()
+    # game_state.get_moves_new()
     # game_state = GameStateV2()
-    bot = BotV2p3()
+    # bot = BotV2p3()
     # while game_state.get_winner() is None:
     #     game_state.move(bot.generate_move(game_state, depth=2)[0][1])
 
     # move = random.choice(game_state.get_moves())
     if condition:
-        bot.minimax_new(game_state, 5, -(1 << 31), (1 << 31), game_state.color == 1)
-        # game_state.move_only_board_new(move)
+        # bot.minimax_new(game_state, 5, -(1 << 31), (1 << 31), game_state.color == 1)
+        game_state.get_moves_new_a()
     else:
-        bot.minimax(game_state, 5, -(1 << 31), (1 << 31), game_state.color == 1)
-        # game_state.move_only_board(move)
+        # bot.minimax(game_state, 5, -(1 << 31), (1 << 31), game_state.color == 1)
+        game_state.get_moves()
 
     # game_state.get_moves()
     # game_state.get_moves_no_check()
@@ -103,19 +104,72 @@ def main() -> None:
     t3 = []
     for _ in range(50_000_000): pass
     print('Warmup complete')
-    N = 25
-    n = 1
+    N = 100_000
+    n = 25
     move = random.choice(GameStateV3().get_moves())
     timeit(lambda: benchmark(True, GameStateV3(), move), number=n * 5)
-    test = timeit(lambda: benchmark(True, GameStateV3(), move), number=n*10) / n / 10
+    test = timeit(lambda: benchmark(True, GameStateV3(), move), number=n * 10) / n / 10
     scale = 1_000_000_000 if test < .000001 else (1_000_000 if test < .001 else (1_000 if test < 1 else 1))
     unit = 'ns' if test < .000001 else ('µs' if test < .001 else ('ms' if test < 1 else 's'))
     print(f'Test: {test}')
     print(f'Scale: {scale:,}')
     print(f'Unit: {unit}\n')
     start = random.randint(0, 500)
+    boards = [
+        (
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 6, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, -6, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+        ),
+        (
+            6, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, -5, -6, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+        ),
+        (
+            -6, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 4, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 6, 0, 0,
+            0, 0, 4, 0, 6, 0, 0, 0,
+        ),
+        (
+            0, 0, 0, 4, 0, 0, 0, 5,
+            6, 0, -6, 0, 0, 0, 0, 0,
+            4, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, -1, 1, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+        ),
+        (
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 1, -1, 0, 0, 0,
+            -4, 0, 0, 0, 0, 0, 0, 0,
+            -6, 0, 6, 0, 0, 0, 0, 0,
+            0, 0, 0, -4, 0, 0, 0, -5,
+        ),
+    ]
+    # game_state = GameStateV3(board)
     for i in range(start, start + N):
-        game_state = game_states[i % 500]
+        game_state = GameStateV3(boards[i % len(boards)]) #game_states[i % 500]
 
         # timeit(lambda: benchmark(True, game_state_a), number=500) * 1_000
         # game_state_a.get_moves()
@@ -123,11 +177,10 @@ def main() -> None:
         # t1.append(mean([benchmark(True, game_state)[1] for i in range(3)]))
         # t2.append(mean([benchmark(False, game_state)[1] for i in range(3)]))
         # timeit(lambda: benchmark(True, game_state_a), number=20)
-        game_state_a = game_state.to_v3()
-        move = random.choice(game_state_a.get_moves())
+        game_state_a = game_state#.to_v3()
+        # move = random.choice(game_state_a.get_moves())
         t1.append(timeit(lambda: benchmark(True, game_state_a, move), number=n) * scale / n)
-        game_state_b = game_state.to_v3()
-        move = random.choice(game_state_b.get_moves())
+        game_state_b = game_state#.to_v3()
         t2.append(timeit(lambda: benchmark(False, game_state_b, move), number=n) * scale / n)
         t3.append(t1[-1] - t2[-1])
         if (i - start) > 0 and (i - start) % max(1, (N // 50)) == 0:
@@ -140,7 +193,7 @@ def main() -> None:
     t1 = t1[N // 100:]
     t2 = t2[N // 100:]
     t3 = t3[N // 100:]
-    print(f'{t1}\n{t2}\n{t3}')
+    # print(f'{t1}\n{t2}\n{t3}')
     print()
     print(f'Mean New: {mean(t1):#.5g}{unit}\nStdDev New: {stdev(t1):#.5g}{unit}\nN New: {len(t1):}\n')
     print(f'Mean Old: {mean(t2):#.5g}{unit}\nStdDev Old: {stdev(t2):#.5g}{unit}\nN Old: {len(t2)}\n')

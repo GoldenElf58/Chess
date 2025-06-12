@@ -1,5 +1,6 @@
 from copy import copy
 
+from game_states.game_v3_list import GameStateV3List
 from game_states.game_base import GameStateBase
 from archive.game_bitboards import GameStateBitboards
 from game_states.game_bitboards_v2 import GameStateBitboardsV2
@@ -491,6 +492,11 @@ class GameState(GameStateBase):
 
     def to_v3(self) -> GameStateV3:
         return GameStateV3(self.board, self.white_queen, self.white_king, self.black_queen, self.black_king,
+                           None, self.color, self.turn, self.winner, copy(self.previous_position_count),
+                           self.moves_since_pawn)
+
+    def to_v3_list(self) -> GameStateV3List:
+        return GameStateV3List(list(self.board), self.white_queen, self.white_king, self.black_queen, self.black_king,
                            None, self.color, self.turn, self.winner, copy(self.previous_position_count),
                            self.moves_since_pawn)
 

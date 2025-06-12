@@ -160,11 +160,16 @@ class GameStateCorrect(GameStateFormatV2):
         moves_len: int = len(moves)
         for i, move_0 in enumerate(reversed(moves)):
             state: GameStateCorrect = self.move(move_0)
+            state.moves_since_pawn = 0
             for move_1 in state.get_moves_no_check():
-                if (winner := (state_2 := state.move(move_1)).get_winner()) == -1 or winner == 1:
+                if self.color * 6 not in (state_2 := state.move(move_1)).board:
                     moves.pop(moves_len - i - 1)
                     break
                 elif move_0[0] == -1:
+                    if (self.board[move_0[2] - self.color * 7] == -self.color or
+                        self.board[move_0[2] - self.color * 9] == -self.color):
+                        moves.pop(moves_len - i - 1)
+                        break
                     if move_0[1] == 1:
                         for idx in range(move_0[2], move_0[2] + 2):
                             if state_2.board[idx] * self.color < 0:
@@ -198,7 +203,6 @@ class GameStateCorrect(GameStateFormatV2):
 
     def get_moves_no_check(self) -> list[tuple[int, int, int]]:
         moves: list[tuple[int, int, int]] = []
-        # Local binds for speed
         color_local: int = self.color
         board_local: tuple[int, ...] = self.board
         last_move_local: tuple[int, int, int] | None = self.last_move
@@ -219,8 +223,7 @@ class GameStateCorrect(GameStateFormatV2):
                         and board_local[row_base + 5] == board_local[row_base + 6] == 0):
                     moves.append((-1, 1, h))
                 if (((color_local == 1 and self.white_queen) or (color_local == -1 and self.black_queen)) and
-                        board_local[
-                            row_base + 7] == 4 * color_local
+                        board_local[row_base] == 4 * color_local
                         and board_local[row_base + 1] == board_local[row_base + 2] == board_local[row_base + 3] == 0):
                     moves.append((-1, -1, h))
                 for target_idx in king_targets_local[h]:
@@ -343,32 +346,23 @@ class GameStateCorrect(GameStateFormatV2):
             return GameStateCorrect(tuple(new_board), white_queen, white_king, black_queen, black_king,
                                     color=-self.color, turn=self.turn + 1, moves_since_pawn=0)
 
-        if (piece := abs(move_2)) in (4, 6):
-            if move_1 == 56:
-                white_queen = False
-            elif move_1 == 63:
-                white_king = False
-            elif not move_1:
-                black_queen = False
-            elif move_1 == 7:
-                black_king = False
-            elif move_1 == 4:
+        if (piece := abs(move_2)) == 6:
+            if move_0 == 4:
                 black_queen = False
                 black_king = False
-            elif move_1 == 60:
+            elif move_0 == 60:
                 white_queen = False
                 white_king = False
-        if move_2 in (-4, 4):
-            if move_1 == 56:
+        elif piece == 4:
+            if move_0 == 56:
                 white_queen = False
-            elif move_1 == 63:
+            elif move_0 == 63:
                 white_king = False
-            elif not move_1:
+            elif not move_0:
                 black_queen = False
-            elif move_1 == 7:
+            elif move_0 == 7:
                 black_king = False
-
-        if piece == 1:
+        elif piece == 1:
             new_moves_since_pawn = 0
 
         new_board[move_1] = move_2
@@ -401,7 +395,7 @@ class GameStateCorrect(GameStateFormatV2):
             self.winner = -1
         else:
             for piece in self.board:
-                if -6 != piece != 6:
+                if 0 != piece != 6 and piece != -6:
                     return None
             self.winner = 0
         return self.winner
