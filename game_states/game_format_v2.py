@@ -59,6 +59,9 @@ class GameStateFormatV2(GameStateBase):
     def get_moves(self) -> list[tuple[int, int, int]]:
         raise NotImplementedError
 
+    def get_moves_new(self) -> list[tuple[tuple[int, int, int], 'GameStateFormatV2']]:
+        raise NotImplementedError
+
     def get_moves_no_check(self) -> list[tuple[int, int, int]]:
         raise NotImplementedError
 

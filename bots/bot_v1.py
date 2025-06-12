@@ -193,7 +193,7 @@ class BotV1(Bot):
     def minimax(self, game_state: GameStateFormatV2, depth: int, alpha: int, beta: int, maximizing_player: bool,
                 first_call: bool = True) -> tuple[int, tuple[int, int, int]]:
         if game_state.get_winner() is not None:
-            return game_state.get_winner() * 9999999, (0, 0, 0)  # type: ignore
+            return game_state.winner * 9999999, (0, 0, 0)  # type: ignore
         state_key: int = hash((game_state.board, game_state.white_queen, game_state.white_king,
                                game_state.black_queen, game_state.black_king, depth, maximizing_player))
         transposition_table: dict[int, tuple[int, tuple[int, int, int]]] = self.transposition_table
@@ -202,7 +202,7 @@ class BotV1(Bot):
         moves: tuple[tuple[int, int, int], ...] = tuple(game_state.get_moves() if first_call else
                                                         game_state.get_moves_no_check())
         if len(moves) == 0:
-            return game_state.get_winner() * 9999999, (0, 0, 0)  # type: ignore
+            return game_state.winner * 9999999, (0, 0, 0)  # type: ignore
         move_fn: Callable[[tuple[int, int, int]], GameStateFormatV2] = game_state.move
         eval_fn: Callable[[GameStateFormatV2], int] = self.evaluate
         child_data: list[tuple[tuple[int, int, int], GameStateFormatV2, int]] = [

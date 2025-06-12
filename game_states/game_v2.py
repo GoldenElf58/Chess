@@ -190,7 +190,7 @@ class GameStateV2(GameStateFormatV2):
                 self.moves = moves
                 return moves
             self.winner = winner
-        elif self.moves_since_pawn >= 50:
+        elif self.moves_since_pawn >= 100:
             self.winner = 0
         self.moves = moves
         return moves
@@ -387,7 +387,7 @@ class GameStateV2(GameStateFormatV2):
     def get_winner(self) -> int | None:
         if self.winner is not None:
             return self.winner
-        if self.moves_since_pawn >= 50:
+        if self.moves_since_pawn >= 100:
             self.winner = 0
             return 0
         white: bool = 6 in self.board

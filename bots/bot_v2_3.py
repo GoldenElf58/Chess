@@ -218,3 +218,44 @@ class BotV2p3(Bot):
 
         transposition_table[state_key] = best_eval, best_move
         return best_eval, best_move
+
+
+    def minimax_new(self, game_state: GameStateFormatV2, depth: int, alpha: int, beta: int, maximizing_player: bool) -> \
+    tuple[int, tuple[int, int, int] | tuple]:
+        if game_state.get_winner() is not None:
+            return game_state.winner * 9999999, (0, 0, 0)  # type: ignore
+        state_key: int = hash((game_state.board, game_state.white_queen, game_state.white_king,
+                               game_state.black_queen, game_state.black_king, depth, maximizing_player))
+        transposition_table: dict[int, tuple[int, tuple[int, int, int] | tuple]] = self.transposition_table
+        if (cached := transposition_table.get(state_key)) is not None:
+            return cached
+        moves: tuple[tuple[tuple[int, int, int], GameStateFormatV2], ...] = tuple(game_state.get_moves_new())
+        if len(moves) == 0:
+            return game_state.winner * 9999999, (0, 0, 0)  # type: ignore
+        eval_fn: Callable[[GameStateFormatV2], int] = self.evaluate
+        child_data: list[tuple[tuple[int, int, int], GameStateFormatV2, int]] = [
+            (move, child_state, eval_fn(child_state)) for move, child_state in moves]  # Cache evaluations
+
+        child_data.sort(key=lambda move: move[2], reverse=maximizing_player)
+
+        best_eval: int = -(1 << 31) if maximizing_player else (1 << 31)  # Large negative/positive integers
+        best_move: tuple[int, int, int] | tuple = ()
+        recurse: Callable = self.minimax
+
+        for move, child, score in child_data:
+            evaluation = score if depth <= 1 else recurse(child, depth - 1, alpha, beta, not maximizing_player)[0]
+
+            if maximizing_player:
+                if evaluation > best_eval:
+                    best_eval, best_move = evaluation, move
+                    alpha = max(alpha, evaluation)
+            elif evaluation < best_eval:
+                best_eval, best_move = evaluation, move
+                beta = min(beta, evaluation)
+
+            if beta <= alpha:
+                break
+
+        transposition_table[state_key] = best_eval, best_move
+        return best_eval, best_move
+
