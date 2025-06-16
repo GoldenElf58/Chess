@@ -14,7 +14,8 @@ from scipy.stats import binomtest  # type: ignore
 from bots import *
 
 from fen_utils import game_state_from_line
-from game_states import GameState, GameStateBase, GameStateBitboardsV2, GameStateFormatV2, GameStateV3
+from game_states import GameState, GameStateBase, GameStateBitboardsV2, GameStateFormatV2, GameStateV3, \
+    GameStateBitboardsV3
 
 images = [
     pygame.image.load("piece_images/-6.png"),
@@ -45,7 +46,7 @@ def display_board(screen, game_state: GameStateBase, selected_square=(), offset=
             if isinstance(game_state, GameState) or isinstance(game_state, GameStateFormatV2):
                 if game_state.board[i * 8 + j] != 0:
                     screen.blit(images[game_state.board[i * 8 + j] + 6], (j * 60 + offset, i * 60))
-            elif isinstance(game_state, GameStateBitboardsV2):
+            elif isinstance(game_state, GameStateBitboardsV2) or isinstance(game_state, GameStateBitboardsV3):
                 piece = 0
                 piece_mask = 1 << (63 - (i * 8 + j))
                 if not piece_mask & (game_state.white_pieces | game_state.black_pieces):
@@ -202,7 +203,7 @@ def can_select_square(row: int, col: int, game_state: GameStateBase, game_mode: 
     :return: Whether or not the square can be selected
     """
     color = game_state.color
-    if isinstance(game_state, GameStateBitboardsV2):
+    if isinstance(game_state, GameStateBitboardsV2) or isinstance(game_state, GameStateBitboardsV3):
         selected_piece_mask = 1 << (63 - (row * 8 + col))
         return bool(((game_mode & (GameMode.HUMAN | GameMode.PLAY_WHITE)) and
                      ((selected_piece_mask & game_state.white_pieces) and color == 1) or (
@@ -265,7 +266,7 @@ def find_move(user_src: tuple[int, int], user_dest: tuple[int, int],
                     expected_dest = (user_src[0] - color, user_src[1] + move_[1])
                     if user_dest == expected_dest:
                         return move_
-    elif isinstance(game_state, GameStateBitboardsV2):
+    elif isinstance(game_state, GameStateBitboardsV2) or isinstance(game_state, GameStateBitboardsV3):
         a8 = 1 << 63
         user_src_mask: int = a8 >> user_src[0] * 8 + user_src[1]
         user_dest_mask: int = a8 >> user_dest[0] * 8 + user_dest[1]
@@ -297,7 +298,7 @@ def game_loop() -> None:
     pygame.init()
     screen: Surface = pygame.display.set_mode((854, 480))
     offset: int = 187
-    game_state_type: Callable[[], GameStateBase] = GameStateV3
+    game_state_type: Callable[[], GameStateBase] = GameStateBitboardsV3
     game_state: GameStateBase = game_state_type()
     selected_square: tuple[int, int] | None = None
     """For human move selection, represented as (col, row)"""

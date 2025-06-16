@@ -113,7 +113,7 @@ start_board: NDArray[int8] = np.array((
 start_board.setflags(write=False)
 
 
-class GameState:
+class GameStateNumpy:
     __slots__ = ('board', 'color', 'white_queen', 'white_king', 'black_queen', 'black_king', 'last_move', 'turn',
                  'winner', 'previous_position_count', 'moves_since_pawn', 'moves')
 
@@ -122,7 +122,7 @@ class GameState:
                  color: int = 1, turn: int = 0, winner: int | None = None,
                  previous_position_count: dict[int, int] | None = None, moves_since_pawn: int = 0) -> None:
         """
-        Initialize a GameState object.
+        Initialize a GameStateNumpy object.
 
         Parameters
         ----------
@@ -179,7 +179,7 @@ class GameState:
         moves_len: int = len(moves)
         winner: int | None = 0
         for i, move_0 in enumerate(reversed(moves)):
-            state: GameState = self.move(move_0)
+            state: GameStateNumpy = self.move(move_0)
             for move_1 in state.get_moves_no_check():
                 if (winner := (state_2 := state.move(move_1)).get_winner()) == -1 or winner == 1:
                     moves.pop(moves_len - i - 1)
@@ -317,7 +317,7 @@ class GameState:
                 return True
         return False
 
-    def move(self, move: tuple[int, int, int, int]) -> 'GameState':
+    def move(self, move: tuple[int, int, int, int]) -> 'GameStateNumpy':
         """
         Make a move on the board.
 
@@ -332,8 +332,8 @@ class GameState:
 
         Returns
         -------
-        GameState
-            A new GameState object, with the move applied.
+        GameStateNumpy
+            A new GameStateNumpy object, with the move applied.
         """
         board_local: NDArray[int8] = self.board
         new_board: NDArray[int8] = board_local.copy()
@@ -348,7 +348,7 @@ class GameState:
         move_3: int = move[3]
 
         if len(move) == 0:
-            return GameState(board_local, turn=self.turn + 1, winner=self.winner)
+            return GameStateNumpy(board_local, turn=self.turn + 1, winner=self.winner)
 
         second_idx: int = move_2 * 8 + move_3
         if move_0 == -1:  # Castle
@@ -363,27 +363,27 @@ class GameState:
             new_board[move_2 * 8 + (0 if move_1 == -1 else 7)] = 0
             new_board[move_2 * 8 + 4 + move_1 * 2] = board_local[second_idx]
             new_board[move_2 * 8 + 4 + move_1] = board_local[move_2 * 8 + (0 if move_1 == -1 else 7)]
-            return GameState(new_board, white_queen, white_king, black_queen, black_king,
+            return GameStateNumpy(new_board, white_queen, white_king, black_queen, black_king,
                              color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn)
 
         if move_0 == -2:  # En Passant
             new_board[second_idx] = 0
             new_board[(move_2 - self.color) * 8 + move_3 + move_1] = self.color
             new_board[second_idx + move_1] = 0
-            return GameState(new_board, white_queen, white_king, black_queen, black_king,
+            return GameStateNumpy(new_board, white_queen, white_king, black_queen, black_king,
                              color=-self.color, turn=self.turn + 1, moves_since_pawn=0)
 
         if move_0 == -3:  # Promotion
             new_board[second_idx] = 0
             new_board[(move_2 - self.color) * 8 + move_3] = move_1
-            return GameState(new_board, white_queen, white_king, black_queen, black_king, color=-self.color,
+            return GameStateNumpy(new_board, white_queen, white_king, black_queen, black_king, color=-self.color,
                              turn=self.turn + 1, moves_since_pawn=0)
 
         if move_0 <= -4:  # Promotion while taking
             new_board[second_idx] = 0
             new_board[(move_2 - self.color) * 8 + (move_3 + move_1)] = (move_0 + 2) * -self.color
 
-            return GameState(new_board, white_queen, white_king, black_queen, black_king,
+            return GameStateNumpy(new_board, white_queen, white_king, black_queen, black_king,
                              color=-self.color, turn=self.turn + 1, moves_since_pawn=0)
 
         first_idx: int = move_0 * 8 + move_1
@@ -421,12 +421,12 @@ class GameState:
         if (hash_state := hash(tuple(board_local))) in new_previous_position_count:
             new_previous_position_count[hash_state] += 1
             if new_previous_position_count[hash_state] >= 3:
-                return GameState(new_board, winner=0)
+                return GameStateNumpy(new_board, winner=0)
         else:
             new_previous_position_count[hash_state] = 1
         last_move: tuple[int, int, int, int] | None = move if (
                 piece == 1 and (move_0 == move_2 + self.color * 2)) else None
-        return GameState(new_board, white_queen, white_king, black_queen, black_king, last_move=last_move,
+        return GameStateNumpy(new_board, white_queen, white_king, black_queen, black_king, last_move=last_move,
                          color=-self.color, turn=self.turn + 1, moves_since_pawn=new_moves_since_pawn,
                          previous_position_count=new_previous_position_count)
 
@@ -447,7 +447,7 @@ class GameState:
         return self.winner
 
     def __repr__(self) -> str:
-        return f"""GameState(board={self.board}
+        return f"""GameStateNumpy(board={self.board}
           color={self.color},
           turn={self.turn},
           winner={self.winner},

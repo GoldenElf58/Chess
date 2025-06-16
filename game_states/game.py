@@ -1,5 +1,6 @@
 from copy import copy
 
+from game_states.game_bitboards_v3 import GameStateBitboardsV3
 from game_states.game_v3_list import GameStateV3List
 from game_states.game_base import GameStateBase
 from archive.game_bitboards import GameStateBitboards
@@ -459,7 +460,7 @@ class GameState(GameStateBase):
         for i, piece in enumerate(self.board):
             if not piece:
                 continue
-            piece_mask = 1 << (64 - i)
+            piece_mask = 1 << (63 - i)
             if piece > 0:
                 white |= piece_mask
             else:
@@ -477,13 +478,80 @@ class GameState(GameStateBase):
                 queens |= piece_mask
             elif piece_type == 6:
                 kings |= piece_mask
-        return GameStateBitboards(white, black, pawns, knights, bishops, rooks, queens, kings, self.white_queen,
+        return GameStateBitboards(white, black, kings, queens, rooks, bishops, knights, pawns, self.white_queen,
                                   self.white_king, self.black_queen, self.black_king, self.last_move,
                                   self.color, self.turn, self.winner, self.previous_position_count,
                                   self.moves_since_pawn)
 
     def to_bitboards_v2(self) -> GameStateBitboardsV2:
-        return self.to_bitboards().to_bitboards_v2()
+        pawns: int = 0
+        knights: int = 0
+        bishops: int = 0
+        rooks: int = 0
+        queens: int = 0
+        kings: int = 0
+        white: int = 0
+        black: int = 0
+        for i, piece in enumerate(self.board):
+            if not piece:
+                continue
+            piece_mask = 1 << (63 - i)
+            if piece > 0:
+                white |= piece_mask
+            else:
+                black |= piece_mask
+            piece_type = abs(piece)
+            if piece_type == 1:
+                pawns |= piece_mask
+            elif piece_type == 2:
+                knights |= piece_mask
+            elif piece_type == 3:
+                bishops |= piece_mask
+            elif piece_type == 4:
+                rooks |= piece_mask
+            elif piece_type == 5:
+                queens |= piece_mask
+            elif piece_type == 6:
+                kings |= piece_mask
+        return GameStateBitboardsV2(white, black, kings, queens, rooks, bishops, knights, pawns, self.white_queen,
+                                    self.white_king, self.black_queen, self.black_king, color=self.color,
+                                    turn=self.turn, winner=self.winner, moves_since_pawn=self.moves_since_pawn,
+                                    previous_position_count=self.previous_position_count)
+
+    def to_bitboards_v3(self) -> GameStateBitboardsV3:
+        pawns: int = 0
+        knights: int = 0
+        bishops: int = 0
+        rooks: int = 0
+        queens: int = 0
+        kings: int = 0
+        white: int = 0
+        black: int = 0
+        for i, piece in enumerate(self.board):
+            if not piece:
+                continue
+            piece_mask = 1 << (63 - i)
+            if piece > 0:
+                white |= piece_mask
+            else:
+                black |= piece_mask
+            piece_type = abs(piece)
+            if piece_type == 1:
+                pawns |= piece_mask
+            elif piece_type == 2:
+                knights |= piece_mask
+            elif piece_type == 3:
+                bishops |= piece_mask
+            elif piece_type == 4:
+                rooks |= piece_mask
+            elif piece_type == 5:
+                queens |= piece_mask
+            elif piece_type == 6:
+                kings |= piece_mask
+        return GameStateBitboardsV3(white, black, kings, queens, rooks, bishops, knights, pawns, self.white_queen,
+                                    self.white_king, self.black_queen, self.black_king, color=self.color,
+                                    turn=self.turn, winner=self.winner, moves_since_pawn=self.moves_since_pawn,
+                                    previous_position_count=self.previous_position_count)
 
     def to_v2(self) -> GameStateV2:
         return GameStateV2(self.board, self.white_queen, self.white_king, self.black_queen, self.black_king,
@@ -497,8 +565,8 @@ class GameState(GameStateBase):
 
     def to_v3_list(self) -> GameStateV3List:
         return GameStateV3List(list(self.board), self.white_queen, self.white_king, self.black_queen, self.black_king,
-                           None, self.color, self.turn, self.winner, copy(self.previous_position_count),
-                           self.moves_since_pawn)
+                               None, self.color, self.turn, self.winner, copy(self.previous_position_count),
+                               self.moves_since_pawn)
 
     def copy(self) -> 'GameState':
         return GameState(self.board, self.white_queen, self.white_king, self.black_queen, self.black_king,
