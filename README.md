@@ -4,12 +4,12 @@
 
 1. Run the following command in the terminal to install the dependencies:
     ```bash
-    pip install -r requirements.txt
+    pip3 install -r requirements.txt
     ```
 
 2. Run the following command to compile the code (Optional, accounts for ~3x speedup):
     ```bash
-    python build/setup.py build_ext --inplace
+    python3 build/setup.py build_ext --inplace
     ```
 > **Note:** Unless you see a message that contains "error", you can ignore any error-looking output.
 
@@ -17,7 +17,7 @@
 
 - Run the following command to start the game:
     ```bash
-    python main.py
+    python3 main.py
     ```
 ### Main Menu Options
 
