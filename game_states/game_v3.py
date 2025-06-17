@@ -740,7 +740,7 @@ class GameStateV3(GameStateFormatV2):
                             moves.append((h, dest_square - 1, promotion_piece * color_local))
                 if color_local == 1:
                     if i == 6 and board_local[4 * 8 + j] == 0 == board_local[5 * 8 + j]:
-                        moves.append((h, h - 16, piece))
+                        moves.append((h, h - 16, piece))  # TODO: Make this count toward 50 move rule
                 elif i == 1 and board_local[3 * 8 + j] == 0 == board_local[2 * 8 + j]:
                     moves.append((h, h + 16, piece))
                 # En Passant

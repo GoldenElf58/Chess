@@ -208,9 +208,6 @@ class GameStateBitboardsV3(GameStateBase):
                 check_mask: int = king_mask | (king_mask >> 1 | king_mask >> 2 if move[1] == 1 else
                                                king_mask << 1 | king_mask << 2)
                 piece_mask = 1 << 64
-                if (self.white_pieces == 0b100001010000000000001110011000011111001 and
-                    self.black_pieces == 0b1110110101110110000001001000000100001000000000000000000000000000):
-                    pass
                 for h in range(64):
                     piece_mask >>= 1
                     if not piece_mask & opponent_mask: continue
@@ -391,14 +388,14 @@ class GameStateBitboardsV3(GameStateBase):
                 # Double push
                 if color_local == 1:
                     if i == 6 and not (pieces & (dest_square_mask | (dest_square_mask << 8))):
-                        moves.append((mask, (dest_square_mask << 8), j))
+                        moves.append((mask, (dest_square_mask << 8), j + 1))
                 elif i == 1 and not (pieces & (dest_square_mask | (dest_square_mask >> 8))):
-                    moves.append((mask, (dest_square_mask >> 8), j))
+                    moves.append((mask, (dest_square_mask >> 8), j + 1))
                 # En Passant
-                if last_move_local is not None and (i == 3 or i == 4):
-                    if 7 != j == last_move_local[2] + 1:
+                if last_move_local is not None and ((i == 3 and color_local == 1) or (i == 4 and color_local == -1)):
+                    if 7 != j == last_move_local[2]:
                         moves.append((-2, -1, mask))
-                    elif 0 != j == last_move_local[2] - 1:
+                    elif 0 != j == last_move_local[2] - 2:
                         moves.append((-2, 1, mask))
             elif kings & mask:
                 if (((color_local == 1 and self.white_king) or (
@@ -485,8 +482,8 @@ class GameStateBitboardsV3(GameStateBase):
 
         if not len(move):
             return GameStateBitboardsV3(new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks,
-                                        new_bishops,
-                                        new_knights, new_pawns, color=-color_local, turn=self.turn + 1, winner=0)
+                                        new_bishops, new_knights, new_pawns, moves_since_pawn=new_moves_since_pawn,
+                                        color=-color_local, turn=self.turn + 1, winner=0)
 
         if move_0 == -1:  # Castle
             if color_local == 1:
@@ -525,6 +522,7 @@ class GameStateBitboardsV3(GameStateBase):
             return GameStateBitboardsV3(new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks,
                                         new_bishops,
                                         new_knights, new_pawns, white_queen, white_king, black_queen, black_king,
+                                        moves_since_pawn=new_moves_since_pawn,
                                         color=-color_local, turn=self.turn + 1, winner=self.winner)
 
         if move_0 == -2:  # En Passant

@@ -1,3 +1,4 @@
+import random
 from math import log2
 from random import choice
 
@@ -752,6 +753,8 @@ def test_other_games(debug: bool = False) -> None:
          0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
         (0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
          -6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+        (0, -4, 0, 0, 0, -3, -2, 0, 0, -3, 0, -1, 0, -6, 0, -4, -2, -1, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1, -5, 0, 0, 2,
+         0, -1, 0, 0, -1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 6, 0, 0, 0, 4, 0, 3, 0, 0, -4, 2, 4),
     ]
 
     for i, board in enumerate(boards):
@@ -767,9 +770,10 @@ def test_random_games(debug: bool = False, n: int = 1) -> None:
         game_state_test = GameStateTest()
         game_state_correct = GameStateCorrect()
         while game_state_test.get_winner() is None:
-            move = choice(game_state_test.get_moves())
-            game_state_test = game_state_test.move(move)
-            game_state_correct = game_state_correct.move(move)
+            move_idx = random.randint(0, len(game_state_test.get_moves()) - 1)
+            game_state_last = game_state_correct
+            game_state_test = game_state_test.move(game_state_test.get_moves()[move_idx])
+            game_state_correct = game_state_correct.move(game_state_correct.get_moves()[move_idx])
             if (str(game_state_test) != str(game_state_correct) or
                     len(game_state_test.get_moves()) != len(game_state_correct.get_moves()) or
                     game_state_test.get_winner() != game_state_correct.get_winner() or not
@@ -783,8 +787,8 @@ def test_random_games(debug: bool = False, n: int = 1) -> None:
                 print(game_state_correct.__repr__())
                 print()
                 print(f'Index: {i}')
-                print(f'Move: {move}')
-                print(f'Color: {game_state_test.color}')
+                print(f'Move Index: {move_idx}')
+                print(f'Color: {game_state_test.color}, {game_state_correct.color}')
                 print(f'Turn: {game_state_test.turn}, {game_state_correct.turn}')
                 print(f'Moves Since Pawn: {game_state_test.moves_since_pawn}, {game_state_correct.moves_since_pawn}')
                 print(f'Last Move: {game_state_test.last_move}, {game_state_correct.last_move}')
@@ -792,23 +796,40 @@ def test_random_games(debug: bool = False, n: int = 1) -> None:
                 print(f'White Queen: {game_state_test.white_queen}, {game_state_correct.white_queen}')
                 print(f'Black King: {game_state_test.black_king}, {game_state_correct.black_king}')
                 print(f'Black Queen: {game_state_test.black_queen}, {game_state_correct.black_queen}')
+                print(game_state_last)
+                print(game_state_last.board)
                 print(game_state_test)
                 if str(game_state_test) != str(game_state_correct):
                     print(game_state_correct)
                 print(game_state_correct.board)
+                print()
+                print(f'White Pieces: {bin(game_state_test.white_pieces)}')
+                print(f'Black Pieces: {bin(game_state_test.black_pieces)}')
+                print(f'Kings       : {bin(game_state_test.kings)}')
+                print(f'Queens      : {bin(game_state_test.queens)}')
+                print(f'Rooks       : {bin(game_state_test.rooks)}')
+                print(f'Bishops     : {bin(game_state_test.bishops)}')
+                print(f'Knights     : {bin(game_state_test.knights)}')
+                print(f'Pawns       : {bin(game_state_test.pawns)}')
+                print()
                 print(game_state_test.get_winner(), game_state_correct.get_winner())
                 print()
                 print(game_state_test.get_moves_no_check())
+                print([(63 - int(log2(move_0)) if move_0 > 0 else move_0,
+                        63 - int(log2(move_1)) if move_1 > 0 else move_1,
+                        move_2) for move_0, move_1, move_2 in game_state_test.get_moves_no_check()])
                 if game_state_test.get_moves_no_check() != game_state_correct.get_moves_no_check():
                     print(game_state_correct.get_moves_no_check())
                 print()
                 print(game_state_test.get_moves())
+                print([(63 - int(log2(move_0)) if move_0 > 0 else move_0, 63 - int(log2(move_1)) if move_1 > 0
+                else move_1, move_2) for move_0, move_1, move_2 in game_state_test.get_moves()])
                 print(game_state_correct.get_moves())
                 print()
             assert game_state_test.get_winner() == game_state_correct.get_winner()
             if game_state_test.get_winner() is not None:
                 break
-            assert str(game_state_test) != str(game_state_correct)
+            assert str(game_state_test) == str(game_state_correct)
             assert (game_state_test.white_king == game_state_correct.white_king and
                     game_state_test.white_queen == game_state_correct.white_queen and
                     game_state_test.black_king == game_state_correct.black_king and

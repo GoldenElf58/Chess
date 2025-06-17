@@ -12,7 +12,7 @@ import numpy as np
 from numpy import int8, int64
 
 from fen_utils import game_state_from_line
-from game_states import GameState, GameStateBase, GameStateV2, GameStateV3, GameStateBitboardsV2
+from game_states import GameState, GameStateBase, GameStateV2, GameStateV3, GameStateBitboardsV3
 from bots import *
 
 game_states: list[GameState] = []
@@ -32,12 +32,12 @@ def populate_game_states():
             coord_to_index[row][col] = row * 8 + col
 
 
-def benchmark(condition: bool, game_state: GameStateV3, move) -> None:
+def benchmark(condition: bool, game_state: GameStateV3 | GameStateBitboardsV3, move) -> None:
     # pass
     # game_state.moves = None
     # game_state.moves_and_states = None
     # game_state.are_captures()
-    # game_state.get_moves_new()
+    # game_state.move(move)
     # game_state = GameStateV2()
     # bot = BotV2p3()
     # while game_state.get_winner() is None:
@@ -49,12 +49,12 @@ def benchmark(condition: bool, game_state: GameStateV3, move) -> None:
     if condition:
         # bot.minimax_new(game_state, 5, -(1 << 31), (1 << 31), game_state.color == 1)
         # a = 3 ** 33
-        game_state & move
-        # game_state.get_moves()
+        # game_state & move
+        game_state.get_moves()
     else:
         # bot.minimax(game_state, 5, -(1 << 31), (1 << 31), game_state.color == 1)
-        game_state == move
-        # game_state.get_moves()
+        # game_state == move
+        game_state.get_moves()
 
     # game_state.get_moves()
     # game_state.get_moves_no_check()
@@ -111,11 +111,11 @@ def main() -> None:
     t3 = []
     for _ in range(50_000_000): pass
     print('Warmup complete')
-    N = 100_000
-    n = 25
+    N = 25_000
+    n = 20
     move = random.choice(GameStateV3().get_moves())
-    # timeit(lambda: benchmark(True, GameStateV3(), move), number=n * 5)
-    test = .000000001#timeit(lambda: benchmark(True, GameStateV3(), move), number=n * 10) / n / 10
+    timeit(lambda: benchmark(True, GameStateV3(), move), number=n * 5)
+    test = timeit(lambda: benchmark(True, GameStateV3(), move), number=n * 10) / n / 10
     scale = 1_000_000_000 if test < .000001 else (1_000_000 if test < .001 else (1_000 if test < 1 else 1))
     unit = 'ns' if test < .000001 else ('µs' if test < .001 else ('ms' if test < 1 else 's'))
     print(f'Test: {test}')
@@ -176,7 +176,7 @@ def main() -> None:
     ]
     # game_state = GameStateV3(board)
     for i in range(start, start + N):
-        # game_state = GameStateV3(boards[i % len(boards)]) #game_states[i % 500]
+        game_state = game_states[i % 500]
 
         # timeit(lambda: benchmark(True, game_state_a), number=500) * 1_000
         # game_state_a.get_moves()
@@ -184,11 +184,12 @@ def main() -> None:
         # t1.append(mean([benchmark(True, game_state)[1] for i in range(3)]))
         # t2.append(mean([benchmark(False, game_state)[1] for i in range(3)]))
         # timeit(lambda: benchmark(True, game_state_a), number=20)
-        game_state_a = None  # game_state#.to_v3()
-        # move = random.choice(game_state_a.get_moves())
-        t1.append(timeit(lambda: benchmark(True, 1 << random.randint(0, 63), 1 << random.randint(0, 63)), number=n) * scale / n)
-        game_state_b = None  # game_state#.to_v3()
-        t2.append(timeit(lambda: benchmark(False, 1 << random.randint(0, 63), 1 << random.randint(0, 63)), number=n) * scale / n)
+        game_state_a = game_state.to_bitboards_v3()
+        move = random.choice(game_state_a.get_moves())
+        t1.append(timeit(lambda: benchmark(True, game_state_a, move), number=n) * scale / n)
+        game_state_b = game_state.to_v3()
+        move = random.choice(game_state_b.get_moves())
+        t2.append(timeit(lambda: benchmark(False,game_state_b, move), number=n) * scale / n)
         t3.append(t1[-1] - t2[-1])
         if (i - start) > 0 and (i - start) % max(1, (N // 50)) == 0:
             t, p = stats.ttest_1samp(t3, 0, alternative='less')
