@@ -174,7 +174,7 @@ class GameStateBitboardsV3(GameStateBase):
                 self.last_move)
 
     def __hash__(self) -> int:
-        return hash((self.white_pieces, self.black_pieces, self.kings, self.queens, self.rooks, self.bishops,
+        return hash((self.white_pieces, self.kings, self.queens, self.rooks, self.bishops,
                      self.knights, self.pawns, self.color, self.white_queen, self.white_king, self.black_queen,
                      self.black_king, self.last_move, self.turn))
 
@@ -198,23 +198,27 @@ class GameStateBitboardsV3(GameStateBase):
         tuple[int, ...], tuple[int, ...]], ...] = rook_rays
         knight_targets_local: tuple[tuple[int, ...], ...] = knight_targets
         king_targets_local: tuple[tuple[int, ...], ...] = king_targets
-        king_mask: int = self.kings & (self.white_pieces if self.color == 1 else self.black_pieces)
+        king_mask: int = self.kings & (self.white_pieces if color_local == 1 else self.black_pieces)
         coords_local: list[tuple[int, int]] = index_to_coord
         for i, move in enumerate(reversed(moves)):
             white_pieces, black_pieces, kings, queens, rooks, bishops, knights, pawns = self.move_only_board(move)
-            opponent_mask: int = black_pieces if self.color == 1 else white_pieces
+            bishops |= queens
+            rooks |= queens
+            pieces: int = white_pieces | black_pieces
+            opponent_mask: int = black_pieces if color_local == 1 else white_pieces
             illegal: bool = False
             if move[0] == -1:  # Castle
                 check_mask: int = king_mask | (king_mask >> 1 | king_mask >> 2 if move[1] == 1 else
                                                king_mask << 1 | king_mask << 2)
+                pieces |= king_mask
                 piece_mask = 1 << 64
                 for h in range(64):
                     piece_mask >>= 1
                     if not piece_mask & opponent_mask: continue
-                    if piece_mask & bishops or piece_mask & queens:
+                    if piece_mask & bishops:
                         for diagonal in bishop_diagonals_local[h]:
                             for target_mask in diagonal:
-                                if not target_mask & (white_pieces | black_pieces | king_mask):
+                                if not target_mask & pieces:
                                     continue
                                 if target_mask & check_mask:
                                     illegal = True
@@ -224,12 +228,12 @@ class GameStateBitboardsV3(GameStateBase):
                         if illegal:
                             moves.pop(pop_idx_base - i)
                             break
-                    if piece_mask & rooks or piece_mask & queens:  # and
+                    if piece_mask & rooks:  # and
                         # (coords_local[check_square][0] == coords_local[h][0] or
                         #  coords_local[check_square][1] == coords_local[h][1])):
                         for ray in rook_rays_local[h]:
                             for target_mask in ray:
-                                if not target_mask & (white_pieces | black_pieces | king_mask): # skips king
+                                if not target_mask & pieces:
                                     continue
                                 if target_mask & check_mask:
                                     illegal = True
@@ -262,15 +266,16 @@ class GameStateBitboardsV3(GameStateBase):
                             moves.pop(pop_idx_base - i)
                             break
             else:
-                check_square: int = king_mask if king_mask & kings else move[1]
+                check_square: int = kings & (white_pieces if color_local == 1 else black_pieces)
+                check_square_idx: int = 64 - check_square.bit_length()
                 piece_mask = 1 << 64
                 for h in range(64):
                     piece_mask >>= 1
                     if not piece_mask & opponent_mask: continue
-                    if piece_mask & bishops or piece_mask & queens:
+                    if piece_mask & bishops:
                         for diagonal in bishop_diagonals_local[h]:
                             for target_mask in diagonal:
-                                if not target_mask & (white_pieces | black_pieces):
+                                if not target_mask & pieces:
                                     continue
                                 if target_mask == check_square:
                                     illegal = True
@@ -280,12 +285,20 @@ class GameStateBitboardsV3(GameStateBase):
                         if illegal:
                             moves.pop(pop_idx_base - i)
                             break
-                    if piece_mask & rooks or piece_mask & queens:  # and
-                        # (coords_local[check_square][0] == coords_local[h][0] or
-                        #  coords_local[check_square][1] == coords_local[h][1])):
+                    if piece_mask & pawns:
+                        forward_mask = piece_mask << 8 if color_local == -1 else piece_mask >> 8
+                        if ((forward_mask >> 1 == check_square and coords_local[h][1] != 7) or
+                                (forward_mask << 1 == check_square and coords_local[h][1])):
+                            moves.pop(pop_idx_base - i)
+                            break
+                    elif (piece_mask & rooks and
+                        (coords_local[check_square_idx][0] == coords_local[h][0] or
+                         coords_local[check_square_idx][1] == coords_local[h][1])):
+                        # (bitboard_to_coord_local[check_square][0] == coords_local[h][0] or
+                        #  bitboard_to_coord_local[check_square][1] == coords_local[h][1])):
                         for ray in rook_rays_local[h]:
                             for target_mask in ray:
-                                if not target_mask & (white_pieces | black_pieces):
+                                if not target_mask & pieces:
                                     continue
                                 if target_mask == check_square:
                                     illegal = True
@@ -311,21 +324,15 @@ class GameStateBitboardsV3(GameStateBase):
                             continue
                         moves.pop(pop_idx_base - i)
                         break
-                    elif piece_mask & pawns:
-                        forward_mask = piece_mask << 8 if color_local == -1 else piece_mask >> 8
-                        if ((forward_mask >> 1 == check_square and coords_local[h][1] != 7) or
-                                (forward_mask << 1 == check_square and coords_local[h][1])):
-                            moves.pop(pop_idx_base - i)
-                            break
 
         if len(moves) == 0 and pop_idx_base > -1:
             game_state: GameStateBitboardsV3 = GameStateBitboardsV3(self.white_pieces, self.black_pieces, self.kings,
                                                                     self.queens, self.rooks, self.bishops, self.knights,
                                                                     self.pawns, False, False, False,
-                                                                    False, color=-self.color)
+                                                                    False, color=-color_local)
             for _, dest_mask, _ in game_state.get_moves_no_check():
                 if dest_mask == king_mask:
-                    self.winner = -self.color
+                    self.winner = -color_local
                     return moves
             self.winner = 0
             return moves
@@ -350,9 +357,8 @@ class GameStateBitboardsV3(GameStateBase):
         opponent_mask: int = self.black_pieces if self.color == 1 else self.white_pieces
         kings: int = self.kings
         colored_rooks: int = self.rooks & color_mask
-        rooks: int = self.rooks
-        bishops: int = self.bishops
-        queens: int = self.queens
+        orthagonal_sliders: int = self.rooks | self.queens
+        diagonal_sliders: int = self.bishops | self.queens
         knights: int = self.knights
         pawns: int = self.pawns
         pieces: int = (color_mask | opponent_mask)
@@ -409,7 +415,7 @@ class GameStateBitboardsV3(GameStateBase):
                 for target_mask in king_targets_local[h]:
                     if not target_mask & color_mask:
                         moves.append((mask, target_mask, 0))
-            elif mask & (rooks | queens):
+            elif mask & orthagonal_sliders:
                 for ray in rook_rays_local[h]:
                     for target_mask in ray:
                         if not target_mask & pieces:
@@ -418,7 +424,7 @@ class GameStateBitboardsV3(GameStateBase):
                         if target_mask & opponent_mask:
                             moves.append((mask, target_mask, 0))
                         break
-            if mask & (bishops | queens):
+            if mask & diagonal_sliders:
                 for diagonal in bishop_diagonals_local[h]:
                     for target_mask in diagonal:
                         if not target_mask & pieces:
@@ -479,11 +485,6 @@ class GameStateBitboardsV3(GameStateBase):
         new_moves_since_pawn: int = self.moves_since_pawn + 1
         color_local: int = self.color
         move_0, move_1, move_2 = move  # type: int, int, int
-
-        if not len(move):
-            return GameStateBitboardsV3(new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks,
-                                        new_bishops, new_knights, new_pawns, moves_since_pawn=new_moves_since_pawn,
-                                        color=-color_local, turn=self.turn + 1, winner=0)
 
         if move_0 == -1:  # Castle
             if color_local == 1:
@@ -673,7 +674,7 @@ class GameStateBitboardsV3(GameStateBase):
                 return GameStateBitboardsV3(new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks,
                                             new_bishops,
                                             new_knights, new_pawns, white_queen, white_king, black_queen, black_king,
-                                            color=-self.color, turn=self.turn + 1, winner=new_winner)
+                                            color=-self.color, turn=self.turn + 1, winner=0)
         else:
             new_previous_position_count[hash_state] = 1
         last_move: tuple[int, int, int] | None = move if move_2 else None
@@ -711,10 +712,6 @@ class GameStateBitboardsV3(GameStateBase):
         new_pawns: int = self.pawns
         color_local: int = self.color
         move_0, move_1, move_2 = move  # type: int, int, int
-
-        if not len(move):
-            return (new_white_pieces, new_black_pieces, new_kings, new_queens, new_rooks, new_bishops, new_knights,
-                    new_pawns)
 
         if move_0 == -1:  # Castle
             if color_local == 1:

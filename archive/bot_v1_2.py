@@ -4,7 +4,7 @@ from typing import Callable
 
 import numpy as np
 
-from game_states.game_v2 import GameStateV2
+from archive.game_v2 import GameStateV2
 from utils import mirror, negate
 from bots.bot import Bot
 

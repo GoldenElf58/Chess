@@ -298,7 +298,7 @@ def game_loop() -> None:
     pygame.init()
     screen: Surface = pygame.display.set_mode((854, 480))
     offset: int = 187
-    game_state_type: Callable[[], GameStateBase] = GameStateBitboardsV3
+    game_state_type: Callable[[], GameStateBase] = GameStateV3
     game_state: GameStateBase = game_state_type()
     selected_square: tuple[int, int] | None = None
     """For human move selection, represented as (col, row)"""
