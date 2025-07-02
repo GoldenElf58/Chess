@@ -8,12 +8,12 @@ from timeit import timeit
 from scipy import stats  # type: ignore
 from pstats import Stats
 from io import StringIO
-import numpy as np
-from numpy import int8, int64
+# import numpy as np
+# from numpy import int8, int64
 
 from fen_utils import game_state_from_line
 from game_states import GameState, GameStateBase, GameStateV3, GameStateBitboardsV3
-from bots import *
+# from bots import *
 
 game_states: list[GameState] = []
 coord_to_index: list[list[int]] = [[0 for _ in range(8)] for _ in range(8)]

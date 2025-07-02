@@ -1,4 +1,3 @@
-from utils import split_table
 from game_states.game_base import GameStateBase
 
 # Precompute index-to-coordinate mapping for faster lookups

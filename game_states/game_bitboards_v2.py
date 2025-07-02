@@ -1,5 +1,5 @@
 import copy
-from game_states.game_base import GameStateBase
+from game_states import GameStateBase
 
 # Precompute index-to-coordinate mapping for faster lookups
 index_to_coord: list[tuple[int, int]] = [(h // 8, h % 8) for h in range(64)]
