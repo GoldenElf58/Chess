@@ -311,6 +311,7 @@ def game_loop() -> None:
     last_eval: int = 0
     depths: list[list[int]] = [[], []]
     t0: float = time.time()
+    start_move_time = time.time()
 
     num_lines: int = 500
     line: int = random.randint(1, num_lines)
@@ -333,14 +334,14 @@ def game_loop() -> None:
         BotV4p2,
         BotV4p3,
     )
-    bot_idxs: list[int] = [5, 4]
+    bot_idxs: list[int] = [5, 5]
     bots: list[Bot] = [bot_options[bot_idxs[0]](), bot_options[bot_idxs[1]]()]
 
     test_mode: bool = False
     test_depth = 5
     test_allotted_time = .1
     normal_depth = -1
-    normal_allotted_time = 5
+    normal_allotted_time = .1
 
     main_buttons: list[Button] = [
         Button((43, 190, 100, 20), "Play White"),
