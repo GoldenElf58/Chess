@@ -311,7 +311,6 @@ def game_loop() -> None:
     last_eval: int = 0
     depths: list[list[int]] = [[], []]
     t0: float = time.time()
-    start_move_time = time.time()
 
     num_lines: int = 500
     line: int = random.randint(1, num_lines)

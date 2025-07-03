@@ -224,7 +224,7 @@ class BotV4(Bot):
                 first_call: bool = True) -> tuple[int, tuple[int, int, int]]:
         if game_state.get_winner() is not None:
             return self.evaluate(game_state) + depth, (
-                game_state.last_move if game_state.last_move is not None else (0, 0, 0, 0))
+                game_state.last_move if game_state.last_move is not None else (0, 0, 0))
         state_key: int = hash((game_state.board, game_state.white_queen, game_state.white_king,
                                game_state.black_queen, game_state.black_king, depth, maximizing_player))
         transposition_table: dict[int, tuple[int, tuple[int, int, int]]] = self.transposition_table
