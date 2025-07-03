@@ -1,8 +1,8 @@
 from random import choice
 
-from game_states.game_v3 import GameStateV3 as GameStateTest
+from game_states import GameStateV3 as GameStateTest
 # from game_states.game_v2 import GameStateV2 as GameStateTest
-from game_states.correct_game_v2 import GameStateCorrect
+from game_states import GameStateCorrect
 
 base_board: tuple[int, ...] = (
     0, 0, 0, 0, 6, 0, 0, 0,

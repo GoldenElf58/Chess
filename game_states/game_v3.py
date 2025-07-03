@@ -1,4 +1,4 @@
-from game_states.game_format_v2 import GameStateFormatV2
+from game_states.game_format_v2 import GameStateFormatV2, start_board
 from utils import split_table
 
 # Precompute index-to-coordinate mapping for faster lookups
