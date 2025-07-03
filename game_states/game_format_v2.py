@@ -1,4 +1,4 @@
-from game_states import GameStateBase
+from game_states.game_base import GameStateBase
 
 start_board: tuple[int, ...] = (
     -4, -2, -3, -5, -6, -3, -2, -4,
