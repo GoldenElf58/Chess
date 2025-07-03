@@ -322,7 +322,6 @@ def game_loop() -> None:
     bot_options: tuple[Callable[[], Bot], ...] = (
         BotV5,
         BotV5p1,
-        BotV5p3,
         BotV5p4,
         BotV1,
         BotV2p3,
@@ -333,7 +332,7 @@ def game_loop() -> None:
         BotV4p2,
         BotV4p3,
     )
-    bot_idxs: list[int] = [5, 5]
+    bot_idxs: list[int] = [3, 1]
     bots: list[Bot] = [bot_options[bot_idxs[0]](), bot_options[bot_idxs[1]]()]
 
     test_mode: bool = False

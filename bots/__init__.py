@@ -9,5 +9,4 @@ from bots.bot_v4_2 import BotV4p2
 from bots.bot_v4_3 import BotV4p3
 from bots.bot_v5 import BotV5
 from bots.bot_v5_1 import BotV5p1
-from bots.bot_v5_3 import BotV5p3
 from bots.bot_v5_4 import BotV5p4
