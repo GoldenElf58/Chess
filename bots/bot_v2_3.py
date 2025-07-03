@@ -1,10 +1,27 @@
-import threading
+import multiprocessing
+
 import time
 from typing import Callable
 
 from game_states.game_format_v2 import GameStateFormatV2
 from utils import mirror, negate
 from bots.bot import Bot
+
+
+def _minimax_worker(bot, game_state, depth, maximizing_player, queue):
+    # Run minimax at the given depth and put the result into the queue
+    result = bot.minimax(game_state, depth, -(1 << 31), (1 << 31), maximizing_player)
+    queue.put(result)
+
+
+# Drain all available items from a multiprocessing.Queue into a results list.
+def _drain_queue(q: multiprocessing.Queue, results: list):
+    """Drain all available items from q into results."""
+    while not q.empty():
+        results.append(q.get_nowait())
+
+# Use fork context on macOS to avoid spawn from non-main thread
+_ctx = multiprocessing.get_context('fork')
 
 piece_values: dict[int, int] = {-6: -9999999,
                                 -5: -900,
@@ -156,31 +173,44 @@ class BotV2p3(Bot):
 
     def iterative_deepening(self, game_state: GameStateFormatV2, maximizing_player: bool, allotted_time: float = 3.0,
                             depth: int = -1) -> tuple[tuple[int, tuple[int, int, int] | tuple], int]:
-        if depth >= 0:
+        if depth > 0:
             result: tuple[int, tuple[int, int, int] | tuple] = (0, game_state.get_moves()[0])
             for i in range(min(depth, 2), depth + 1):
                 result = self.minimax(game_state, i, -(1 << 31), (1 << 31), maximizing_player)
             return result, depth
         t0: float = time.time()
+        queue: multiprocessing.Queue = _ctx.Queue()
         results: list[tuple[int, tuple[int, int, int] | tuple]] = [(0, game_state.get_moves()[0])]
         depth = 2
-        minimax_thread: threading.Thread = threading.Thread(
-            target=lambda: results.append(self.minimax(game_state, depth, -(1 << 31), (1 << 31), maximizing_player)))
-        minimax_thread.start()
+        minimax_process = _ctx.Process(
+            target=_minimax_worker,
+            args=(self, game_state, depth, maximizing_player, queue)
+        )
+        minimax_process.start()
         while time.time() - t0 < allotted_time:
             depth += 1
-            minimax_thread.join(allotted_time - (time.time() - t0))
-            minimax_thread = threading.Thread(
-                target=lambda: results.append(
-                    self.minimax(game_state, depth, -(1 << 31), (1 << 31), maximizing_player)))
-            if time.time() - t0 < allotted_time: minimax_thread.start()
-        if minimax_thread.is_alive():
-            minimax_thread.join(0)
-            return results[-1], (depth - 1 if len(results) != 1 else 0)
-        return results[-1], (depth if len(results) != 1 else 0)
+            minimax_process.join(allotted_time - (time.time() - t0))
+            # Drain any finished results from the queue
+            _drain_queue(queue, results)
+            minimax_process = _ctx.Process(
+                target=_minimax_worker,
+                args=(self, game_state, depth, maximizing_player, queue)
+            )
+            if time.time() - t0 < allotted_time:
+                minimax_process.start()
+        # time’s up: finalize the last process
+        try:
+            minimax_process.join(0)
+        except AssertionError:
+            pass
+        # drain any remaining results
+        _drain_queue(queue, results)
+        # completed_depth: number of depths actually processed (dummy depth 0 counts)
+        completed_depth = len(results) - 1
+        return results[-1], completed_depth
 
     def minimax(self, game_state: GameStateFormatV2, depth: int, alpha: int, beta: int, maximizing_player: bool) -> \
-    tuple[int, tuple[int, int, int] | tuple]:
+            tuple[int, tuple[int, int, int] | tuple]:
         if game_state.get_winner() is not None:
             return game_state.winner * 9999999, (0, 0, 0)  # type: ignore
         state_key: int = hash((game_state.board, game_state.white_queen, game_state.white_king,
@@ -219,9 +249,8 @@ class BotV2p3(Bot):
         transposition_table[state_key] = best_eval, best_move
         return best_eval, best_move
 
-
     def minimax_new(self, game_state: GameStateFormatV2, depth: int, alpha: int, beta: int, maximizing_player: bool) -> \
-    tuple[int, tuple[int, int, int] | tuple]:
+            tuple[int, tuple[int, int, int] | tuple]:
         if game_state.get_winner() is not None:
             return game_state.winner * 9999999, (0, 0, 0)  # type: ignore
         state_key: int = hash((game_state.board, game_state.white_queen, game_state.white_king,
@@ -258,4 +287,3 @@ class BotV2p3(Bot):
 
         transposition_table[state_key] = best_eval, best_move
         return best_eval, best_move
-
