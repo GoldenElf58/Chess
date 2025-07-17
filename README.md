@@ -40,7 +40,7 @@
  - **Evaluation**: The evaluation the last bot gave of the board.
  - **Turn**: The turn of the game.
  - **Time**: The total time you have been in this mode.
- - **Depth BotA/B**: The average depth the bot searched to accross all games.
+ - **Depth BotA/B**: The average depth the bot searched to across all games.
  - **BotA (W/B)**: How many times Bot A has won and whether they are white or black.
  - **Draws**: How many draws there have been.
  - **BotB (W/B)**: How many times Bot B has won and whether they are white or black.
