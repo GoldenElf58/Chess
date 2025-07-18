@@ -118,7 +118,7 @@ class GameStateNumpy:
                  'winner', 'previous_position_count', 'moves_since_pawn', 'moves')
 
     def __init__(self, board: NDArray[int8] | None = None, white_queen: bool = True, white_king: bool = True,
-                 black_queen: bool = True, back_king: bool = True, last_move: tuple[int, int, int, int] | None = None,
+                 black_queen: bool = True, black_king: bool = True, last_move: tuple[int, int, int, int] | None = None,
                  color: int = 1, turn: int = 0, winner: int | None = None,
                  previous_position_count: dict[int, int] | None = None, moves_since_pawn: int = 0) -> None:
         """
@@ -134,7 +134,7 @@ class GameStateNumpy:
             Whether the white king is still on the board. Defaults to True.
         black_queen : bool, optional
             Whether the black queen is still on the board. Defaults to True.
-        back_king : bool, optional
+        black_king : bool, optional
             Whether the black king is still on the board. Defaults to True.
         last_move : tuple[tuple[int, int], tuple[int, int]], optional
             The last move made, as a tuple of two tuples. Defaults to None.
@@ -147,7 +147,7 @@ class GameStateNumpy:
         self.white_queen: bool = white_queen
         self.white_king: bool = white_king
         self.black_queen: bool = black_queen
-        self.black_king: bool = back_king
+        self.black_king: bool = black_king
         self.last_move: tuple[int, int, int, int] = last_move if last_move is not None else (0, 0, 0, 0)
         self.turn: int = turn
         self.winner: int | None = winner
