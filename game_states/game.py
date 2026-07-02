@@ -127,8 +127,8 @@ class GameState(GameStateBase):
 
         Parameters
         ----------
-        board : list[list[int]], optional
-            The starting board. Defaults to `start_board`.
+        board : tuple[int, ...] | None, optional
+            The starting board as a tuple of 64 integers. Defaults to ``start_board``.
         white_queen : bool, optional
             Whether the white queen is still on the board. Defaults to True.
         white_king : bool, optional
