@@ -13,6 +13,7 @@ from io import StringIO
 
 from fen_utils import game_state_from_line
 from game_states import GameState, GameStateBase, GameStateV3, GameStateBitboardsV3
+
 # from bots import *
 
 game_states: list[GameState] = []
@@ -94,7 +95,7 @@ def test():
 def deep_test():
     game_times = []
     turn_times = []
-    for i in range(1_000):
+    for i in range(100):
         test()
         game_time, turn_time = test()
         game_times.append(game_time)
@@ -105,6 +106,11 @@ def deep_test():
     print()
     print(f'Average turn time (µs): {mean(turn_times) / 1_000:#.5g}')
     print(f'Std dev turn time (µs): {stdev(turn_times) / 1_000:#.5g}')
+    print()
+    print(f'Total moves: {len(game_times) * mean(game_times) / mean(turn_times):,.0f}')
+    print(f'Average moves per game: {mean(game_times) / mean(turn_times):#.5g}')
+    moves_per_game = [game_times[i] / turn_times[i] for i in range(len(game_times))]
+    print(f'Std dev moves per game: {stdev(moves_per_game):#.5g}')
 
 
 def main() -> None:
@@ -261,8 +267,25 @@ def profile():
                 printed_header = True
 
 
+def perft(depth: int, root: bool = True, game_state: GameState = None) -> int:
+    t = time.time() if root else 0
+    if game_state is None:
+        game_state = GameState()
+    moves: list[tuple[int, int, int, int]] = game_state.get_moves()
+    if depth == 1: return len(moves)
+    n = 0
+    for move in moves:
+        n += perft(depth - 1, False, game_state.move(move))
+    if root:
+        print(f'Moves: {n}')
+        print(f'Time Elapsed: {time.time() - t:.2f}s')
+        print(f'kNPS: {n / (time.time() - t) / 1_000:.3f}')
+    return n
+
+
 if __name__ == '__main__':
+    perft(4)
     # deep_test()
-    populate_game_states()
+    # populate_game_states()
     # main()
-    profile()
+    # profile()
