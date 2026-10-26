@@ -14,10 +14,10 @@ from scipy.stats import binomtest  # type: ignore
 from bots import *
 
 from fen_utils import game_state_from_line
-from game_states import GameState, GameStateBase, GameStateBitboardsV2, GameStateFormatV2, GameStateV3, \
-    GameStateBitboardsV3
+from game_states import GameState, GameStateBase, GameStateBitboardsV2, GameStateFormatV2, \
+    GameStateV3, GameStateBitboardsV3
 
-images = [
+images: list[Surface] = [
     pygame.image.load("piece_images/-6.png"),
     pygame.image.load("piece_images/-5.png"),
     pygame.image.load("piece_images/-4.png"),
@@ -46,7 +46,8 @@ def display_board(screen, game_state: GameStateBase, selected_square=(), offset=
             if isinstance(game_state, GameState) or isinstance(game_state, GameStateFormatV2):
                 if game_state.board[i * 8 + j] != 0:
                     screen.blit(images[game_state.board[i * 8 + j] + 6], (j * 60 + offset, i * 60))
-            elif isinstance(game_state, GameStateBitboardsV2) or isinstance(game_state, GameStateBitboardsV3):
+            elif isinstance(game_state, GameStateBitboardsV2) or isinstance(game_state,
+                                                                            GameStateBitboardsV3):
                 piece = 0
                 piece_mask = 1 << (63 - (i * 8 + j))
                 if not piece_mask & (game_state.white_pieces | game_state.black_pieces):
@@ -81,7 +82,8 @@ class GameMode(IntFlag):
     OPTIONS_MENU = OPTIONS | MENU
 
 
-def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, font: Font, t0: float, game_mode: GameMode,
+def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, font: Font, t0: float,
+                 game_mode: GameMode,
                  wins: int, draws: int, losses: int, bots: list[Bot], reverse: bool,
                  depths: list[list[int]] | None = None) -> None:
     """
@@ -147,10 +149,9 @@ def display_info(screen: Surface, game_state: GameStateBase, last_eval: int, fon
         screen.blit(p_value_surf, (info_rect.x + 10, 250))
 
 
-
-
 class Button:
-    def __init__(self, rect, text, color="gray", hover_color="lightgray", text_color=(0, 0, 0)) -> None:
+    def __init__(self, rect, text, color="gray", hover_color="lightgray",
+                 text_color=(0, 0, 0)) -> None:
         self.rect = pygame.Rect(rect)
         self.text = text
         self.color = color
@@ -165,7 +166,8 @@ class Button:
         :param font: The font to use to draw the text
         """
         mouse_pos: tuple[int, int] = pygame.mouse.get_pos()
-        pygame.draw.rect(screen, self.hover_color if self.check_hover(mouse_pos) else self.color, self.rect)
+        pygame.draw.rect(screen, self.hover_color if self.check_hover(mouse_pos) else self.color,
+                         self.rect)
         text_surf: Surface = font.render(self.text, True, self.text_color)
         text_rect: Rect = text_surf.get_rect(center=self.rect.center)
         screen.blit(text_surf, text_rect)
@@ -266,7 +268,8 @@ def find_move(user_src: tuple[int, int], user_dest: tuple[int, int],
                     expected_dest = (user_src[0] - color, user_src[1] + move_[1])
                     if user_dest == expected_dest:
                         return move_
-    elif isinstance(game_state, GameStateBitboardsV2) or isinstance(game_state, GameStateBitboardsV3):
+    elif isinstance(game_state, GameStateBitboardsV2) or isinstance(game_state,
+                                                                    GameStateBitboardsV3):
         a8 = 1 << 63
         user_src_mask: int = a8 >> user_src[0] * 8 + user_src[1]
         user_dest_mask: int = a8 >> user_dest[0] * 8 + user_dest[1]
@@ -307,7 +310,8 @@ def game_loop() -> None:
     font: Font = Font(None, 24)
 
     computer_thread: threading.Thread | None = None
-    computer_move_result: list[tuple[tuple[int, tuple[int, int, int, int] | tuple[int, int, int]], int]] = []
+    computer_move_result: list[
+        tuple[tuple[int, tuple[int, int, int, int] | tuple[int, int, int]], int]] = []
     last_eval: int = 0
     depths: list[list[int]] = [[], []]
     t0: float = time.time()
@@ -332,14 +336,14 @@ def game_loop() -> None:
         BotV4p2,
         BotV4p3,
     )
-    bot_idxs: list[int] = [3, 1]
+    bot_idxs: list[int] = [5, 5]
     bots: list[Bot] = [bot_options[bot_idxs[0]](), bot_options[bot_idxs[1]]()]
 
     test_mode: bool = False
     test_depth = 5
     test_allotted_time = .1
     normal_depth = -1
-    normal_allotted_time = .1
+    normal_allotted_time = 1.5
 
     main_buttons: list[Button] = [
         Button((43, 190, 100, 20), "Play White"),
@@ -429,8 +433,8 @@ def game_loop() -> None:
                 else:
                     user_src: tuple[int, int] = selected_square
                     user_dest: tuple[int, int] = (row, col)
-                    chosen_move: tuple[int, int, int, int] | tuple[int, int, int] | None = find_move(
-                        user_src, user_dest, game_state)
+                    chosen_move: tuple[int, int, int, int] | tuple[
+                        int, int, int] | None = find_move(user_src, user_dest, game_state)
                     if chosen_move is not None:
                         game_state = game_state.move(chosen_move)
                         game_state.get_moves()
@@ -445,7 +449,8 @@ def game_loop() -> None:
                     computer_move_result.clear()
                     computer_thread = threading.Thread(target=lambda: computer_move_result.append(
                         bots[0 if (game_state.color == 1) is not reverse else 1]
-                        .generate_move(game_state, test_allotted_time if test_mode else normal_allotted_time,
+                        .generate_move(game_state,
+                                       test_allotted_time if test_mode else normal_allotted_time,
                                        depth=test_depth if test_mode else normal_depth)))
                     computer_thread.start()
             elif not computer_thread.is_alive():
@@ -508,8 +513,8 @@ def game_loop() -> None:
             elif game_mode & GameMode.OPTIONS:
                 for btn in options_buttons: btn.draw(screen, font)
         else:
-            display_info(screen, game_state, last_eval, font, t0, game_mode, wins, draws, losses, bots, reverse,
-                         depths=depths)
+            display_info(screen, game_state, last_eval, font, t0, game_mode, wins, draws, losses,
+                         bots, reverse, depths=depths)
 
         pygame.display.flip()
 
