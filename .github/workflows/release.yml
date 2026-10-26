@@ -1,0 +1,71 @@
+name: Build and release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.asset }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            asset: windows-x64
+            launcher: "Play Chess.bat"
+          - os: macos-15
+            asset: macos-arm64
+            launcher: "Play Chess.command"
+          - os: ubuntu-22.04
+            asset: linux-x64
+            launcher: "Play Chess.sh"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install build dependencies
+        run: python -m pip install -r requirements-build.txt
+      - name: Build executable
+        env:
+          PYINSTALLER_CONFIG_DIR: ${{ runner.temp }}/pyinstaller
+        run: pyinstaller --noconfirm --onedir --name Chess main.py
+      - name: Assemble downloadable archive
+        shell: bash
+        run: |
+          cp -R piece_images dist/Chess/piece_images
+          cp fens.txt dist/Chess/fens.txt
+          cp "release/${{ matrix.launcher }}" "dist/Chess/${{ matrix.launcher }}"
+          if [[ "${{ matrix.asset }}" != "windows-x64" ]]; then
+            chmod +x "dist/Chess/${{ matrix.launcher }}"
+          fi
+          cd dist
+          python -m zipfile -c "../Chess-${{ matrix.asset }}.zip" Chess
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Chess-${{ matrix.asset }}
+          path: Chess-${{ matrix.asset }}.zip
+          if-no-files-found: error
+          retention-days: 1
+
+  draft-release:
+    name: Create draft GitHub release
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: release-assets/*.zip
