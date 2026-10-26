@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: Existing version tag to build (for example, v1.0.0)
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -28,6 +34,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag_name || github.ref }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
@@ -42,9 +50,11 @@ jobs:
         run: |
           cp -R piece_images dist/Chess/piece_images
           cp fens.txt dist/Chess/fens.txt
-          cp "release/${{ matrix.launcher }}" "dist/Chess/${{ matrix.launcher }}"
           if [[ "${{ matrix.asset }}" != "windows-x64" ]]; then
+            printf '%s\n' '#!/bin/sh' 'cd "$(dirname "$0")"' 'exec ./Chess' > "dist/Chess/${{ matrix.launcher }}"
             chmod +x "dist/Chess/${{ matrix.launcher }}"
+          else
+            printf '%s\r\n' '@echo off' 'cd /d "%~dp0"' 'Chess.exe' > "dist/Chess/${{ matrix.launcher }}"
           fi
           cd dist
           python -m zipfile -c "../Chess-${{ matrix.asset }}.zip" Chess
@@ -66,6 +76,7 @@ jobs:
           merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.tag_name || github.ref_name }}
           draft: true
           generate_release_notes: true
           files: release-assets/*.zip
