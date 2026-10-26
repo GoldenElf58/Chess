@@ -44,9 +44,13 @@ Extract the ZIP file, then launch the included **Play Chess** file (`.bat` on Wi
 Linux). Keep that launcher beside the `Chess` executable and the `piece_images` folder. The release builds include
 Python and the required libraries; you do not need to install Python.
 
-On macOS, if Gatekeeper blocks the app because it is not signed, use **Control-click → Open** on `Play Chess.command`
-the first time. On Linux, if needed, allow the script to run with `chmod +x "Play Chess.sh"` and start it from the
-extracted folder.
+On macOS, If you get a message that says "Apple could not verify “JavaChess.app” is free of malware that may harm your
+Mac or compromise your privacy," click " Done". Go to System Settings/Privacy & Security and scroll down to the Security
+section. Click "Open Anyway" next to the message that says "JavaChess.app was blocked to protect your app". Click
+"Open Anyway" one more time, then type in your password. You're good to go!
+
+On Linux, if you have permission issues, you may need to to run the script with `chmod +x "Play Chess.sh"` and start it
+from the extracted folder.
 
 ## Run from Source
 
@@ -65,14 +69,18 @@ do not need it. It compiles in place and may leave platform-specific files in th
 
 ## Build a Release Locally
 
-> Warning: This is untested and may not work.
-
 Builds must be made on the operating system they target. With the virtual environment active:
 
-On macOS or Linux, use:
+On macOS, build a single executable so Gatekeeper does not inspect a folder of bundled runtime files:
 
 ```bash
 python -m pip install -r requirements-build.txt
+PYINSTALLER_CONFIG_DIR=.pyinstaller-cache pyinstaller --noconfirm --onefile --name Chess main.py
+```
+
+On Linux, use the one-folder build:
+
+```bash
 PYINSTALLER_CONFIG_DIR=.pyinstaller-cache pyinstaller --noconfirm --onedir --name Chess main.py
 ```
 
@@ -83,9 +91,8 @@ $env:PYINSTALLER_CONFIG_DIR = ".pyinstaller-cache"
 pyinstaller --noconfirm --onedir --name Chess main.py
 ```
 
-Copy `piece_images/`, `fens.txt`, and the matching launcher from `release/` into `dist/Chess/`, then zip the `Chess`
-folder. GitHub Actions performs these steps for Windows x64, macOS Apple Silicon, and Linux x64 whenever a version tag
-is pushed.
+GitHub Actions also copies the game assets, creates the platform launcher, and packages the complete ZIP for Windows x64,
+macOS Apple Silicon, and Linux x64 when a version tag is pushed.
 
 ## Publish a GitHub Release
 

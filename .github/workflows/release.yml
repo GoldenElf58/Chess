@@ -25,12 +25,15 @@ jobs:
           - os: windows-2022
             asset: windows-x64
             launcher: "Play Chess.bat"
+            build-mode: onedir
           - os: macos-15
             asset: macos-arm64
             launcher: "Play Chess.command"
+            build-mode: onefile
           - os: ubuntu-22.04
             asset: linux-x64
             launcher: "Play Chess.sh"
+            build-mode: onedir
 
     steps:
       - uses: actions/checkout@v4
@@ -44,20 +47,26 @@ jobs:
       - name: Build executable
         env:
           PYINSTALLER_CONFIG_DIR: ${{ runner.temp }}/pyinstaller
-        run: pyinstaller --noconfirm --onedir --name Chess main.py
+        run: pyinstaller --noconfirm --${{ matrix.build-mode }} --name Chess main.py
       - name: Assemble downloadable archive
         shell: bash
         run: |
-          cp -R piece_images dist/Chess/piece_images
-          cp fens.txt dist/Chess/fens.txt
-          if [[ "${{ matrix.asset }}" != "windows-x64" ]]; then
-            printf '%s\n' '#!/bin/sh' 'cd "$(dirname "$0")"' 'exec ./Chess' > "dist/Chess/${{ matrix.launcher }}"
-            chmod +x "dist/Chess/${{ matrix.launcher }}"
+          mkdir -p dist/staging/Chess
+          if [[ "${{ matrix.build-mode }}" == "onefile" ]]; then
+            cp dist/Chess dist/staging/Chess/Chess
           else
-            printf '%s\r\n' '@echo off' 'cd /d "%~dp0"' 'Chess.exe' > "dist/Chess/${{ matrix.launcher }}"
+            cp -R dist/Chess/. dist/staging/Chess/
           fi
-          cd dist
-          python -m zipfile -c "../Chess-${{ matrix.asset }}.zip" Chess
+          cp -R piece_images dist/staging/Chess/piece_images
+          cp fens.txt dist/staging/Chess/fens.txt
+          if [[ "${{ matrix.asset }}" != "windows-x64" ]]; then
+            printf '%s\n' '#!/bin/sh' 'cd "$(dirname "$0")"' 'exec ./Chess' > "dist/staging/Chess/${{ matrix.launcher }}"
+            chmod +x "dist/staging/Chess/${{ matrix.launcher }}"
+          else
+            printf '%s\r\n' '@echo off' 'cd /d "%~dp0"' 'Chess.exe' > "dist/staging/Chess/${{ matrix.launcher }}"
+          fi
+          cd dist/staging
+          python -m zipfile -c "../../Chess-${{ matrix.asset }}.zip" Chess
       - uses: actions/upload-artifact@v4
         with:
           name: Chess-${{ matrix.asset }}
